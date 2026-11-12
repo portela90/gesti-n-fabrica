@@ -130,6 +130,12 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-00000000005a
 select pruebas.ok(pruebas.cuantas('select * from nucleo.empresas') = 2, 'el superadministrador ve las dos empresas');
 select pruebas.ok((select veces from nucleo.errores where firma = 'prueba-1') = 2, 'el mismo error se agrupa y suma veces');
 
+-- ---------- un anónimo (sin entrar) no puede llamar a ninguna función del núcleo ----------
+reset role;
+select pruebas.ok(not has_function_privilege('anon', 'nucleo.mi_sesion()', 'execute'), 'un anónimo no puede pedir la sesión');
+select pruebas.ok(not has_function_privilege('anon', 'nucleo.tiene_permiso(text, uuid, uuid)', 'execute'), 'ni comprobar permisos');
+select pruebas.ok(not has_function_privilege('authenticated', 'nucleo.activar_historial(regclass)', 'execute'), 'nadie desde la app puede tocar el historial');
+
 -- ---------- nada se puede borrar del historial ni de las firmas, ni siquiera desde el servidor ----------
 reset role;
 select pruebas.falla('delete from nucleo.historial', 'el historial no se borra');
