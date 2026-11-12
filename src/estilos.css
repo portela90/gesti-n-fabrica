@@ -110,4 +110,9 @@ h1, h2 { margin: 0; line-height: 1.2; }
 .dias { display: flex; gap: 6px; flex-wrap: wrap; }
 .dias button { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-weight: 600; cursor: pointer; }
 .dias button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #fff; }
+.fila.fija { cursor: default; align-items: flex-start; }
+.rol-linea { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; font-size: 14px; color: var(--tinta2); }
+.rol-linea .boton.txt { min-height: 32px; padding: 0 6px; }
+.clave-temporal { margin: 12px 0; padding: 14px; text-align: center; font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;
+  background: var(--fondo); border: 1px dashed var(--linea); border-radius: 12px; user-select: all; word-break: break-all; }
 

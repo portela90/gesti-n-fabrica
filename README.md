@@ -15,7 +15,9 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
   - [x] Configuración: naves, ubicaciones, tipos de máquina y pieza (con sus estados), máquinas y piezas, almacenes,
         familias, artículos, proveedores, turnos, equipos y trabajadores (añadir, cambiar, dar de baja).
         Cada catálogo es una entrada en `src/configuracion/catalogos.ts`.
-  - [ ] Usuarios y roles: invitar por correo, dar roles por unidad y nave, crear roles propios.
+  - [x] Usuarios: dar acceso con contraseña temporal (función `supabase/functions/invitar`), roles por unidad y nave,
+        quitar roles; la primera vez obliga a poner contraseña propia.
+  - [ ] Roles propios de cada unidad (crear y ajustar permisos desde la app).
   - [ ] Soporte: versión visible, «Tengo un problema», registro de errores, panel de salud.
   - [ ] Copias nocturnas y aviso diario para que Supabase no se pause.
 

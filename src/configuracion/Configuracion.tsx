@@ -8,7 +8,7 @@ import { CATALOGOS, catalogoPorTabla, codigoDe, DIAS_SEMANA, estadosDeTexto, tex
 /** ¿Puede configurar algo en esta unidad de trabajo? (para enseñar «Configuración» en el menú) */
 export function useConfigurable() {
   const { puede } = useSesion();
-  return CATALOGOS.some((c) => puede(c.permiso));
+  return puede('nucleo.usuario.editar') || CATALOGOS.some((c) => puede(c.permiso));
 }
 
 const textoError = (e: { code?: string; message: string }) =>
@@ -33,12 +33,19 @@ export function IndiceConfiguracion({ ir }: { ir: (r: string) => void }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [empresa?.id]);
   if (!empresa) return null;
-  if (!mios.length) return <main className="contenido estrecho"><div className="vacio"><p><b>No tienes permiso para configurar nada.</b></p></div></main>;
+  const usuarios = puede('nucleo.usuario.editar') || puede('nucleo.usuario.ver');
+  if (!mios.length && !usuarios) return <main className="contenido estrecho"><div className="vacio"><p><b>No tienes permiso para configurar nada.</b></p></div></main>;
   return (
     <main className="contenido estrecho">
       <h1 className="titulo">Configuración</h1>
       <p className="nota" style={{ margin: '-8px 0 16px' }}>Todo lo de {empresa.nombre} que se da de alta sin programar.</p>
       <div className="lista">
+        {usuarios && (
+          <button type="button" className="fila" onClick={() => ir('/config/usuarios')}>
+            <span className="fila-txt"><b>Usuarios</b><small>Quién entra, con qué rol y en qué nave</small></span>
+            <span className="fila-flecha" aria-hidden="true">›</span>
+          </button>
+        )}
         {mios.map((c) => (
           <button key={c.tabla} type="button" className="fila" onClick={() => ir('/config/' + c.tabla)}>
             <span className="fila-txt"><b>{c.titulo}</b><small>{c.descripcion}</small></span>

@@ -35,6 +35,8 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
 
   const cargar = useCallback(async (s: Session | null) => {
     if (!s) { setEstado({ fase: 'fuera' }); return; }
+    // dado de alta con contraseña temporal: lo primero es poner la suya
+    if (s.user.user_metadata?.cambiar_clave) { setEstado({ fase: 'nueva-clave' }); return; }
     const { data, error } = await nucleo().rpc('mi_sesion');
     if (error) { setEstado({ fase: 'error', mensaje: error.message }); return; }
     const sesion = data as Sesion;
@@ -47,7 +49,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     supabase.auth.getSession().then(({ data }) => { if (vivo) cargar(data.session); });
     const { data: sub } = supabase.auth.onAuthStateChange((evento, s) => {
       if (evento === 'PASSWORD_RECOVERY') { setEstado({ fase: 'nueva-clave' }); return; }
-      if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT') cargar(s);
+      if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'USER_UPDATED') cargar(s);
     });
     return () => { vivo = false; sub.subscription.unsubscribe(); };
   }, [cargar]);

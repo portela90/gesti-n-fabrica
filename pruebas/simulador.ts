@@ -30,7 +30,7 @@ export interface Llamada { metodo: string; ruta: string; cuerpo: unknown; perfil
 
 export async function simular(page: Page, op: Opciones = {}) {
   const llamadas: Llamada[] = [];
-  const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas'];
+  const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas', 'asignaciones', 'usuarios', 'roles'];
   const tablas: Record<string, Record<string, unknown>[]> = Object.fromEntries(vacias.map((t) => [t, [...(op.tablas?.[t] ?? [])]]));
   const sesion = op.sesion ?? { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null }, empresas: [EMPRESA_A] };
   if (op.dentro) {
@@ -53,12 +53,22 @@ export async function simular(page: Page, op: Opciones = {}) {
     if (u.pathname === '/rest/v1/rpc/mi_sesion') return json(sesion);
     if (u.pathname === '/rest/v1/rpc/anotar_error') return route.fulfill({ status: 204 });
     if (u.pathname === '/rest/v1/incidencias' && r.method() === 'POST') return route.fulfill({ status: 201 });
+    if (u.pathname === '/functions/v1/invitar') {
+      const b = r.postDataJSON() as { correo: string; nombre: string; rol_id: string; empresa_id: string; centro_id: string | null };
+      if (b.correo === USUARIO.email) return json({ error: 'A_TI_MISMO' }, 400);
+      let usu = tablas.usuarios.find((x) => x.email === b.correo);
+      const nuevo = !usu;
+      if (!usu) { usu = { id: `u-${tablas.usuarios.length + 1}`, nombre: b.nombre, email: b.correo, superadmin: false }; tablas.usuarios.push(usu); }
+      tablas.asignaciones.push({ id: `as-${tablas.asignaciones.length + 1}`, usuario_id: usu.id, rol_id: b.rol_id, empresa_id: b.empresa_id, centro_id: b.centro_id, hasta: null });
+      return json({ usuario_id: usu.id, nuevo, clave: nuevo ? 'Temporal234' : null });
+    }
     // tablas del núcleo en memoria (lo justo de PostgREST: filtros eq/is, contar, insertar y cambiar)
     const tabla = u.pathname.replace('/rest/v1/', '');
     if (tablas[tabla] !== undefined) {
       const filtros = [...u.searchParams.entries()].filter(([k]) => !['select', 'order', 'limit', 'columns'].includes(k));
       const cumple = (f: Record<string, unknown>) => filtros.every(([k, v]) =>
-        v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null : true);
+        v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null
+          : v.startsWith('in.(') ? v.slice(4, -1).split(',').map((x) => x.replace(/^"|"$/g, '')).includes(String(f[k])) : true);
       const uno = (r.headers()['accept'] ?? '').includes('vnd.pgrst.object');
       if (r.method() === 'HEAD' || (r.method() === 'GET' && (r.headers()['prefer'] ?? '').includes('count=exact'))) {
         const n = tablas[tabla].filter(cumple).length;
@@ -71,6 +81,11 @@ export async function simular(page: Page, op: Opciones = {}) {
           return json({ code: '23505', message: 'duplicate key value violates unique constraint' }, 409);
         tablas[tabla].push(nueva);
         return json(uno ? nueva : [nueva], 201);
+      }
+      if (r.method() === 'DELETE') {
+        const quedan = tablas[tabla].filter((f) => !cumple(f));
+        tablas[tabla].splice(0, tablas[tabla].length, ...quedan);
+        return route.fulfill({ status: 204 });
       }
       if (r.method() === 'PATCH') {
         const cambio = r.postDataJSON() as object;

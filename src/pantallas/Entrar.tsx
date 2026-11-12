@@ -89,7 +89,7 @@ export function NuevaClave({ alTerminar }: { alTerminar: () => void }) {
   async function guardar(e: FormEvent) {
     e.preventDefault();
     if (clave.length < 8) { setError('Pon al menos 8 caracteres'); return; }
-    const { error } = await supabase.auth.updateUser({ password: clave });
+    const { error } = await supabase.auth.updateUser({ password: clave, data: { cambiar_clave: false } });
     if (error) { setError(traducir(error.message)); return; }
     aviso('Contraseña cambiada');
     alTerminar();
@@ -97,7 +97,8 @@ export function NuevaClave({ alTerminar }: { alTerminar: () => void }) {
   return (
     <main className="entrar">
       <form className="entrar-caja" onSubmit={guardar}>
-        <h1>Contraseña nueva</h1>
+        <h1>Pon tu contraseña</h1>
+        <p className="nota" style={{ margin: '-8px 0 16px', textAlign: 'center' }}>Solo la sabrás tú. La usarás para entrar a partir de ahora.</p>
         <label className="campo"><span>Contraseña nueva</span>
           <input id="claveNueva" type="password" autoComplete="new-password" value={clave} onChange={(e) => setClave(e.target.value)} />
         </label>
