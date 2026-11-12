@@ -80,3 +80,17 @@ test('Configuración en el móvil más estrecho: nada se aplasta ni se sale', as
   await page.locator('.fila').first().click();
   expect(await desbordes(page), 'ficha de un trabajador').toEqual([]);
 });
+
+test('lo escrito en el buscador pasa al nombre al pulsar «Añadir»', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: admin });
+  await page.goto('./#/config/centros');
+  await expect(page.getByPlaceholder('Buscar naves…')).toBeVisible();
+  await page.getByPlaceholder('Buscar naves…').fill('Nave 2');
+  await page.getByRole('button', { name: 'Añadir', exact: true }).click();
+  await expect(page.locator('#c-nombre')).toHaveValue('Nave 2');
+  await expect(page.getByText('Opcional. 1, 2, 3…')).toBeVisible();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByRole('status')).toHaveText('Guardado');
+  expect(sim.tablas.centros[0]).toMatchObject({ nombre: 'Nave 2', codigo: 'nave-2' });
+});
+

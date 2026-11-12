@@ -93,7 +93,7 @@ export function ListaCatalogo({ tabla, ir }: { tabla: string; ir: (r: string) =>
       <button type="button" className="boton txt volver" onClick={() => ir('/config')}><Icono d={ICONOS.volver} tam={18} /> Configuración</button>
       <h1 className="titulo">{cat.titulo}</h1>
       <div className="barra-lista">
-        <input type="search" aria-label={'Buscar en ' + cat.titulo} placeholder="Buscar" value={buscar} onChange={(e) => setBuscar(e.target.value)} />
+        <input type="search" aria-label={'Buscar en ' + cat.titulo} placeholder={`Buscar ${cat.titulo.toLowerCase()}…`} value={buscar} onChange={(e) => setBuscar(e.target.value)} />
         {editable && <button type="button" className="boton" onClick={() => setEditando('nueva')}>Añadir</button>}
       </div>
       {error && <p className="error" role="alert">{error}</p>}
@@ -118,7 +118,7 @@ export function ListaCatalogo({ tabla, ir }: { tabla: string; ir: (r: string) =>
       )}
       {bajas > 0 && <button type="button" className="boton txt" onClick={() => setVerBajas(!verBajas)}>{verBajas ? 'Esconder los dados de baja' : `Ver los dados de baja (${bajas})`}</button>}
       {editando && (
-        <FormFila cat={cat} fila={editando === 'nueva' ? null : editando} refs={refs} todas={filas ?? []} editable={editable}
+        <FormFila cat={cat} fila={editando === 'nueva' ? null : editando} inicial={editando === 'nueva' ? buscar.trim() : ''} refs={refs} todas={filas ?? []} editable={editable}
           alCerrar={() => setEditando(null)} alGuardar={() => { setEditando(null); cargar(); }} />
       )}
     </main>
@@ -152,12 +152,18 @@ function aGuardar(cat: Catalogo, v: Valores) {
   return out;
 }
 
-function FormFila({ cat, fila, refs, todas, editable, alCerrar, alGuardar }: {
-  cat: Catalogo; fila: Fila | null; refs: Record<string, Fila[]>; todas: Fila[]; editable: boolean;
+function FormFila({ cat, fila, inicial, refs, todas, editable, alCerrar, alGuardar }: {
+  cat: Catalogo; fila: Fila | null; inicial: string; refs: Record<string, Fila[]>; todas: Fila[]; editable: boolean;
   alCerrar: () => void; alGuardar: () => void;
 }) {
   const { empresa } = useSesion();
-  const [v, setV] = useState<Valores>(() => valoresDe(cat, fila));
+  /* lo escrito en el buscador pasa al primer campo de texto (nombre o código) al añadir */
+  const [v, setV] = useState<Valores>(() => {
+    const x = valoresDe(cat, fila);
+    const primero = cat.campos.find((c) => c.tipo === 'texto');
+    if (!fila && inicial && primero) x[primero.clave] = inicial;
+    return x;
+  });
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const pon = (k: string, x: string | string[]) => setV((a) => ({ ...a, [k]: x }));
@@ -183,7 +189,7 @@ function FormFila({ cat, fila, refs, todas, editable, alCerrar, alGuardar }: {
     }
     setOcupado(false);
     if (res.error) { setError(textoError(res.error)); return; }
-    aviso(fila ? 'Guardado' : `${cat.singular[0].toUpperCase()}${cat.singular.slice(1)} añadido`);
+    aviso('Guardado');
     alGuardar();
   }
 

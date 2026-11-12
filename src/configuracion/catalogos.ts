@@ -28,6 +28,7 @@ export interface Catalogo {
 
 export type Fila = Record<string, unknown> & { id: string; nombre: string; baja?: string | null };
 
+const ORDEN = 'Opcional. 1, 2, 3… para decidir cuál sale primero; si lo dejas vacío, por nombre.';
 const DIAS: [string, string][] = [['1', 'L'], ['2', 'M'], ['3', 'X'], ['4', 'J'], ['5', 'V'], ['6', 'S'], ['0', 'D']];
 export const DIAS_SEMANA = DIAS;
 
@@ -35,7 +36,7 @@ export const CATALOGOS: Catalogo[] = [
   {
     tabla: 'centros', titulo: 'Naves', singular: 'nave', descripcion: 'Naves o plantas de esta unidad de trabajo',
     permiso: 'nucleo.nave.editar', conCodigo: true,
-    campos: [{ clave: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true }, { clave: 'orden', etiqueta: 'Orden en las listas', tipo: 'numero' }],
+    campos: [{ clave: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true }, { clave: 'orden', etiqueta: 'Orden en las listas', tipo: 'numero', ayuda: ORDEN }],
     detalle: () => '',
   },
   {
@@ -77,7 +78,7 @@ export const CATALOGOS: Catalogo[] = [
       { clave: 'nombre', etiqueta: 'Nombre', tipo: 'texto', obligatorio: true },
       { clave: 'tipo', etiqueta: 'Tipo', tipo: 'lista', obligatorio: true, opciones: [['general', 'General'], ['produccion', 'De producción (se repone)'], ['externo', 'Externo']] },
       { clave: 'centro_id', etiqueta: 'Nave', tipo: 'referencia', ref: { tabla: 'centros', vacio: 'Sin nave' } },
-      { clave: 'orden', etiqueta: 'Orden en las listas', tipo: 'numero' },
+      { clave: 'orden', etiqueta: 'Orden en las listas', tipo: 'numero', ayuda: ORDEN },
     ],
     detalle: (f, n) => [({ general: 'General', produccion: 'De producción', externo: 'Externo' } as Record<string, string>)[String(f.tipo)], n('centros', f.centro_id)].filter(Boolean).join(' · '),
   },
@@ -120,7 +121,7 @@ export const CATALOGOS: Catalogo[] = [
       { clave: 'inicio', etiqueta: 'Empieza', tipo: 'hora' },
       { clave: 'fin', etiqueta: 'Acaba', tipo: 'hora' },
       { clave: 'centro_id', etiqueta: 'Nave', tipo: 'referencia', ref: { tabla: 'centros', vacio: 'Todas' } },
-      { clave: 'orden', etiqueta: 'Orden', tipo: 'numero' },
+      { clave: 'orden', etiqueta: 'Orden en las listas', tipo: 'numero', ayuda: ORDEN },
     ],
     detalle: (f, n) => [f.inicio && f.fin ? `${String(f.inicio).slice(0, 5)}–${String(f.fin).slice(0, 5)}` : '', n('centros', f.centro_id)].filter(Boolean).join(' · '),
   },
