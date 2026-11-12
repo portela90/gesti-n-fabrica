@@ -33,10 +33,22 @@ jobs:
       - name: Instalar pg_dump 17 (el mismo que Supabase)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
-          sudo curl -fsS --retry 3 -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          # la clave del repositorio de PostgreSQL: varios intentos y dos direcciones (a veces una corta la conexión)
+          ok=0
+          for i in 1 2 3 4 5; do
+            for u in https://www.postgresql.org/media/keys/ACCC4CF8.asc https://apt.postgresql.org/pub/repos/apt/ACCC4CF8.asc; do
+              if sudo curl -fsS --retry 3 --retry-all-errors --connect-timeout 20 -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc "$u"; then ok=1; break 2; fi
+            done
+            sleep $((i * 10))
+          done
+          [ "$ok" = 1 ] || { echo "::error::No se pudo descargar la clave de PostgreSQL (fallo de internet en GitHub). Vuelve a lanzarla en un rato."; exit 1; }
           echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
-          sudo apt-get update -qq -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/pgdg.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
-          sudo apt-get install -y -qq postgresql-client-17
+          for i in 1 2 3; do
+            sudo apt-get update -qq -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/pgdg.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0 \
+              && sudo apt-get install -y -qq postgresql-client-17 && break
+            sleep $((i * 15))
+          done
+          test -x /usr/lib/postgresql/17/bin/pg_dump || { echo "::error::No se pudo instalar pg_dump 17. Vuelve a lanzarla en un rato."; exit 1; }
       - name: Hacer la copia, comprobarla y cifrarla
         run: |
           set -euo pipefail
