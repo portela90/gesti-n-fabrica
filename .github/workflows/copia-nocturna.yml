@@ -30,6 +30,29 @@ jobs:
         run: |
           if [ -z "$DB" ] || [ -z "$CLAVE" ]; then
             echo "::error::Faltan los secretos SUPABASE_DB_URL y/o COPIA_CLAVE (Settings → Secrets and variables → Actions)"; exit 1; fi
+      - name: Revisar cómo está escrita la dirección (sin enseñar la contraseña)
+        run: |
+          python3 - <<'PY'
+          import os, re, urllib.parse as u
+          bruto = os.environ['DB']; d = bruto.strip()
+          avisos = []
+          esquema, _, resto = d.partition('://')
+          credenciales, _, servidor = resto.rpartition('@')   # la contraseña puede llevar @: el servidor va tras la última
+          usuario, _, clave = credenciales.partition(':')
+          host = servidor.split('/')[0]
+          if esquema not in ('postgresql', 'postgres'): avisos.append('no empieza por postgresql://')
+          if not usuario.startswith('postgres.'): avisos.append(f'el usuario es «{usuario}»: con el «Session pooler» tiene que ser postgres.<código del proyecto>')
+          if '[' in d or ']' in d: avisos.append('quedan corchetes [ ]: hay que cambiar [YOUR-PASSWORD] entero, corchetes incluidos, por la contraseña')
+          if 'YOUR-PASSWORD' in d: avisos.append('sigue poniendo YOUR-PASSWORD')
+          if re.search(r'[@#/?:%\s]', clave) and u.unquote(clave) == clave: avisos.append('la contraseña tiene símbolos (@ # / ? : % o espacios): mejor una solo con letras y números')
+          if d != bruto: avisos.append('hay espacios o saltos de línea al principio o al final (se quitan solos)')
+          if 'pooler.supabase.com' not in host: avisos.append(f'el servidor es «{host}»: tiene que ser el del «Session pooler» (…pooler.supabase.com)')
+          print(f'usuario: {usuario}')
+          print(f'servidor: {host}')
+          print(f'contraseña: {len(clave)} caracteres')
+          for a in avisos: print(f'::warning::{a}')
+          if not avisos: print('La dirección tiene buena forma. Si aun así falla, la contraseña no es la de la base de datos (o se cambió hace menos de un minuto).')
+          PY
       - name: Instalar pg_dump 17 (el mismo que Supabase)
         run: |
           sudo install -d /usr/share/postgresql-common/pgdg
@@ -54,7 +77,7 @@ jobs:
           set -euo pipefail
           BIN=/usr/lib/postgresql/17/bin
           F="copia-$(date -u +%F).sql"
-          $BIN/pg_dump "$DB" --no-owner --no-privileges -n nucleo -n public -n informes -f "$F"
+          $BIN/pg_dump "$(echo "$DB" | tr -d '[:space:]')" --no-owner --no-privileges -n nucleo -n public -n informes -f "$F"
           tablas=$(grep -c '^CREATE TABLE' "$F" || true)
           grep -q '^CREATE TABLE nucleo.empresas' "$F" || { echo "::error::La copia no trae las tablas del núcleo"; exit 1; }
           grep -q '^COPY nucleo.empresas' "$F" || { echo "::error::La copia no trae los datos del núcleo"; exit 1; }
@@ -63,7 +86,7 @@ jobs:
           openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in "$F.gz" -out "$F.gz.cifrado" -pass env:CLAVE
           rm "$F.gz"
           echo "Copia: $tablas tablas, $bytes bytes sin comprimir"
-          $BIN/psql "$DB" -v ON_ERROR_STOP=1 -q -c "insert into nucleo.copias (bytes, tablas, nota) values ($bytes, $tablas, 'GitHub Actions')"
+          $BIN/psql "$(echo "$DB" | tr -d '[:space:]')" -v ON_ERROR_STOP=1 -q -c "insert into nucleo.copias (bytes, tablas, nota) values ($bytes, $tablas, 'GitHub Actions')"
       - uses: actions/upload-artifact@v4
         with:
           name: copia-${{ github.run_id }}
