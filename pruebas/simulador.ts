@@ -19,6 +19,7 @@ export const EMPRESA_B = { id: 'bbbbbbbb-0000-0000-0000-000000000001', codigo: '
 export interface Opciones {
   dentro?: boolean;            // ya ha entrado (sesión guardada en el navegador)
   sesion?: object;             // lo que devuelve nucleo.mi_sesion()
+  salud?: object;              // lo que devuelve nucleo.salud() (si no, «sin permiso»)
   tablas?: Record<string, Record<string, unknown>[]>; // filas iniciales de las tablas del núcleo (se guardan en memoria)
 }
 
@@ -30,7 +31,7 @@ export interface Llamada { metodo: string; ruta: string; cuerpo: unknown; perfil
 
 export async function simular(page: Page, op: Opciones = {}) {
   const llamadas: Llamada[] = [];
-  const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas', 'asignaciones', 'usuarios', 'roles'];
+  const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas', 'asignaciones', 'usuarios', 'roles', 'errores', 'incidencias'];
   const tablas: Record<string, Record<string, unknown>[]> = Object.fromEntries(vacias.map((t) => [t, [...(op.tablas?.[t] ?? [])]]));
   const sesion = op.sesion ?? { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null }, empresas: [EMPRESA_A] };
   if (op.dentro) {
@@ -52,6 +53,7 @@ export async function simular(page: Page, op: Opciones = {}) {
     if (u.pathname === '/auth/v1/user') return json(sesionAuth().user);
     if (u.pathname === '/rest/v1/rpc/mi_sesion') return json(sesion);
     if (u.pathname === '/rest/v1/rpc/anotar_error') return route.fulfill({ status: 204 });
+    if (u.pathname === '/rest/v1/rpc/salud') return op.salud ? json(op.salud) : json({ code: 'P0001', message: 'NO_PERMISO' }, 400);
     if (u.pathname === '/rest/v1/incidencias' && r.method() === 'POST') return route.fulfill({ status: 201 });
     if (u.pathname === '/functions/v1/invitar') {
       const b = r.postDataJSON() as { correo: string; nombre: string; rol_id: string; empresa_id: string; centro_id: string | null };
@@ -68,6 +70,7 @@ export async function simular(page: Page, op: Opciones = {}) {
       const filtros = [...u.searchParams.entries()].filter(([k]) => !['select', 'order', 'limit', 'columns'].includes(k));
       const cumple = (f: Record<string, unknown>) => filtros.every(([k, v]) =>
         v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null
+          : v.startsWith('neq.') ? String(f[k]) !== v.slice(4)
           : v.startsWith('in.(') ? v.slice(4, -1).split(',').map((x) => x.replace(/^"|"$/g, '')).includes(String(f[k])) : true);
       const uno = (r.headers()['accept'] ?? '').includes('vnd.pgrst.object');
       if (r.method() === 'HEAD' || (r.method() === 'GET' && (r.headers()['prefer'] ?? '').includes('count=exact'))) {

@@ -1,0 +1,64 @@
+# Copia de seguridad cada noche (el plan gratis de Supabase no hace copias) y, de paso, actividad diaria para que
+# Supabase no pause el proyecto.
+# - Copia el núcleo y las apps de ahora (esquemas nucleo, public, informes) con pg_dump, comprueba que trae las tablas,
+#   la comprime y la CIFRA con la clave COPIA_CLAVE (solo la tiene Cristian). Se guarda 30 días en GitHub (Actions → la
+#   ejecución → Artifacts). Sin la clave no se puede abrir, aunque el repositorio sea público.
+# - Apunta la copia en nucleo.copias: sale en el panel «Salud de la app».
+# Necesita dos secretos en GitHub (Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL  = la dirección «Session pooler» de Supabase (botón Connect), con la contraseña de la base de datos.
+#   COPIA_CLAVE      = una frase larga que elijas tú y guardes en un sitio seguro (sin ella no se recupera nada).
+# Cómo recuperar una copia: docs/copias.md
+name: Copia nocturna
+on:
+  schedule:
+    - cron: "43 2 * * *"   # 02:43 UTC (madrugada en España)
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: write
+concurrency:
+  group: copia
+jobs:
+  copia:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      DB: ${{ secrets.SUPABASE_DB_URL }}
+      CLAVE: ${{ secrets.COPIA_CLAVE }}
+    steps:
+      - name: Comprobar que están los secretos
+        run: |
+          if [ -z "$DB" ] || [ -z "$CLAVE" ]; then
+            echo "::error::Faltan los secretos SUPABASE_DB_URL y/o COPIA_CLAVE (Settings → Secrets and variables → Actions)"; exit 1; fi
+      - name: Instalar pg_dump 17 (el mismo que Supabase)
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsS --retry 3 -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq -o Dir::Etc::sourcelist=/etc/apt/sources.list.d/pgdg.list -o Dir::Etc::sourceparts=- -o APT::Get::List-Cleanup=0
+          sudo apt-get install -y -qq postgresql-client-17
+      - name: Hacer la copia, comprobarla y cifrarla
+        run: |
+          set -euo pipefail
+          BIN=/usr/lib/postgresql/17/bin
+          F="copia-$(date -u +%F).sql"
+          $BIN/pg_dump "$DB" --no-owner --no-privileges -n nucleo -n public -n informes -f "$F"
+          tablas=$(grep -c '^CREATE TABLE' "$F" || true)
+          grep -q '^CREATE TABLE nucleo.empresas' "$F" || { echo "::error::La copia no trae las tablas del núcleo"; exit 1; }
+          grep -q '^COPY nucleo.empresas' "$F" || { echo "::error::La copia no trae los datos del núcleo"; exit 1; }
+          bytes=$(stat -c %s "$F")
+          gzip -9 "$F"
+          openssl enc -aes-256-cbc -pbkdf2 -iter 200000 -salt -in "$F.gz" -out "$F.gz.cifrado" -pass env:CLAVE
+          rm "$F.gz"
+          echo "Copia: $tablas tablas, $bytes bytes sin comprimir"
+          $BIN/psql "$DB" -v ON_ERROR_STOP=1 -q -c "insert into nucleo.copias (bytes, tablas, nota) values ($bytes, $tablas, 'GitHub Actions')"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: copia-${{ github.run_id }}
+          path: "*.cifrado"
+          retention-days: 30
+      - name: Que GitHub no apague esta tarea por inactividad
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh api -X PUT "repos/${{ github.repository }}/actions/workflows/copia-nocturna.yml/enable" || true

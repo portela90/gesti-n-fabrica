@@ -18,8 +18,8 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
   - [x] Usuarios: dar acceso con contraseña temporal (función `supabase/functions/invitar`), roles por unidad y nave,
         quitar roles; la primera vez obliga a poner contraseña propia.
   - [ ] Roles propios de cada unidad (crear y ajustar permisos desde la app).
-  - [ ] Soporte: versión visible, «Tengo un problema», registro de errores, panel de salud.
-  - [ ] Copias nocturnas y aviso diario para que Supabase no se pause.
+  - [x] Soporte: versión visible, «Tengo un problema», registro de errores, panel «Salud de la app» (superadministrador).
+  - [x] Copia nocturna cifrada (`.github/workflows/copia-nocturna.yml`, ver `docs/copias.md`) que además mantiene activo Supabase.
 
 ## Carpetas
 ```

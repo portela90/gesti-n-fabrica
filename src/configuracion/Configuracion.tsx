@@ -19,7 +19,8 @@ const textoError = (e: { code?: string; message: string }) =>
 
 /** Portada de Configuración: un acceso por catálogo, con cuántos hay. */
 export function IndiceConfiguracion({ ir }: { ir: (r: string) => void }) {
-  const { empresa, puede } = useSesion();
+  const { empresa, puede, estado } = useSesion();
+  const superadmin = estado.fase === 'dentro' && !!estado.sesion.usuario?.superadmin;
   const mios = CATALOGOS.filter((c) => puede(c.permiso));
   const [cuantos, setCuantos] = useState<Record<string, number>>({});
   useEffect(() => {
@@ -40,6 +41,12 @@ export function IndiceConfiguracion({ ir }: { ir: (r: string) => void }) {
       <h1 className="titulo">Configuración</h1>
       <p className="nota" style={{ margin: '-8px 0 16px' }}>Todo lo de {empresa.nombre} que se da de alta sin programar.</p>
       <div className="lista">
+        {superadmin && (
+          <button type="button" className="fila" onClick={() => ir('/config/salud')}>
+            <span className="fila-txt"><b>Salud de la app</b><small>Espacio usado, copias, errores e incidencias</small></span>
+            <span className="fila-flecha" aria-hidden="true">›</span>
+          </button>
+        )}
         {usuarios && (
           <button type="button" className="fila" onClick={() => ir('/config/usuarios')}>
             <span className="fila-txt"><b>Usuarios</b><small>Quién entra, con qué rol y en qué nave</small></span>

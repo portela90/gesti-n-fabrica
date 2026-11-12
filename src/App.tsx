@@ -10,6 +10,7 @@ import { Entrar, NuevaClave } from './pantallas/Entrar';
 import { ElegirEmpresa, Inicio, PantallaModulo } from './pantallas/Inicio';
 import { IndiceConfiguracion, ListaCatalogo, useConfigurable } from './configuracion/Configuracion';
 import { Usuarios } from './configuracion/Usuarios';
+import { Salud } from './configuracion/Salud';
 
 export function App() {
   const { estado, empresa, salir, recargar } = useSesion();
@@ -41,7 +42,7 @@ export function App() {
     const m = ruta.match(/^\/m\/([a-z]+)/);
     const cfg = ruta.match(/^\/config(?:\/([a-z_]+))?/);
     cuerpo = m ? <PantallaModulo codigo={m[1]} ir={ir} />
-      : cfg ? (cfg[1] === 'usuarios' ? <Usuarios ir={ir} /> : cfg[1] ? <ListaCatalogo key={cfg[1]} tabla={cfg[1]} ir={ir} /> : <IndiceConfiguracion ir={ir} />)
+      : cfg ? (cfg[1] === 'usuarios' ? <Usuarios ir={ir} /> : cfg[1] === 'salud' ? <Salud ir={ir} /> : cfg[1] ? <ListaCatalogo key={cfg[1]} tabla={cfg[1]} ir={ir} /> : <IndiceConfiguracion ir={ir} />)
       : <Inicio ir={ir} configurable={configurable} />;
   }
 

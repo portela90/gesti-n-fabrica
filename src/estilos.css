@@ -115,4 +115,15 @@ h1, h2 { margin: 0; line-height: 1.2; }
 .rol-linea .boton.txt { min-height: 32px; padding: 0 6px; }
 .clave-temporal { margin: 12px 0; padding: 14px; text-align: center; font: 600 26px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em;
   background: var(--fondo); border: 1px dashed var(--linea); border-radius: 12px; user-select: all; word-break: break-all; }
+/* panel de salud */
+.cifras { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 0 0 20px; }
+.cifra { display: flex; flex-direction: column; gap: 2px; padding: 14px; background: var(--sup); border: 1px solid var(--linea); border-left: 4px solid var(--bien); border-radius: var(--radio); min-width: 0; }
+.cifra.mal { border-left-color: #d97706; }
+.cifra b { font-size: 20px; overflow-wrap: anywhere; }
+.cifra span { font-weight: 600; font-size: 14px; }
+.cifra small { color: var(--tinta2); font-size: 13px; }
+.barra { height: 6px; border-radius: 3px; background: var(--linea); overflow: hidden; margin-top: 6px; }
+.barra > div { height: 6px; background: var(--acento); }
+.subtitulo { font-size: 17px; margin: 18px 0 10px; }
+.romper { overflow-wrap: anywhere; }
 
