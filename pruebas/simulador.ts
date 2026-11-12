@@ -19,12 +19,19 @@ export const EMPRESA_B = { id: 'bbbbbbbb-0000-0000-0000-000000000001', codigo: '
 export interface Opciones {
   dentro?: boolean;            // ya ha entrado (sesión guardada en el navegador)
   sesion?: object;             // lo que devuelve nucleo.mi_sesion()
+  tablas?: Record<string, Record<string, unknown>[]>; // filas iniciales de las tablas del núcleo (se guardan en memoria)
 }
+
+/** Permisos de un administrador de unidad: configurar todo el núcleo. */
+export const PERMISOS_ADMIN = ['nave', 'ubicacion', 'turno', 'equipo', 'activo', 'almacen', 'articulo', 'proveedor', 'configuracion', 'persona']
+  .map((c) => `nucleo.${c}.editar`).concat(['nucleo.persona.ver']);
 
 export interface Llamada { metodo: string; ruta: string; cuerpo: unknown; perfil: string | null }
 
 export async function simular(page: Page, op: Opciones = {}) {
   const llamadas: Llamada[] = [];
+  const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas'];
+  const tablas: Record<string, Record<string, unknown>[]> = Object.fromEntries(vacias.map((t) => [t, [...(op.tablas?.[t] ?? [])]]));
   const sesion = op.sesion ?? { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null }, empresas: [EMPRESA_A] };
   if (op.dentro) {
     await page.addInitScript((s) => { localStorage.setItem('sb-whemhkcrgwyjucpaswrm-auth-token', JSON.stringify(s)); }, sesionAuth());
@@ -46,9 +53,35 @@ export async function simular(page: Page, op: Opciones = {}) {
     if (u.pathname === '/rest/v1/rpc/mi_sesion') return json(sesion);
     if (u.pathname === '/rest/v1/rpc/anotar_error') return route.fulfill({ status: 204 });
     if (u.pathname === '/rest/v1/incidencias' && r.method() === 'POST') return route.fulfill({ status: 201 });
+    // tablas del núcleo en memoria (lo justo de PostgREST: filtros eq/is, contar, insertar y cambiar)
+    const tabla = u.pathname.replace('/rest/v1/', '');
+    if (tablas[tabla] !== undefined) {
+      const filtros = [...u.searchParams.entries()].filter(([k]) => !['select', 'order', 'limit', 'columns'].includes(k));
+      const cumple = (f: Record<string, unknown>) => filtros.every(([k, v]) =>
+        v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null : true);
+      const uno = (r.headers()['accept'] ?? '').includes('vnd.pgrst.object');
+      if (r.method() === 'HEAD' || (r.method() === 'GET' && (r.headers()['prefer'] ?? '').includes('count=exact'))) {
+        const n = tablas[tabla].filter(cumple).length;
+        return route.fulfill({ status: 200, headers: { 'content-range': `0-${Math.max(n - 1, 0)}/${n}`, 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-expose-headers': 'content-range' }, body: '[]' });
+      }
+      if (r.method() === 'GET') return json(tablas[tabla].filter(cumple).sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''))));
+      if (r.method() === 'POST') {
+        const nueva = { id: `id-${tabla}-${tablas[tabla].length + 1}`, baja: null, ...(r.postDataJSON() as object) } as Record<string, unknown>;
+        if (tablas[tabla].some((f) => f.codigo && f.codigo === nueva.codigo && f.empresa_id === nueva.empresa_id))
+          return json({ code: '23505', message: 'duplicate key value violates unique constraint' }, 409);
+        tablas[tabla].push(nueva);
+        return json(uno ? nueva : [nueva], 201);
+      }
+      if (r.method() === 'PATCH') {
+        const cambio = r.postDataJSON() as object;
+        const tocadas = tablas[tabla].filter(cumple);
+        tocadas.forEach((f) => Object.assign(f, cambio));
+        return json(uno ? tocadas[0] : tocadas);
+      }
+    }
     return json({ message: 'no simulado: ' + u.pathname }, 404);
   });
-  return llamadas;
+  return Object.assign(llamadas, { tablas });
 }
 
 /** Textos aplastados (letra a letra) o cosas que se salen por la derecha. */

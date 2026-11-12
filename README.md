@@ -12,7 +12,10 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
   - [x] App (web instalable): entrar con correo y contraseña o con enlace, elegir empresa, menú según permisos,
         versión visible, «Tengo un problema», registro de errores, aviso de versión nueva.
   - [ ] Entrar con nombre y PIN (operarios): llega con el primer módulo que lo necesite.
-  - [ ] Configuración: pantallas para dar de alta naves, máquinas, almacenes, artículos, personas, usuarios y roles.
+  - [x] Configuración: naves, ubicaciones, tipos de máquina y pieza (con sus estados), máquinas y piezas, almacenes,
+        familias, artículos, proveedores, turnos, equipos y trabajadores (añadir, cambiar, dar de baja).
+        Cada catálogo es una entrada en `src/configuracion/catalogos.ts`.
+  - [ ] Usuarios y roles: invitar por correo, dar roles por unidad y nave, crear roles propios.
   - [ ] Soporte: versión visible, «Tengo un problema», registro de errores, panel de salud.
   - [ ] Copias nocturnas y aviso diario para que Supabase no se pause.
 

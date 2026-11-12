@@ -23,7 +23,7 @@ export function ElegirEmpresa() {
 }
 
 /** Inicio: los módulos que esta persona puede usar en esta unidad de trabajo (lo decide la base de datos). */
-export function Inicio({ ir }: { ir: (r: string) => void }) {
+export function Inicio({ ir, configurable }: { ir: (r: string) => void; configurable?: boolean }) {
   const { estado, empresa } = useSesion();
   if (estado.fase !== 'dentro' || !empresa) return null;
   const mios = MODULOS.filter((m) => empresa.modulos.includes(m.codigo));
@@ -31,7 +31,7 @@ export function Inicio({ ir }: { ir: (r: string) => void }) {
   return (
     <main className="contenido">
       <h1 className="titulo">Hola, {nombre}</h1>
-      {mios.length === 0 ? (
+      {mios.length === 0 && !configurable ? (
         <div className="vacio">
           <p><b>Todavía no tienes ningún módulo en {empresa.nombre}.</b></p>
           <p>Los módulos se irán encendiendo según avance el plan. Si crees que deberías ver alguno, pídeselo a tu administrador.</p>
@@ -45,6 +45,13 @@ export function Inicio({ ir }: { ir: (r: string) => void }) {
               <small>{m.descripcion}</small>
             </button>
           ))}
+          {configurable && (
+            <button type="button" className="mosaico" style={{ ['--area' as string]: '#64748b' }} onClick={() => ir('/config')}>
+              <span className="mosaico-icono"><Icono d={ICONOS.ajustes} tam={26} /></span>
+              <b>Configuración</b>
+              <small>Naves, máquinas, almacenes, artículos, trabajadores…</small>
+            </button>
+          )}
         </div>
       )}
     </main>

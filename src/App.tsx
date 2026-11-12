@@ -8,6 +8,7 @@ import { Avisos, Icono, ICONOS, useRuta, Ventana } from './componentes/basicos';
 import { Problema } from './componentes/Problema';
 import { Entrar, NuevaClave } from './pantallas/Entrar';
 import { ElegirEmpresa, Inicio, PantallaModulo } from './pantallas/Inicio';
+import { IndiceConfiguracion, ListaCatalogo, useConfigurable } from './configuracion/Configuracion';
 
 export function App() {
   const { estado, empresa, salir, recargar } = useSesion();
@@ -15,6 +16,7 @@ export function App() {
   const [menu, setMenu] = useState(false);
   const [problema, setProblema] = useState(false);
   const { needRefresh: [hayNueva], updateServiceWorker } = useRegisterSW();
+  const configurable = useConfigurable();
 
   useEffect(() => { ponerEmpresaErrores(empresa?.id ?? null); }, [empresa]);
 
@@ -36,21 +38,25 @@ export function App() {
   else if (!empresa) cuerpo = <ElegirEmpresa />;
   else {
     const m = ruta.match(/^\/m\/([a-z]+)/);
-    cuerpo = m ? <PantallaModulo codigo={m[1]} ir={ir} /> : <Inicio ir={ir} />;
+    const cfg = ruta.match(/^\/config(?:\/([a-z_]+))?/);
+    cuerpo = m ? <PantallaModulo codigo={m[1]} ir={ir} />
+      : cfg ? (cfg[1] ? <ListaCatalogo key={cfg[1]} tabla={cfg[1]} ir={ir} /> : <IndiceConfiguracion ir={ir} />)
+      : <Inicio ir={ir} configurable={configurable} />;
   }
 
   const dentro = estado.fase === 'dentro';
   const modulo = moduloPorCodigo((ruta.match(/^\/m\/([a-z]+)/) ?? [])[1] ?? '');
+  const enConfig = ruta.startsWith('/config');
   const sesion = estado.fase === 'dentro' ? estado.sesion : null;
 
   return (
     <>
       {dentro && (
         <header className="cabecera" style={modulo ? { ['--area' as string]: modulo.color } : undefined}>
-          {modulo && <button type="button" className="boton-icono claro" aria-label="Volver al inicio" onClick={() => ir('/')}><Icono d={ICONOS.volver} /></button>}
+          {(modulo || enConfig) && <button type="button" className="boton-icono claro" aria-label="Volver al inicio" onClick={() => ir('/')}><Icono d={ICONOS.volver} /></button>}
           <div className="cabecera-txt">
-            <b>{modulo?.nombre ?? empresa?.nombre ?? 'Gestión de fábrica'}</b>
-            <small>{modulo ? empresa?.nombre : new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small>
+            <b>{modulo?.nombre ?? (enConfig ? 'Configuración' : empresa?.nombre ?? 'Gestión de fábrica')}</b>
+            <small>{modulo || enConfig ? empresa?.nombre : new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small>
           </div>
           <button type="button" className="boton-icono claro" aria-label="Tengo un problema" onClick={() => setProblema(true)}><Icono d={ICONOS.ayuda} /></button>
           <button type="button" className="boton-icono claro" aria-label="Menú" onClick={() => setMenu(true)}><Icono d={ICONOS.menu} /></button>
@@ -70,6 +76,11 @@ export function App() {
             {sesion.empresas.length > 1 && (
               <button type="button" className="fila" onClick={() => { try { localStorage.removeItem('fabrica.empresa'); } catch { /* */ } setMenu(false); location.hash = '/'; location.reload(); }}>
                 <span className="fila-icono"><Icono d={ICONOS.empresa} /></span><span className="fila-txt"><b>Cambiar de unidad de trabajo</b><small>Ahora: {empresa?.nombre ?? '—'}</small></span>
+              </button>
+            )}
+            {configurable && (
+              <button type="button" className="fila" onClick={() => { setMenu(false); ir('/config'); }}>
+                <span className="fila-icono"><Icono d={ICONOS.ajustes} /></span><span className="fila-txt"><b>Configuración</b><small>Naves, máquinas, almacenes, artículos, trabajadores…</small></span>
               </button>
             )}
             <button type="button" className="fila" onClick={() => { setMenu(false); setProblema(true); }}>
