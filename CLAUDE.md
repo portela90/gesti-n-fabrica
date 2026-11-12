@@ -3,6 +3,10 @@
 Plan completo: documento «Plan de la nueva app de planta (MAPRI y CIE)» (en Claude). Este repositorio es la app NUEVA;
 las apps de ahora siguen en `portela90/COLADA` y no se tocan desde aquí.
 
+## Nombres
+- En pantalla se dice **unidad de trabajo** (hoy: **Fábrica** y **Limpieza**); en la base de datos es `nucleo.empresas` / `empresa_id`.
+  Nunca escribir «empresa» en textos que vea el usuario.
+
 ## Reglas que no se rompen
 - Cristian habla español: textos, comentarios y nombres en español.
 - Solo servicios gratuitos.

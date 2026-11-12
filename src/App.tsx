@@ -69,7 +69,7 @@ export function App() {
           <div className="lista">
             {sesion.empresas.length > 1 && (
               <button type="button" className="fila" onClick={() => { try { localStorage.removeItem('fabrica.empresa'); } catch { /* */ } setMenu(false); location.hash = '/'; location.reload(); }}>
-                <span className="fila-icono"><Icono d={ICONOS.empresa} /></span><span className="fila-txt"><b>Cambiar de empresa</b><small>Ahora: {empresa?.nombre ?? '—'}</small></span>
+                <span className="fila-icono"><Icono d={ICONOS.empresa} /></span><span className="fila-txt"><b>Cambiar de unidad de trabajo</b><small>Ahora: {empresa?.nombre ?? '—'}</small></span>
               </button>
             )}
             <button type="button" className="fila" onClick={() => { setMenu(false); setProblema(true); }}>

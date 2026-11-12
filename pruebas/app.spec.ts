@@ -32,7 +32,7 @@ test('entrar con un enlace al correo: no crea usuarios nuevos', async ({ page })
   expect(otp?.cuerpo).toMatchObject({ email: 'jefe@ejemplo.com', create_user: false });
 });
 
-test('el menú solo trae los módulos que la base de datos permite (Empresa A: Almacén y Mantenimiento, sin Coladas)', async ({ page }) => {
+test('el menú solo trae los módulos que la base de datos permite (Unidad A: Almacén y Mantenimiento, sin Coladas)', async ({ page }) => {
   const err = vigilar(page);
   await simular(page, { dentro: true });
   await page.goto('./');
@@ -48,19 +48,19 @@ test('el menú solo trae los módulos que la base de datos permite (Empresa A: A
   expect(err).toEqual([]);
 });
 
-test('con dos empresas pregunta en cuál trabajar y la recuerda', async ({ page }) => {
+test('con dos unidades de trabajo pregunta en cuál trabajar y la recuerda', async ({ page }) => {
   await simular(page, { dentro: true, sesion: { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: true, empresa_actual: null }, empresas: [EMPRESA_A, EMPRESA_B] } });
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: '¿En qué empresa vas a trabajar?' })).toBeVisible();
-  await page.locator('.fila', { hasText: 'Empresa B' }).click();
+  await expect(page.getByRole('heading', { name: '¿En qué unidad de trabajo vas a trabajar?' })).toBeVisible();
+  await page.locator('.fila', { hasText: 'Unidad B' }).click();
   await expect(page.locator('.mosaico')).toHaveCount(3);
   await expect(page.locator('.mosaico', { hasText: 'Limpieza' })).toBeVisible();
   await page.reload();
-  await expect(page.locator('.cabecera')).toContainText('Empresa B');
+  await expect(page.locator('.cabecera')).toContainText('Unidad B');
   await page.getByRole('button', { name: 'Menú' }).click();
   await expect(page.locator('.menu-quien')).toContainText('Superadministrador');
   await expect(page.locator('#version')).toContainText('Versión ');
-  await expect(page.locator('.fila', { hasText: 'Cambiar de empresa' })).toBeVisible();
+  await expect(page.locator('.fila', { hasText: 'Cambiar de unidad de trabajo' })).toBeVisible();
 });
 
 test('quien entra pero no tiene usuario en la app ve un aviso claro', async ({ page }) => {
@@ -69,7 +69,7 @@ test('quien entra pero no tiene usuario en la app ve un aviso claro', async ({ p
   await expect(page.getByText('todavía no tienes acceso a la app')).toBeVisible();
 });
 
-test('«Tengo un problema» envía la incidencia con la pantalla, la versión y la empresa', async ({ page }) => {
+test('«Tengo un problema» envía la incidencia con la pantalla, la versión y la unidad de trabajo', async ({ page }) => {
   const llamadas = await simular(page, { dentro: true });
   await page.goto('./#/m/almacen');
   await page.getByRole('button', { name: 'Tengo un problema' }).click();

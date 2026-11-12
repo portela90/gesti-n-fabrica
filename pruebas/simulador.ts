@@ -13,8 +13,8 @@ export const sesionAuth = () => ({
   user: { id: USUARIO.id, aud: 'authenticated', role: 'authenticated', email: USUARIO.email, app_metadata: {}, user_metadata: {}, created_at: '2026-01-01T00:00:00Z' },
 });
 
-export const EMPRESA_A = { id: 'aaaaaaaa-0000-0000-0000-000000000001', codigo: 'empresa-a', nombre: 'Empresa A', modulos: ['almacen', 'mantenimiento'], permisos: ['almacen.stock.ver'] };
-export const EMPRESA_B = { id: 'bbbbbbbb-0000-0000-0000-000000000001', codigo: 'empresa-b', nombre: 'Empresa B', modulos: ['limpieza', 'personal', 'prevencion'], permisos: [] };
+export const EMPRESA_A = { id: 'aaaaaaaa-0000-0000-0000-000000000001', codigo: 'empresa-a', nombre: 'Unidad A', modulos: ['almacen', 'mantenimiento'], permisos: ['almacen.stock.ver'] };
+export const EMPRESA_B = { id: 'bbbbbbbb-0000-0000-0000-000000000001', codigo: 'empresa-b', nombre: 'Unidad B', modulos: ['limpieza', 'personal', 'prevencion'], permisos: [] };
 
 export interface Opciones {
   dentro?: boolean;            // ya ha entrado (sesión guardada en el navegador)

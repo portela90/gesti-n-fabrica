@@ -2,13 +2,13 @@ import { useSesion } from '../nucleo/sesion';
 import { MODULOS, moduloPorCodigo } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
 
-/** Elegir empresa (solo si tiene más de una y aún no ha elegido). */
+/** Elegir unidad de trabajo (en la base de datos, «empresa»): solo si tiene más de una y aún no ha elegido. */
 export function ElegirEmpresa() {
   const { estado, elegirEmpresa } = useSesion();
   if (estado.fase !== 'dentro') return null;
   return (
     <main className="contenido estrecho">
-      <h1 className="titulo">¿En qué empresa vas a trabajar?</h1>
+      <h1 className="titulo">¿En qué unidad de trabajo vas a trabajar?</h1>
       <div className="lista">
         {estado.sesion.empresas.map((e) => (
           <button key={e.id} type="button" className="fila" onClick={() => elegirEmpresa(e.id)}>
@@ -22,7 +22,7 @@ export function ElegirEmpresa() {
   );
 }
 
-/** Inicio: los módulos que esta persona puede usar en esta empresa (lo decide la base de datos). */
+/** Inicio: los módulos que esta persona puede usar en esta unidad de trabajo (lo decide la base de datos). */
 export function Inicio({ ir }: { ir: (r: string) => void }) {
   const { estado, empresa } = useSesion();
   if (estado.fase !== 'dentro' || !empresa) return null;
