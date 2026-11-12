@@ -1,12 +1,78 @@
+# Pruebas y publicación (como en COLADA):
+# - En «dev»: pruebas de la base de datos + montar la app + pruebas de pantallas. Si todo pasa, se pasa a «main».
+# - En «main»: se prueba otra vez y se publica la app en GitHub Pages.
+#   (GitHub no lanza otra ejecución cuando es la propia tarea la que sube a main, por eso «publicar» la lanza a mano.)
 name: Pruebas
 on:
   push:
-  pull_request:
+    branches: [dev, main]
+  workflow_dispatch:
+permissions:
+  contents: write
+  actions: write
+  pages: write
+  id-token: write
+concurrency:
+  group: pruebas-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  base-de-datos:
+  pruebas:
     runs-on: ubuntu-24.04
-    timeout-minutes: 10
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      # las máquinas de GitHub ya traen PostgreSQL 16 instalado (parado): el script lo arranca en una carpeta temporal
-      - run: scripts/probar-bd.sh
+      - name: Base de datos (migraciones y permisos)
+        run: scripts/probar-bd.sh
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Montar la app (comprueba los tipos)
+        run: npm run build
+      - run: timeout 180 npx playwright install --with-deps chromium || npx playwright install chromium
+      - name: Pruebas de pantallas
+        run: npx playwright test
+        env:
+          CI: "1"
+      - name: Guardar resultados si algo falla
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: resultados-pruebas
+          path: test-results
+          retention-days: 7
+      - name: Preparar la web para publicar
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+  publicar:
+    needs: pruebas
+    if: github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Pasar dev a main y lanzar la publicación
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git checkout -B main origin/main
+          git merge --ff-only origin/dev || git merge --no-edit origin/dev
+          git push origin main
+          gh workflow run pruebas.yml --ref main
+  web:
+    needs: pruebas
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.despliegue.outputs.page_url }}
+    steps:
+      - id: despliegue
+        uses: actions/deploy-pages@v4

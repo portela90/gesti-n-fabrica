@@ -9,13 +9,17 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
         proveedores, personas, usuarios, ajustes, campos extra, archivos, firmas, incidencias, errores, versiones.
   - [x] Roles, permisos y seguridad por fila; historial de cambios; firmas e historial que no se pueden borrar.
   - [x] Pruebas de permisos (`scripts/probar-bd.sh`).
-  - [ ] App (web instalable): entrar (correo, enlace o PIN), elegir empresa, menú según permisos.
+  - [x] App (web instalable): entrar con correo y contraseña o con enlace, elegir empresa, menú según permisos,
+        versión visible, «Tengo un problema», registro de errores, aviso de versión nueva.
+  - [ ] Entrar con nombre y PIN (operarios): llega con el primer módulo que lo necesite.
   - [ ] Configuración: pantallas para dar de alta naves, máquinas, almacenes, artículos, personas, usuarios y roles.
   - [ ] Soporte: versión visible, «Tengo un problema», registro de errores, panel de salud.
   - [ ] Copias nocturnas y aviso diario para que Supabase no se pause.
 
 ## Carpetas
 ```
+src/                   la app (React + TypeScript): nucleo/, componentes/, pantallas/
+pruebas/               pruebas de pantallas (Playwright) y el Supabase simulado
 supabase/migrations/   cambios de la base de datos, en orden (0001_nucleo.sql, 0002_permisos.sql…)
 supabase/pruebas/      pruebas de la base de datos (00 = imitar Supabase en local)
 scripts/               herramientas (probar-bd.sh)
@@ -24,6 +28,13 @@ docs/                  cómo está hecha la app
 
 ## Probar
 ```
-scripts/probar-bd.sh
+npm install
+scripts/probar-bd.sh      # base de datos (necesita PostgreSQL 15 o más; no usa ningún Supabase)
+npm run build             # montar la app en dist/
+npx playwright test       # pantallas, con Supabase simulado
+npm run dev               # la app en local
 ```
-Necesita PostgreSQL 15 o más instalado (no usa ningún Supabase).
+
+## Publicar
+Subir a la rama `dev`. GitHub pasa todas las pruebas y, si van bien, pasa los cambios a `main` y publica la app en
+https://portela90.github.io/gesti-n-fabrica/ (nunca se sube a `main` a mano).

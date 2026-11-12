@@ -15,9 +15,14 @@ las apps de ahora siguen en `portela90/COLADA` y no se tocan desde aquí.
 - Aplicar migraciones al Supabase de verdad o desplegar funciones: solo con el «sí» explícito de Cristian.
 - Nunca datos reales en las pruebas: empresas y personas inventadas.
 
+## Publicar
+- Subir SIEMPRE a `dev` (`git push origin HEAD:dev`); GitHub prueba y pasa a `main`, y publica en GitHub Pages. Nunca a `main` a mano.
+
 ## Probar
 - `scripts/probar-bd.sh`: Postgres de usar y tirar, imita Supabase, aplica las migraciones y pasa `supabase/pruebas/`.
   Cada archivo de pruebas va en una transacción con `rollback` y usa `pruebas.ok / pruebas.falla / pruebas.cuantas`.
+- `npm run build` y `npx playwright test` (pruebas de pantallas con Supabase simulado en `pruebas/simulador.ts`;
+  incluyen que nada se aplaste a 320 px).
 - Para probar como un usuario: `set role authenticated; select set_config('request.jwt.claim.sub', '<uuid>', true);`
 
 ## Permisos
