@@ -20,6 +20,11 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
   - [ ] Roles propios de cada unidad (crear y ajustar permisos desde la app).
   - [x] Soporte: versión visible, «Tengo un problema», registro de errores, panel «Salud de la app» (superadministrador).
   - [x] Copia nocturna cifrada (`.github/workflows/copia-nocturna.yml`, ver `docs/copias.md`) que además mantiene activo Supabase.
+- **Fase 1 · Personal y Prevención** — en curso.
+  - [x] Calendario laboral (`src/personal/`, esquema `personal`): días por equipo, vacaciones, enviar a firmar, firmar
+        con el dedo (conforme o con observaciones), quién ha firmado, imprimir o PDF.
+  - [ ] Entrar con nombre y PIN; traer los datos de limpieza-cie.
+  - [ ] Prevención (Toolbox).
 
 ## Carpetas
 ```

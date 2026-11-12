@@ -1,6 +1,6 @@
 # Estado del proyecto (para empezar una conversación nueva)
 
-Última actualización: 12/11/2026. Léelo junto con `CLAUDE.md` y `README.md`.
+Última actualización: 12/11/2026 (noche). Léelo junto con `CLAUDE.md` y `README.md`.
 
 ## Qué es
 App nueva de planta para MAPRI y CIE que sustituye poco a poco a las apps de ahora (repo `portela90/COLADA`:
@@ -25,10 +25,33 @@ independientes, con roles y permisos por unidad de trabajo y nave. Plan completo
   puestos; primera copia OK: 43 tablas). Ver `docs/copias.md`.
 - Datos reales dados de alta: Fábrica → «NAVE 1» (código interno `nave`). Nada más todavía.
 
-## Siguiente: Fase 1 (Personal y Prevención)
+## Fase 1 (Personal y Prevención): EN CURSO
 Calendario laboral (festivos, cierres, vacaciones, firmas) y Toolbox (charlas, EPIs, formación, firmas mensuales).
 Migrar desde limpieza-cie (tablas `cal_dia`, `cal_vac`, `cal_firma`, `prl_*`) con historial completo y comprobar
 que cuadra antes de dejar la app vieja en solo consulta.
+
+### 1.1 Calendario laboral (Personal): HECHO EN EL CÓDIGO, falta ponerlo en marcha
+- Migraciones nuevas, **sin aplicar todavía** en Supabase (las pega Cristian en el SQL Editor, en orden):
+  - `0008_firma_imagen.sql`: la imagen de la firma (PNG) se guarda en `nucleo.firmas.imagen` (sin Storage).
+  - `0009_personal_calendario.sql`: esquema `personal` con `dias` (por equipo), `vacaciones`, `envios` (foto fija
+    del calendario + huella sha256; solo se anulan) y la vista `v_envios` (pendiente / firmado / anulado).
+    Funciones: `marcar_dias`, `copiar_dias`, `enviar_calendario`, `anular_envio`, `firmar_calendario`.
+    Permisos `personal.*` (tarea.ver, calendario.ver/editar, vacaciones.editar, firma.enviar/ver/recoger, historial.ver).
+- Después de aplicarlas: añadir `personal` a «Exposed schemas» y encender el módulo Personal en Limpieza.
+- Pantallas (`src/personal/`): Mi calendario (ver y firmar con el dedo, conforme o con observaciones), Calendario
+  (tocar días y marcarlos, también en el otro equipo; copiar de otro equipo), Vacaciones, Firmas (quién ha firmado,
+  enviar a firmar, anular, ver la firma). «Imprimir o PDF» con el diálogo de imprimir del móvil.
+  Recuadro de firma reutilizable: `src/componentes/Firma.tsx` (lo usará Prevención).
+- Pruebas: `supabase/pruebas/40-personal-calendario.sql` (49) y `pruebas/personal.spec.ts` (5).
+
+### Lo siguiente de la Fase 1, en orden
+1. **Dar de alta Limpieza de verdad**: equipos Semana y Fin de semana y los trabajadores (desde limpieza-cie).
+2. **Entrar con nombre y PIN** (operarios): hace falta para que firmen en su móvil. Por decidir cómo (ver abajo).
+3. **Traer los datos del calendario** de limpieza-cie (`cal_dia` → `personal.dias`, `cal_vac` → `personal.vacaciones`,
+   `cal_firma` está vacía) con `origen` = tabla:id vieja, y comprobar que cuadra.
+4. **Prevención** (Toolbox): datos del trabajador, charlas mensuales, formación F40R304, documentos PRL y EPIs,
+   certificados, tallas, expediente PDF. Y traer `prl_*`.
+5. App vieja de Calendario y Toolbox en solo consulta.
 
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).

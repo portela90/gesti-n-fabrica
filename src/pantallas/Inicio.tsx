@@ -1,6 +1,7 @@
 import { useSesion } from '../nucleo/sesion';
 import { MODULOS, moduloPorCodigo } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
+import { Personal } from '../personal/Personal';
 
 /** Elegir unidad de trabajo (en la base de datos, «empresa»): solo si tiene más de una y aún no ha elegido. */
 export function ElegirEmpresa() {
@@ -59,7 +60,7 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
 }
 
 /** Pantalla de un módulo (mientras no llega, dice en qué fase llega). */
-export function PantallaModulo({ codigo, ir }: { codigo: string; ir: (r: string) => void }) {
+export function PantallaModulo({ codigo, ruta, ir }: { codigo: string; ruta: string; ir: (r: string) => void }) {
   const { empresa } = useSesion();
   const m = moduloPorCodigo(codigo);
   if (!m || !empresa?.modulos.includes(codigo)) {
@@ -70,6 +71,7 @@ export function PantallaModulo({ codigo, ir }: { codigo: string; ir: (r: string)
       </main>
     );
   }
+  if (codigo === 'personal') return <Personal ruta={ruta} ir={ir} />;
   return (
     <main className="contenido estrecho" style={{ ['--area' as string]: m.color }}>
       <h1 className="titulo con-icono"><span className="mosaico-icono"><Icono d={m.icono} /></span>{m.nombre}</h1>
