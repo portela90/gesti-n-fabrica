@@ -1,0 +1,12 @@
+name: Pruebas
+on:
+  push:
+  pull_request:
+jobs:
+  base-de-datos:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      # las máquinas de GitHub ya traen PostgreSQL 16 instalado (parado): el script lo arranca en una carpeta temporal
+      - run: scripts/probar-bd.sh
