@@ -4,10 +4,11 @@ import { test, expect, type Page } from '@playwright/test';
 import { simular, desbordes, vigilar, USUARIO } from './simulador';
 
 const UNIDAD = 'cccccccc-0000-0000-0000-000000000001';
-const SEMANA = 'cccccccc-0000-0000-0000-0000000000e1';
-const FINDE = 'cccccccc-0000-0000-0000-0000000000e2';
+const SEMANA = 'cccccccc-0000-0000-0000-0000000000e1'; // calendario «Semana»
+const FINDE = 'cccccccc-0000-0000-0000-0000000000e2';  // calendario «Fin de semana»
 const ANA = 'cccccccc-0000-0000-0000-0000000000f1';
 const BRUNO = 'cccccccc-0000-0000-0000-0000000000f2';
+const CARLA = 'cccccccc-0000-0000-0000-0000000000f3';
 const ANIO = new Date().getFullYear();
 
 const PERMISOS_JEFE = ['nucleo.persona.ver', 'personal.calendario.editar', 'personal.calendario.ver', 'personal.firma.enviar',
@@ -23,28 +24,40 @@ const foto = (persona: string) => ({
   vacaciones: [{ desde: `${ANIO}-08-03`, hasta: `${ANIO}-08-14`, nota: 'Verano' }],
 });
 const envio = (persona: string, estado: 'pendiente' | 'firmado') => ({
-  id: 'env-' + persona.slice(-2), empresa_id: UNIDAD, anio: ANIO, equipo_id: SEMANA, persona_id: persona, datos: foto(persona), sha256: 'a'.repeat(64),
+  id: 'env-' + persona.slice(-2), empresa_id: UNIDAD, anio: ANIO, calendario_id: SEMANA, persona_id: persona, datos: foto(persona), sha256: 'a'.repeat(64),
   enviado: `${ANIO}-01-10T09:00:00Z`, anulado: null, estado, firmado_en: estado === 'firmado' ? `${ANIO}-01-11T10:00:00Z` : null,
   conforme: estado === 'firmado' ? true : null, comentario: null, firma_imagen: null,
 });
 
 const tablas = () => ({
-  equipos: [{ id: SEMANA, empresa_id: UNIDAD, nombre: 'Semana', dias: [1, 2, 3, 4, 5], baja: null }, { id: FINDE, empresa_id: UNIDAD, nombre: 'Fin de semana', dias: [0, 6], baja: null }],
-  personas: [{ id: ANA, empresa_id: UNIDAD, nombre: 'Ana Prueba', equipo_id: SEMANA, baja: null }, { id: BRUNO, empresa_id: UNIDAD, nombre: 'Bruno Prueba', equipo_id: SEMANA, baja: null }],
+  calendarios: [{ id: SEMANA, empresa_id: UNIDAD, anio: ANIO, nombre: 'Semana', dias_semana: [1, 2, 3, 4, 5] }, { id: FINDE, empresa_id: UNIDAD, anio: ANIO, nombre: 'Fin de semana', dias_semana: [0, 6] }],
+  calendario_personas: [{ empresa_id: UNIDAD, anio: ANIO, persona_id: ANA, calendario_id: SEMANA }, { empresa_id: UNIDAD, anio: ANIO, persona_id: BRUNO, calendario_id: SEMANA }],
+  personas: [{ id: ANA, empresa_id: UNIDAD, nombre: 'Ana Prueba', baja: null }, { id: BRUNO, empresa_id: UNIDAD, nombre: 'Bruno Prueba', baja: null },
+    { id: CARLA, empresa_id: UNIDAD, nombre: 'Carla Finde', baja: null }],
   usuarios: [{ id: USUARIO.id, nombre: 'Ana Prueba', persona_id: ANA }],
-  dias: [{ empresa_id: UNIDAD, equipo_id: SEMANA, fecha: `${ANIO}-01-01`, tipo: 'festivo', nombre: 'Año nuevo', horario: null }],
+  dias: [{ empresa_id: UNIDAD, calendario_id: SEMANA, fecha: `${ANIO}-01-01`, tipo: 'festivo', nombre: 'Año nuevo', horario: null }],
   vacaciones: [{ id: 'v1', empresa_id: UNIDAD, persona_id: ANA, desde: `${ANIO}-08-03`, hasta: `${ANIO}-08-14`, nota: 'Verano' }],
   v_envios: [envio(ANA, 'firmado'), envio(BRUNO, 'pendiente')],
 });
 
 const rpc = {
   marcar_dias: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
-    const fechas = b.p_fechas as string[], equipos = b.p_equipos as string[];
-    t.dias.splice(0, t.dias.length, ...t.dias.filter((d) => !(equipos.includes(String(d.equipo_id)) && fechas.includes(String(d.fecha)))));
-    if (b.p_tipo) for (const e of equipos) for (const f of fechas) t.dias.push({ empresa_id: UNIDAD, equipo_id: e, fecha: f, tipo: b.p_tipo, nombre: b.p_nombre, horario: b.p_horario });
-    return fechas.length * equipos.length;
+    const fechas = b.p_fechas as string[], cals = b.p_calendarios as string[];
+    t.dias.splice(0, t.dias.length, ...t.dias.filter((d) => !(cals.includes(String(d.calendario_id)) && fechas.includes(String(d.fecha)))));
+    if (b.p_tipo) for (const c of cals) for (const f of fechas) t.dias.push({ empresa_id: UNIDAD, calendario_id: c, fecha: f, tipo: b.p_tipo, nombre: b.p_nombre, horario: b.p_horario });
+    return fechas.length * cals.length;
   },
   enviar_calendario: (b: Record<string, unknown>) => (b.p_personas as string[]).length,
+  poner_personas: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    const ps = b.p_personas as string[];
+    t.calendario_personas.splice(0, t.calendario_personas.length, ...t.calendario_personas.filter((m) => m.calendario_id !== b.p_calendario && !ps.includes(String(m.persona_id))));
+    for (const p of ps) t.calendario_personas.push({ empresa_id: UNIDAD, anio: ANIO, persona_id: p, calendario_id: b.p_calendario });
+    return ps.length;
+  },
+  copiar_dias: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    const de = t.dias.filter((d) => d.calendario_id === b.p_de).map((d) => ({ ...d, calendario_id: b.p_a }));
+    t.dias.push(...de); return de.length;
+  },
   firmar_calendario: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
     if (!String(b.p_imagen).startsWith('data:image/png;base64,')) throw new Error('FIRMA_MAL');
     Object.assign(t.v_envios.find((e) => e.id === b.p_envio)!, { estado: 'firmado', firmado_en: new Date().toISOString(), conforme: b.p_conforme });
@@ -77,7 +90,7 @@ test('el jefe marca dos festivos en el calendario del equipo', async ({ page }) 
   await expect(page.locator('.lista-dias').first()).toContainText('Fiesta local');
   const llamada = sim.find((l) => l.ruta.includes('/rpc/marcar_dias'))!;
   expect(llamada.perfil).toBe('personal');
-  expect(llamada.cuerpo).toMatchObject({ p_empresa: UNIDAD, p_equipos: [SEMANA, FINDE], p_fechas: [`${ANIO}-01-06`, `${ANIO}-03-19`], p_tipo: 'festivo', p_nombre: 'Fiesta local' });
+  expect(llamada.cuerpo).toMatchObject({ p_calendarios: [SEMANA, FINDE], p_fechas: [`${ANIO}-01-06`, `${ANIO}-03-19`], p_tipo: 'festivo', p_nombre: 'Fiesta local' });
   expect(errores).toEqual([]);
 });
 
@@ -88,7 +101,7 @@ test('desde el calendario: elegir días y ponerlos de vacaciones a quien se quie
   await expect(page.locator('.lista-dias').last()).toContainText('Ana Prueba');
   for (const d of ['^20 de abril', '^21 de abril', '^24 de abril']) await page.getByRole('button', { name: new RegExp(d) }).click();
   await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
-  await page.getByRole('dialog').locator('.opcion', { hasText: 'Para todo el equipo' }).click();
+  await page.getByRole('dialog').locator('.opcion', { hasText: 'Para todos los de este calendario' }).click();
   await expect(page.getByText('¿Quién? (2 de 2)')).toBeVisible();
   await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').uncheck();
   await page.getByLabel('Nota (opcional)').fill('Semana Santa');
@@ -97,6 +110,31 @@ test('desde el calendario: elegir días y ponerlos de vacaciones a quien se quie
   const nuevas = sim.tablas.vacaciones.filter((v) => v.nota === 'Semana Santa');
   expect(nuevas.map((v) => [v.persona_id, v.desde, v.hasta])).toEqual([[ANA, `${ANIO}-04-20`, `${ANIO}-04-21`], [ANA, `${ANIO}-04-24`, `${ANIO}-04-24`]]);
   await expect(page.locator('.lista-dias').last()).toContainText('Semana Santa');
+  expect(errores).toEqual([]);
+});
+
+test('crear un calendario solo para algunos, copiando los días de otro', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/calendario');
+  await expect(page.getByRole('button', { name: 'Para 2 personas · cambiar' })).toBeVisible();
+  await page.getByRole('button', { name: '+ Nuevo calendario' }).click();
+  await page.getByLabel('Nombre').fill(`Refuerzo ${ANIO}`);
+  await page.getByRole('group', { name: 'Días de la semana que se trabaja' }).getByRole('button', { name: 'M', exact: true }).click();
+  await page.getByRole('group', { name: 'Días de la semana que se trabaja' }).getByRole('button', { name: 'J', exact: true }).click();
+  await page.getByLabel('Copiar los días marcados de (opcional)').selectOption({ label: 'Semana' });
+  await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').check();
+  await expect(page.locator('.fila.check', { hasText: 'Bruno Prueba' })).toContainText('Ahora en «Semana»');
+  await expect(page.getByText('1 persona se cambiará a este')).toBeVisible();
+  await page.getByRole('button', { name: 'Crear' }).click();
+  await expect(page.getByText('Calendario creado')).toBeVisible();
+  const nuevo = sim.tablas.calendarios.find((c) => c.nombre === `Refuerzo ${ANIO}`)!;
+  expect(nuevo).toMatchObject({ empresa_id: UNIDAD, anio: ANIO, dias_semana: [1, 3, 5] });
+  expect(sim.find((l) => l.ruta.includes('/rpc/poner_personas'))!.cuerpo).toEqual({ p_calendario: nuevo.id, p_personas: [BRUNO] });
+  expect(sim.find((l) => l.ruta.includes('/rpc/copiar_dias'))!.cuerpo).toEqual({ p_de: SEMANA, p_a: nuevo.id });
+  await expect(page.getByLabel('Calendario')).toHaveValue(String(nuevo.id));
+  await expect(page.getByRole('button', { name: 'Para 1 persona · cambiar' })).toBeVisible();
+  await expect(page.locator('.lista-dias').first()).toContainText('Año nuevo');
   expect(errores).toEqual([]);
 });
 
@@ -126,7 +164,7 @@ test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', 
   await page.getByLabel('Elegir a Bruno Prueba').check();
   await page.getByRole('button', { name: 'Enviar a firmar (1)' }).click();
   await expect(page.getByText('Enviado a 1 trabajador')).toBeVisible();
-  expect(sim.find((l) => l.ruta.includes('/rpc/enviar_calendario'))!.cuerpo).toMatchObject({ p_empresa: UNIDAD, p_anio: ANIO, p_equipo: SEMANA, p_personas: [BRUNO] });
+  expect(sim.find((l) => l.ruta.includes('/rpc/enviar_calendario'))!.cuerpo).toMatchObject({ p_calendario: SEMANA, p_personas: [BRUNO] });
 });
 
 test('la trabajadora ve su calendario pendiente y lo firma con el dedo', async ({ page }) => {

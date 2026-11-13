@@ -210,3 +210,4 @@ button.dia { cursor: pointer; }
 .tabla-firmas th, .tabla-firmas td { border: 1px solid var(--linea); padding: 6px 8px; text-align: left; vertical-align: middle; }
 .tabla-firmas img { height: 42px; max-width: 140px; object-fit: contain; }
 @media print { .charla img { max-height: 180px; } .tabla-firmas img, .firma-mini { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+.acciones-cal { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: -4px 0 12px; }

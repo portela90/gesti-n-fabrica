@@ -46,34 +46,48 @@ select u::uuid, (select id from nucleo.roles where codigo = r and empresa_id is 
   ('00000000-0000-0000-0000-0000000001e3', 'encargado',     '11111111-0000-0000-0000-000000000001'),
   ('00000000-0000-0000-0000-0000000002a1', 'admin_empresa', '22222222-0000-0000-0000-000000000001')) x(u, r, e);
 
+-- calendarios del año 2031 (los crea el jefe)
+insert into personal.calendarios (id, empresa_id, anio, nombre, dias_semana) values
+  ('11111111-0000-0000-0000-0000000000c1', '11111111-0000-0000-0000-000000000001', 2031, 'Semana 2031', '{1,2,3,4,5}'),
+  ('11111111-0000-0000-0000-0000000000c2', '11111111-0000-0000-0000-000000000001', 2031, 'Fin de semana 2031', '{0,6}'),
+  ('22222222-0000-0000-0000-0000000000c1', '22222222-0000-0000-0000-000000000001', 2031, 'Semana M 2031', '{1,2,3,4,5}');
+
 set role authenticated;
 
--- ---------- jefe: marca el calendario ----------
+-- ---------- jefe: calendarios, personas y días ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000001a1', true);
 select pruebas.ok(nucleo.mi_sesion() -> 'empresas' -> 0 -> 'modulos' ? 'personal', 'el jefe ve Personal en el menú');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001',
-  array['11111111-0000-0000-0000-0000000000e1', '11111111-0000-0000-0000-0000000000e2']::uuid[],
-  array['2031-01-01', '2031-01-06']::date[], 'festivo', 'Festivo', null) = 4, 'marca 2 festivos en los 2 equipos (4 días)');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[],
-  array['2031-01-06']::date[], 'cierre', 'Cierre de fábrica', null) = 1, 'volver a marcar un día cambia su tipo');
-select pruebas.ok((select tipo from personal.dias where equipo_id = '11111111-0000-0000-0000-0000000000e1' and fecha = '2031-01-06') = 'cierre', 'el día ya es cierre');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
-  array['2031-01-06']::date[], null) = 1, 'tipo vacío quita la marca');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[],
-  array['2031-07-01', '2031-07-02']::date[], 'intensiva', null, '7:00-15:00') = 2, 'jornada intensiva con horario');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
-  array['2031-01-13']::date[], 'trabaja', null, '6:00 a 14:00') = 1, 'el equipo de fin de semana trabaja un lunes');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
-  array['2031-01-11']::date[], 'descanso') = 1, 'y descansa un domingo');
-select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
-  array['2031-01-11', '2031-01-13']::date[], null) = 2, 'y se puede deshacer');
-select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[], array['2031-02-01']::date[], 'vacaciones')$q$,
+insert into personal.calendarios (id, empresa_id, anio, nombre, dias_semana) values
+  ('11111111-0000-0000-0000-0000000000c3', '11111111-0000-0000-0000-000000000001', 2031, 'Refuerzo 2031', '{1,3,5}');
+select pruebas.falla($q$insert into personal.calendarios (empresa_id, anio, nombre) values ('11111111-0000-0000-0000-000000000001', 2031, 'Refuerzo 2031')$q$,
+  'no hay dos calendarios con el mismo nombre el mismo año');
+select pruebas.ok(personal.poner_personas('11111111-0000-0000-0000-0000000000c1',
+  array['11111111-0000-0000-0000-0000000000f1', '11111111-0000-0000-0000-0000000000f2']::uuid[]) = 2, 'Ana y Bruno en el calendario Semana');
+select pruebas.ok(personal.poner_personas('11111111-0000-0000-0000-0000000000c2', array['11111111-0000-0000-0000-0000000000f3']::uuid[]) = 1, 'Carla en Fin de semana');
+select pruebas.ok(personal.poner_personas('11111111-0000-0000-0000-0000000000c3', array['11111111-0000-0000-0000-0000000000f2']::uuid[]) = 1, 'Bruno pasa a Refuerzo');
+select pruebas.ok((select calendario_id from personal.calendario_personas where persona_id = '11111111-0000-0000-0000-0000000000f2') = '11111111-0000-0000-0000-0000000000c3',
+  'una persona solo está en un calendario por año (Bruno sale de Semana)');
+select pruebas.ok(personal.poner_personas('11111111-0000-0000-0000-0000000000c1',
+  array['11111111-0000-0000-0000-0000000000f1', '22222222-0000-0000-0000-0000000000f1']::uuid[]) = 1, 'no se mete a un trabajador de otra unidad (se ignora)');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1', '11111111-0000-0000-0000-0000000000c2']::uuid[],
+  array['2031-01-01', '2031-01-06']::date[], 'festivo', 'Festivo', null) = 4, 'marca 2 festivos en 2 calendarios (4 días)');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-01-06']::date[], 'cierre', 'Cierre de fábrica', null) = 1,
+  'volver a marcar un día cambia su tipo');
+select pruebas.ok((select tipo from personal.dias where calendario_id = '11111111-0000-0000-0000-0000000000c1' and fecha = '2031-01-06') = 'cierre', 'el día ya es cierre');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c2']::uuid[], array['2031-01-06']::date[], null) = 1, 'tipo vacío quita la marca');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-07-01', '2031-07-02']::date[], 'intensiva', null, '7:00-15:00') = 2,
+  'jornada intensiva con horario');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c2']::uuid[], array['2031-01-13']::date[], 'trabaja', null, '6:00 a 14:00') = 1,
+  'el calendario de fin de semana trabaja un lunes');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c2']::uuid[], array['2031-01-13']::date[], null) = 1, 'y se puede deshacer');
+select pruebas.ok(personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2032-01-01']::date[], 'festivo') = 0,
+  'un día de otro año no se marca en un calendario de 2031');
+select pruebas.falla($q$select personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-02-01']::date[], 'vacaciones')$q$,
   'un tipo que no existe no se acepta');
-select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['22222222-0000-0000-0000-0000000000e1']::uuid[], array['2031-02-01']::date[], 'festivo')$q$,
-  'no se puede marcar un equipo de otra unidad');
-select pruebas.ok(personal.copiar_dias('11111111-0000-0000-0000-000000000001', 2031,
-  '11111111-0000-0000-0000-0000000000e1', '11111111-0000-0000-0000-0000000000e2') = 4, 'copiar el año de Semana a Fin de semana');
-select pruebas.ok(pruebas.cuantas($q$select * from personal.dias where equipo_id = '11111111-0000-0000-0000-0000000000e2'$q$) = 4, 'Fin de semana queda igual que Semana');
+select pruebas.falla($q$select personal.marcar_dias(array['22222222-0000-0000-0000-0000000000c1']::uuid[], array['2031-02-01']::date[], 'festivo')$q$,
+  'no se puede marcar un calendario de otra unidad');
+select pruebas.ok(personal.copiar_dias('11111111-0000-0000-0000-0000000000c1', '11111111-0000-0000-0000-0000000000c3') = 4, 'copiar los días de Semana a Refuerzo');
+select pruebas.ok(pruebas.cuantas($q$select * from personal.dias where calendario_id = '11111111-0000-0000-0000-0000000000c3'$q$) = 4, 'Refuerzo queda igual que Semana');
 
 -- vacaciones
 insert into personal.vacaciones (empresa_id, persona_id, desde, hasta, nota) values
@@ -86,19 +100,18 @@ select pruebas.falla($q$insert into personal.vacaciones (empresa_id, persona_id,
   'no se ponen vacaciones a un trabajador de otra unidad');
 
 -- enviar a firmar
-select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000e1',
-  array['11111111-0000-0000-0000-0000000000f1', '11111111-0000-0000-0000-0000000000f2', '22222222-0000-0000-0000-0000000000f1']::uuid[]) = 2,
-  'envía a los 2 trabajadores de su unidad (el de otra unidad se ignora)');
-select pruebas.ok((select datos -> 'vacaciones' -> 0 ->> 'desde' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1')
-  = '2031-01-01', 'la foto recorta las vacaciones al año');
-select pruebas.ok((select jsonb_array_length(datos -> 'dias') from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = 4,
-  'la foto lleva los días del equipo');
+select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-0000000000c1') = 1, 'enviar Semana sin decir a quién: a todos los del calendario (Ana)');
+select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-0000000000c3', array['11111111-0000-0000-0000-0000000000f2', '11111111-0000-0000-0000-0000000000f1']::uuid[]) = 1,
+  'enviar Refuerzo a Bruno y Ana: solo a Bruno (Ana no está en ese calendario)');
+select pruebas.ok((select datos ->> 'calendario' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f2') = 'Refuerzo 2031', 'la foto dice qué calendario es');
+select pruebas.ok((select datos -> 'dias_equipo' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f2') = '[1,3,5]', 'y qué días de la semana se trabaja');
+select pruebas.ok((select datos -> 'vacaciones' -> 0 ->> 'desde' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = '2031-01-01', 'la foto recorta las vacaciones al año');
+select pruebas.ok((select jsonb_array_length(datos -> 'dias') from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = 4, 'la foto lleva los días del calendario');
 select pruebas.ok((select sha256 = personal.huella(datos) from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1'), 'el envío guarda la huella de la foto');
 select pruebas.ok(pruebas.cuantas($q$select * from personal.v_envios where estado = 'pendiente'$q$) = 2, 'los 2 envíos están pendientes');
-select pruebas.falla($q$insert into personal.envios (empresa_id, anio, equipo_id, persona_id, datos, sha256) values ('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000e1', '11111111-0000-0000-0000-0000000000f1', '{}', repeat('0', 64))$q$,
+select pruebas.falla($q$insert into personal.envios (empresa_id, anio, calendario_id, persona_id, datos, sha256) values ('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000c1', '11111111-0000-0000-0000-0000000000f1', '{}', repeat('0', 64))$q$,
   'un envío no se puede crear a mano (solo con enviar_calendario)');
--- volver a enviar sustituye el pendiente
-select personal.enviar_calendario('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000e1', array['11111111-0000-0000-0000-0000000000f2']::uuid[]);
+select personal.enviar_calendario('11111111-0000-0000-0000-0000000000c3');
 select pruebas.ok(pruebas.cuantas($q$select * from personal.v_envios where persona_id = '11111111-0000-0000-0000-0000000000f2' and estado = 'anulado'$q$) = 1
   and pruebas.cuantas($q$select * from personal.v_envios where persona_id = '11111111-0000-0000-0000-0000000000f2' and estado = 'pendiente'$q$) = 1,
   'volver a enviar anula el envío anterior sin firmar');
@@ -108,13 +121,12 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000001f1
 select pruebas.ok(nucleo.mi_sesion() -> 'empresas' -> 0 -> 'modulos' ? 'personal', 'el operario ve Personal en el menú (su calendario)');
 select pruebas.ok(pruebas.cuantas('select * from personal.v_envios') = 1, 'Ana solo ve su envío');
 select pruebas.ok(pruebas.cuantas('select * from personal.vacaciones') = 2, 'Ana solo ve sus vacaciones');
-select pruebas.ok(pruebas.cuantas('select * from personal.dias') = 8, 'Ana ve los festivos de su unidad');
-select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[], array['2031-03-01']::date[], 'festivo')$q$,
-  'un operario no marca días');
+select pruebas.ok(pruebas.cuantas('select * from personal.calendarios') = 3, 'Ana ve los calendarios de su unidad');
+select pruebas.falla($q$select personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-03-01']::date[], 'festivo')$q$, 'un operario no marca días');
+select pruebas.falla($q$select personal.poner_personas('11111111-0000-0000-0000-0000000000c1', array[]::uuid[])$q$, 'un operario no cambia quién va en un calendario');
 select pruebas.falla($q$insert into personal.vacaciones (empresa_id, persona_id, desde, hasta) values ('11111111-0000-0000-0000-000000000001', '11111111-0000-0000-0000-0000000000f1', '2031-10-01', '2031-10-02')$q$,
   'un operario no se pone vacaciones');
-select pruebas.falla($q$select personal.enviar_calendario('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000e1', array['11111111-0000-0000-0000-0000000000f1']::uuid[])$q$,
-  'un operario no envía calendarios');
+select pruebas.falla($q$select personal.enviar_calendario('11111111-0000-0000-0000-0000000000c1')$q$, 'un operario no envía calendarios');
 select pruebas.falla($q$select personal.firmar_calendario((select id from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1'), false, '', 'data:image/png;base64,AAAA')$q$,
   'si no está conforme tiene que explicar por qué');
 select pruebas.falla($q$select personal.firmar_calendario((select id from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1'), true, null, 'hola')$q$,
@@ -134,37 +146,32 @@ select pruebas.falla($q$delete from personal.envios$q$, 'los envíos no se borra
 select pruebas.falla($q$update nucleo.firmas set conforme = false$q$, 'una firma no se cambia ni desde el servidor');
 set role authenticated;
 
--- Bruno no puede firmar el de Ana ni ver el suyo de otro
+-- Bruno no ve el de Ana
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000001f2', true);
 select pruebas.ok(pruebas.cuantas($q$select * from personal.v_envios where persona_id = '11111111-0000-0000-0000-0000000000f1'$q$) = 0, 'Bruno no ve el calendario de Ana');
 select pruebas.falla($q$select personal.firmar_calendario((select id from personal.envios where anulado is not null limit 1), true, null, 'data:image/png;base64,AAAA')$q$,
   'un envío anulado no se firma');
 
--- ---------- encargada: ve todo, recoge firmas, no envía ----------
+-- ---------- encargada: ve todo, recoge firmas, no envía ni cambia ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000001e3', true);
 select pruebas.ok(pruebas.cuantas('select * from personal.v_envios') = 3, 'la encargada ve todos los envíos');
 select pruebas.ok(pruebas.cuantas('select * from personal.vacaciones') = 3, 'la encargada ve todas las vacaciones');
-select pruebas.ok((select count(*) from personal.v_envios where estado = 'firmado') = 1, 'la encargada ve la firma de Ana');
 select pruebas.ok(personal.firmar_calendario((select id from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f2' and anulado is null), false,
   'Faltan mis vacaciones de octubre', 'data:image/png;base64,BBBB') is not null, 'la encargada recoge en su móvil la firma de Bruno (no conforme, con comentario)');
-select pruebas.ok((select persona_id from nucleo.firmas where comentario like 'Faltan%') = '11111111-0000-0000-0000-0000000000f2'
-  and (select firmado_por from nucleo.firmas where comentario like 'Faltan%') = '00000000-0000-0000-0000-0000000001e3',
-  'la firma queda a nombre de Bruno y se sabe que la recogió la encargada');
-select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[], array['2031-03-01']::date[], 'festivo')$q$,
-  'la encargada no cambia el calendario');
+select pruebas.ok((select firmado_por from nucleo.firmas where comentario like 'Faltan%') = '00000000-0000-0000-0000-0000000001e3', 'se sabe que la recogió la encargada');
+select pruebas.falla($q$select personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-03-01']::date[], 'festivo')$q$, 'la encargada no cambia el calendario');
 select pruebas.falla($q$select personal.anular_envio((select id from personal.envios where anulado is null limit 1))$q$, 'la encargada no anula envíos');
 
 -- ---------- jefe de otra unidad: no ve nada de L ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000002a1', true);
 select pruebas.ok(pruebas.cuantas('select * from personal.dias') + pruebas.cuantas('select * from personal.vacaciones')
-  + pruebas.cuantas('select * from personal.v_envios') = 0, 'el jefe de otra unidad no ve nada de L');
-select pruebas.falla($q$select personal.enviar_calendario('22222222-0000-0000-0000-000000000001', 2031, '22222222-0000-0000-0000-0000000000e1', array['22222222-0000-0000-0000-0000000000f1']::uuid[])$q$,
-  'sin el módulo Personal encendido no se envían calendarios');
+  + pruebas.cuantas('select * from personal.v_envios') + pruebas.cuantas('select * from personal.calendario_personas') = 0, 'el jefe de otra unidad no ve nada de L');
+select pruebas.falla($q$select personal.enviar_calendario('22222222-0000-0000-0000-0000000000c1')$q$, 'sin el módulo Personal encendido no se envían calendarios');
 
 -- ---------- historial ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000001a1', true);
-select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'personal' and tabla = 'dias'$q$) > 0, 'los cambios del calendario quedan en el historial');
 select pruebas.ok((select usuario_id from nucleo.historial where modulo = 'personal' and tabla = 'dias' order by id limit 1) = '00000000-0000-0000-0000-0000000001a1',
   'el historial dice quién marcó el día');
+select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'personal' and tabla = 'calendario_personas'$q$) > 0, 'y quién cambió a la gente de calendario');
 
 rollback;

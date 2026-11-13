@@ -47,6 +47,17 @@ que cuadra antes de dejar la app vieja en solo consulta.
   Recuadro de firma reutilizable: `src/componentes/Firma.tsx` (lo usará Prevención).
 - Pruebas: `supabase/pruebas/40-personal-calendario.sql` (52) y `pruebas/personal.spec.ts` (5).
 
+### 1.1 bis · Calendarios con nombre y personas (13/11, noche)
+- Cristian: «hay operarios que tienen calendarios diferentes». Ya no hay un calendario por equipo: `0011_personal_calendarios.sql`
+  crea `personal.calendarios` (nombre, año, días de la semana) y `personal.calendario_personas` (**una persona, un calendario
+  por año**). `dias` y `envios` van por `calendario_id`. Funciones nuevas: `marcar_dias(p_calendarios, …)`,
+  `copiar_dias(p_de, p_a)`, `poner_personas`, `enviar_calendario(p_calendario, p_personas)`.
+- Conversión automática de lo que había: un calendario «<equipo> <año>» por equipo y año (origen `equipo:<código>`) con la
+  gente del equipo. Probado con datos como los reales: mismos días y el envío firmado sigue firmado (misma huella).
+- Pantallas: elegir año y calendario; «+ Nuevo calendario» (nombre, días de la semana, copiar días de otro, para quién:
+  todos o algunos; avisa si alguien se cambia de calendario); «Para N personas · cambiar»; borrar si no se ha enviado.
+- Pruebas: 61 de base de datos (40-personal-calendario) y 7 de pantallas de Personal.
+
 ### Lo siguiente de la Fase 1, en orden
 1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13
    trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que

@@ -8,19 +8,55 @@ import {
   type Dia, type TipoDia, type Vacacion,
 } from './calendario';
 
-interface Equipo { id: string; nombre: string; dias: number[] }
-interface Persona { id: string; nombre: string; equipo_id: string | null }
+/** Un calendario del año (nombre, días de la semana que se trabaja y quién va en él). */
+interface Equipo { id: string; nombre: string; dias: number[]; personas: string[] }
+interface Persona { id: string; nombre: string; baja?: string | null }
 interface Envio {
-  id: string; anio: number; equipo_id: string; persona_id: string; enviado: string; anulado: string | null;
+  id: string; anio: number; calendario_id: string; persona_id: string; enviado: string; anulado: string | null;
   estado: 'pendiente' | 'firmado' | 'anulado'; firmado_en: string | null; conforme: boolean | null; comentario: string | null;
   firma_imagen: string | null; sha256: string;
-  datos: { anio: number; unidad: string; equipo: string; trabajador: string; dias_equipo: number[] | null; dias: Dia[]; vacaciones: Vacacion[] };
+  datos: { anio: number; unidad: string; calendario?: string; equipo: string; trabajador: string; dias_equipo: number[] | null; dias: Dia[]; vacaciones: Vacacion[] };
 }
 
 type Pestana = 'mio' | 'calendario' | 'vacaciones' | 'firmas';
 const ANIO_ACTUAL = new Date().getFullYear();
+const DIAS_SEMANA: [number, string][] = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
+const leer = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const guardar = (k: string, v: string) => { try { localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
 
-/** Módulo Personal: mi calendario (todos) y, según permisos, calendario por equipo, vacaciones y firmas. */
+/** Los calendarios de un año, con quién va en cada uno. */
+function useCalendarios(anio: number) {
+  const { empresa } = useSesion();
+  const [cals, setCals] = useState<Equipo[] | null>(null);
+  const cargar = useCallback(async () => {
+    const [c, cp] = await Promise.all([
+      personal().from('calendarios').select('id, nombre, dias_semana').eq('empresa_id', empresa!.id).eq('anio', anio).order('nombre'),
+      personal().from('calendario_personas').select('persona_id, calendario_id').eq('empresa_id', empresa!.id).eq('anio', anio),
+    ]);
+    const miembros = (cp.data ?? []) as { persona_id: string; calendario_id: string }[];
+    // primero el que empieza antes la semana (lunes), luego el de fin de semana
+    const primerDia = (d: number[]) => Math.min(...d.map((x) => (x + 6) % 7), 7);
+    setCals(((c.data ?? []) as { id: string; nombre: string; dias_semana: number[] }[])
+      .map((x) => ({ id: x.id, nombre: x.nombre, dias: x.dias_semana, personas: miembros.filter((m) => m.calendario_id === x.id).map((m) => m.persona_id) }))
+      .sort((a, b) => primerDia(a.dias) - primerDia(b.dias) || a.nombre.localeCompare(b.nombre, 'es')));
+  }, [empresa, anio]);
+  useEffect(() => { setCals(null); cargar(); }, [cargar]);
+  return [cals, cargar] as const;
+}
+
+/** Todos los trabajadores de la unidad (para elegir quién va en cada calendario). */
+function usePersonas() {
+  const { empresa, puede } = useSesion();
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  useEffect(() => {
+    if (!puede('nucleo.persona.ver')) return;
+    nucleo().from('personas').select('id, nombre, baja').eq('empresa_id', empresa!.id).order('nombre')
+      .then(({ data }) => setPersonas((data ?? []) as Persona[]));
+  }, [empresa, puede]);
+  return personas;
+}
+
+/** Módulo Personal: mi calendario (todos) y, según permisos, los calendarios del año, vacaciones y firmas. */
 export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const pestanas = ([
@@ -32,35 +68,38 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.length > 1 ? 'calendario' : 'mio');
   const [anio, setAnio] = useState(ANIO_ACTUAL);
-  const [equipos, setEquipos] = useState<Equipo[]>([]);
-  const [equipoId, setEquipoId] = useState<string>('');
+  const [cals, recargar] = useCalendarios(anio);
+  const [calId, setCalId] = useState<string>('');
+  const [editando, setEditando] = useState<Equipo | 'nuevo' | null>(null);
+  const editable = puede('personal.calendario.editar');
 
   useEffect(() => {
-    if (!empresa) return;
-    nucleo().from('equipos').select('id, nombre, dias, baja').eq('empresa_id', empresa.id).is('baja', null).order('nombre')
-      .then(({ data }) => {
-        // primero el equipo que empieza antes la semana (lunes), luego el de fin de semana
-        const primerDia = (e: Equipo) => Math.min(...(e.dias ?? []).map((d) => (d + 6) % 7), 7);
-        const eq = ((data ?? []) as Equipo[]).sort((a, b) => primerDia(a) - primerDia(b) || a.nombre.localeCompare(b.nombre, 'es'));
-        let guardado: string | null = null;
-        try { guardado = localStorage.getItem('personal.equipo'); } catch { /* sin almacenamiento */ }
-        setEquipos(eq); setEquipoId((x) => x || eq.find((e) => e.id === guardado)?.id || eq[0]?.id || '');
-      });
-  }, [empresa]);
+    if (!cals) return;
+    setCalId((x) => (cals.some((c) => c.id === x) ? x : cals.find((c) => c.id === leer('personal.calendario.' + anio))?.id ?? cals[0]?.id ?? ''));
+  }, [cals, anio]);
 
   if (!empresa) return null;
-  const equipo = equipos.find((e) => e.id === equipoId) ?? null;
-  const elegirAnioEquipo = actual !== 'mio' && (
-    <div className="filtros">
-      <label className="campo"><span>Año</span>
-        <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
-          {[ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1, ANIO_ACTUAL + 2].map((a) => <option key={a}>{a}</option>)}
-        </select></label>
-      <label className="campo"><span>Equipo</span>
-        <select value={equipoId} onChange={(e) => { setEquipoId(e.target.value); try { localStorage.setItem('personal.equipo', e.target.value); } catch { /* */ } }}>
-          {equipos.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-        </select></label>
-    </div>
+  const cal = cals?.find((c) => c.id === calId) ?? null;
+  const elegir = actual !== 'mio' && (
+    <>
+      <div className="filtros">
+        <label className="campo"><span>Año</span>
+          <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
+            {[ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1, ANIO_ACTUAL + 2].map((a) => <option key={a}>{a}</option>)}
+          </select></label>
+        {!!cals?.length && <label className="campo"><span>Calendario</span>
+          <select value={calId} onChange={(e) => { setCalId(e.target.value); guardar('personal.calendario.' + anio, e.target.value); }}>
+            {cals.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+          </select></label>}
+      </div>
+      {cal && (
+        <div className="acciones-cal no-imprimir">
+          {editable
+            ? <button type="button" className="boton sec peq" onClick={() => setEditando(cal)}>Para {cal.personas.length === 1 ? '1 persona' : `${cal.personas.length} personas`} · cambiar</button>
+            : <span className="nota">Para {cal.personas.length === 1 ? '1 persona' : `${cal.personas.length} personas`}</span>}
+          {editable && <button type="button" className="boton sec peq" onClick={() => setEditando('nuevo')}>+ Nuevo calendario</button>}
+        </div>)}
+    </>
   );
 
   return (
@@ -70,19 +109,99 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
           {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/personal/${c}`)}>{n}</button>)}
         </nav>
       )}
-      {elegirAnioEquipo}
-      {actual !== 'mio' && !equipos.length && (
-        <div className="vacio"><p><b>No hay equipos.</b></p><p>Da de alta los equipos (por ejemplo «Semana» y «Fin de semana») en Configuración → Equipos.</p></div>)}
+      {elegir}
+      {actual !== 'mio' && cals?.length === 0 && (
+        <div className="vacio"><p><b>Todavía no hay calendarios de {anio}.</b></p>
+          <p>Crea uno para cada grupo de gente que trabaja igual (por ejemplo «Semana {anio}» y «Fin de semana {anio}»).</p>
+          {editable && <button type="button" className="boton" onClick={() => setEditando('nuevo')}>Crear calendario</button>}</div>)}
       {actual === 'mio' && <MiCalendario />}
-      {actual === 'calendario' && equipo && <Calendario key={equipo.id + anio} anio={anio} equipo={equipo} equipos={equipos} />}
-      {actual === 'vacaciones' && equipo && <Vacaciones key={equipo.id + anio} anio={anio} equipo={equipo} />}
-      {actual === 'firmas' && equipo && <Firmas key={equipo.id + anio} anio={anio} equipo={equipo} />}
+      {actual === 'calendario' && cal && <Calendario key={cal.id} anio={anio} equipo={cal} equipos={cals!} />}
+      {actual === 'vacaciones' && cal && <Vacaciones key={cal.id} anio={anio} equipo={cal} />}
+      {actual === 'firmas' && cal && <Firmas key={cal.id} anio={anio} equipo={cal} />}
+      {editando && <FormCalendario anio={anio} cal={editando === 'nuevo' ? null : editando} cals={cals ?? []}
+        alCerrar={() => setEditando(null)} alGuardar={(id) => { setEditando(null); setCalId(id); guardar('personal.calendario.' + anio, id); recargar(); }} />}
     </main>
   );
 }
 
+/** Crear un calendario o cambiar su nombre, sus días de la semana y para quién es. */
+function FormCalendario({ anio, cal, cals, alCerrar, alGuardar }: {
+  anio: number; cal: Equipo | null; cals: Equipo[]; alCerrar: () => void; alGuardar: (id: string) => void;
+}) {
+  const { empresa } = useSesion();
+  const personas = usePersonas().filter((p) => !p.baja || cal?.personas.includes(p.id));
+  const [nombre, setNombre] = useState(cal?.nombre ?? '');
+  const [dias, setDias] = useState<number[]>(cal?.dias ?? [1, 2, 3, 4, 5]);
+  const [quien, setQuien] = useState<Set<string>>(new Set(cal?.personas ?? []));
+  const [copiarDe, setCopiarDe] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const enOtro = (pid: string) => cals.find((c) => c.id !== cal?.id && c.personas.includes(pid));
+  const cambia = personas.filter((p) => quien.has(p.id) && enOtro(p.id)).length;
+
+  async function guardarCal() {
+    if (!nombre.trim()) { setError('Ponle un nombre.'); return; }
+    if (!dias.length) { setError('Elige qué días de la semana se trabaja.'); return; }
+    setOcupado(true); setError(null);
+    const fila = { nombre: nombre.trim(), dias_semana: [...dias].sort() };
+    const r = cal ? await personal().from('calendarios').update(fila).eq('id', cal.id).select('id').single()
+      : await personal().from('calendarios').insert({ ...fila, empresa_id: empresa!.id, anio }).select('id').single();
+    if (r.error) { setOcupado(false); setError(r.error.message.includes('duplicate') ? 'Ya hay un calendario con ese nombre este año.' : textoError(r.error.message)); return; }
+    const id = (r.data as { id: string }).id;
+    const p = await personal().rpc('poner_personas', { p_calendario: id, p_personas: [...quien] });
+    if (p.error) { setOcupado(false); setError(textoError(p.error.message)); return; }
+    if (!cal && copiarDe) {
+      const c = await personal().rpc('copiar_dias', { p_de: copiarDe, p_a: id });
+      if (c.error) { setOcupado(false); setError(textoError(c.error.message)); return; }
+    }
+    setOcupado(false);
+    aviso(cal ? 'Calendario guardado' : 'Calendario creado'); alGuardar(id);
+  }
+  async function borrar() {
+    if (!cal || !confirm(`¿Borrar el calendario «${cal.nombre}» con sus días marcados? Solo se puede si no se ha enviado a nadie.`)) return;
+    const { error } = await personal().from('calendarios').delete().eq('id', cal.id);
+    if (error) { setError(error.message.includes('foreign key') ? 'No se puede borrar: ya se ha enviado a firmar.' : textoError(error.message)); return; }
+    aviso('Calendario borrado'); alGuardar('');
+  }
+
+  return (
+    <Ventana titulo={cal ? cal.nombre : `Nuevo calendario ${anio}`} alCerrar={alCerrar}
+      pie={<>{cal && <button type="button" className="boton sec" onClick={borrar}>Borrar</button>}
+        <button type="button" className="boton" disabled={ocupado} onClick={guardarCal}>{cal ? 'Guardar' : 'Crear'}</button></>}>
+      <label className="campo"><span>Nombre</span><input value={nombre} maxLength={80} placeholder={`Por ejemplo: Refuerzo ${anio}`} onChange={(e) => setNombre(e.target.value)} /></label>
+      <div className="campo"><span>Días de la semana que se trabaja</span>
+        <div className="dias" role="group" aria-label="Días de la semana que se trabaja">
+          {DIAS_SEMANA.map(([d, l]) => <button key={d} type="button" aria-pressed={dias.includes(d)}
+            onClick={() => setDias((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))}>{l}</button>)}
+        </div></div>
+      {!cal && cals.length > 0 && <label className="campo"><span>Copiar los días marcados de (opcional)</span>
+        <select value={copiarDe} onChange={(e) => setCopiarDe(e.target.value)}>
+          <option value="">— Empezar en blanco —</option>{cals.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+        </select></label>}
+      <div className="campo"><span>¿Para quién es? ({quien.size})</span>
+        <div className="botonera" style={{ justifyContent: 'flex-start', margin: '0 0 6px' }}>
+          <button type="button" className="boton txt peq" onClick={() => setQuien(new Set(personas.filter((p) => !p.baja).map((p) => p.id)))}>Todos</button>
+          <button type="button" className="boton txt peq" onClick={() => setQuien(new Set())}>Ninguno</button>
+        </div>
+        <div className="lista compacta">
+          {personas.map((p) => {
+            const otro = enOtro(p.id);
+            return (
+              <label key={p.id} className="fila check">
+                <input type="checkbox" checked={quien.has(p.id)} onChange={() => setQuien((q) => { const n = new Set(q); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })} />
+                <span className="fila-txt"><b>{p.nombre}</b>{otro && <small>Ahora en «{otro.nombre}»</small>}</span>
+              </label>
+            );
+          })}
+        </div></div>
+      {cambia > 0 && <p className="nota">Cada persona va en un solo calendario por año: {cambia === 1 ? '1 persona se cambiará' : `${cambia} personas se cambiarán`} a este.</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}
+
 // ---------------------------------------------------------------------------------------------
-// Calendario del equipo: marcar festivos, cierres, intensiva y horarios especiales
+// Un calendario: marcar festivos, cierres, intensiva, horarios especiales, trabaja, descanso y vacaciones
 // ---------------------------------------------------------------------------------------------
 function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; equipos: Equipo[] }) {
   const { empresa, puede } = useSesion();
@@ -97,7 +216,7 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
   const cargar = useCallback(async () => {
     const [d, v] = await Promise.all([
       personal().from('dias').select('fecha, tipo, nombre, horario')
-        .eq('empresa_id', empresa!.id).eq('equipo_id', equipo.id).gte('fecha', `${anio}-01-01`).lte('fecha', `${anio}-12-31`).order('fecha'),
+        .eq('calendario_id', equipo.id).order('fecha'),
       personal().from('vacaciones').select('id, persona_id, desde, hasta, nota')
         .eq('empresa_id', empresa!.id).lte('desde', `${anio}-12-31`).gte('hasta', `${anio}-01-01`).order('desde'),
     ]);
@@ -106,7 +225,7 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
   }, [empresa, equipo, anio]);
   useEffect(() => { cargar(); }, [cargar]);
 
-  // vacaciones de la gente de este equipo; en el calendario sale en verde el día que está de vacaciones todo el equipo
+  // vacaciones de la gente de este calendario; sale en verde el día que están de vacaciones todos
   const delEquipo = useMemo(() => vacs.filter((v) => personas?.some((p) => p.id === v.persona_id)), [vacs, personas]);
   const deTodos = useMemo(() => {
     if (!personas?.length) return [] as Vacacion[];
@@ -128,14 +247,14 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
       </div>
       {editable && (
         <p className="nota no-imprimir">Toca los días para elegirlos y pulsa «Marcar». {equipos.length > 1 &&
-          <button type="button" className="boton txt peq" onClick={() => setCopiar(true)}>Copiar de otro equipo</button>}</p>)}
+          <button type="button" className="boton txt peq" onClick={() => setCopiar(true)}>Copiar de otro calendario</button>}</p>)}
       <Leyenda />
       {dias === null ? <p className="nota">Cargando…</p>
         : <Anio anio={anio} dias={dias} vacaciones={deTodos} diasEquipo={equipo.dias} elegidos={editable ? elegidos : undefined} alTocar={editable ? tocar : undefined} />}
-      <p className="nota">En verde, los días que está de vacaciones todo el equipo. Las de cada uno, en la lista de abajo.</p>
+      <p className="nota">En verde, los días que están de vacaciones todos los de este calendario. Las de cada uno, en la lista de abajo.</p>
       <h2 className="subtitulo">Días marcados</h2>
       <ListaDias dias={dias ?? []} />
-      <h2 className="subtitulo">Vacaciones del equipo</h2>
+      <h2 className="subtitulo">Vacaciones de la gente de este calendario</h2>
       {delEquipo.length ? (
         <ul className="lista-dias">
           {delEquipo.map((v) => <li key={v.id}><i className="t-vacaciones" aria-hidden="true" /><b>{personas?.find((p) => p.id === v.persona_id)?.nombre}</b>
@@ -192,7 +311,7 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
       return;
     }
     const { error } = await personal().rpc('marcar_dias', {
-      p_empresa: empresa!.id, p_equipos: todos ? equipos.map((e) => e.id) : [equipo.id], p_fechas: fechas,
+      p_calendarios: todos ? equipos.map((e) => e.id) : [equipo.id], p_fechas: fechas,
       p_tipo: tipo || null, p_nombre: nombre || null, p_horario: ['intensiva', 'especial', 'trabaja'].includes(tipo) ? horario || null : null,
     });
     setOcupado(false);
@@ -210,7 +329,7 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
           {conVacaciones && (
             <label className={'opcion' + (tipo === 'vacaciones' ? ' sel' : '')}>
               <input type="radio" name="tipo" checked={tipo === 'vacaciones'} onChange={() => setTipo('vacaciones')} />
-              <i className="t-vacaciones" /><span><b>Vacaciones</b><small>Para todo el equipo o solo para algunos</small></span></label>)}
+              <i className="t-vacaciones" /><span><b>Vacaciones</b><small>Para todos los de este calendario o solo para algunos</small></span></label>)}
           {conDias && TIPOS.map((t) => (
             <label key={t.tipo} className={'opcion' + (tipo === t.tipo ? ' sel' : '')}>
               <input type="radio" name="tipo" checked={tipo === t.tipo} onChange={() => setTipo(t.tipo)} />
@@ -248,12 +367,11 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
 }
 
 function Copiar({ anio, equipo, equipos, alCerrar, alGuardar }: { anio: number; equipo: Equipo; equipos: Equipo[]; alCerrar: () => void; alGuardar: () => void }) {
-  const { empresa } = useSesion();
   const otros = equipos.filter((e) => e.id !== equipo.id);
   const [de, setDe] = useState(otros[0]?.id ?? '');
   const [error, setError] = useState<string | null>(null);
   async function copiar() {
-    const { data, error } = await personal().rpc('copiar_dias', { p_empresa: empresa!.id, p_anio: anio, p_de: de, p_a: equipo.id });
+    const { data, error } = await personal().rpc('copiar_dias', { p_de: de, p_a: equipo.id });
     if (error) { setError(textoError(error.message)); return; }
     aviso(`${data} días copiados`); alGuardar();
   }
@@ -262,7 +380,7 @@ function Copiar({ anio, equipo, equipos, alCerrar, alGuardar }: { anio: number; 
       pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={copiar}>Copiar</button></>}>
       <label className="campo"><span>Copiar los días marcados de</span>
         <select value={de} onChange={(e) => setDe(e.target.value)}>{otros.map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></label>
-      <p className="nota">Lo que ya tenga marcado {equipo.nombre} en {anio} se sustituye.</p>
+      <p className="nota">Lo que ya tenga marcado «{equipo.nombre}» se sustituye.</p>
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
   );
@@ -275,8 +393,8 @@ function usePersonasEquipo(equipo: Equipo) {
   const { empresa } = useSesion();
   const [personas, setPersonas] = useState<Persona[] | null>(null);
   useEffect(() => {
-    nucleo().from('personas').select('id, nombre, equipo_id, baja').eq('empresa_id', empresa!.id).is('baja', null).order('nombre')
-      .then(({ data }) => setPersonas(((data ?? []) as Persona[]).filter((p) => p.equipo_id === equipo.id)));
+    nucleo().from('personas').select('id, nombre, baja').eq('empresa_id', empresa!.id).is('baja', null).order('nombre')
+      .then(({ data }) => setPersonas(((data ?? []) as Persona[]).filter((p) => equipo.personas.includes(p.id))));
   }, [empresa, equipo]);
   return personas;
 }
@@ -296,7 +414,7 @@ function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
   useEffect(() => { cargar(); }, [cargar]);
 
   if (personas === null) return <p className="nota">Cargando…</p>;
-  if (!personas.length) return <div className="vacio"><p>No hay trabajadores en {equipo.nombre}. Se asignan en Configuración → Trabajadores.</p></div>;
+  if (!personas.length) return <div className="vacio"><p>Nadie va en «{equipo.nombre}». Pulsa «Para 0 personas · cambiar» para elegir para quién es.</p></div>;
   return (
     <>
       {editable && <button type="button" className="boton sec ancho" style={{ marginBottom: 12 }} onClick={() => setEditando({ persona_id: '*' })}>
@@ -376,7 +494,7 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
   const enviar = puede('personal.firma.enviar');
 
   const cargar = useCallback(async () => {
-    const { data, error } = await personal().from('v_envios').select('*').eq('empresa_id', empresa!.id).eq('anio', anio).eq('equipo_id', equipo.id).order('enviado', { ascending: false });
+    const { data, error } = await personal().from('v_envios').select('*').eq('empresa_id', empresa!.id).eq('anio', anio).eq('calendario_id', equipo.id).order('enviado', { ascending: false });
     if (error) { aviso(error.message); return; }
     setEnvios((data ?? []) as Envio[]);
   }, [empresa, anio, equipo]);
@@ -391,7 +509,7 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
     const ya = [...elegidos].filter((id) => vigente.get(id)?.estado === 'firmado');
     if (ya.length && !confirm(`${ya.length} ya lo ${ya.length === 1 ? 'ha' : 'han'} firmado. ¿Enviar otra vez el calendario de ${anio}?`)) return;
     setOcupado(true);
-    const { data, error } = await personal().rpc('enviar_calendario', { p_empresa: empresa!.id, p_anio: anio, p_equipo: equipo.id, p_personas: [...elegidos] });
+    const { data, error } = await personal().rpc('enviar_calendario', { p_calendario: equipo.id, p_personas: [...elegidos] });
     setOcupado(false);
     if (error) { aviso(textoError(error.message)); return; }
     aviso(`Enviado a ${data} ${data === 1 ? 'trabajador' : 'trabajadores'}`); setElegidos(new Set()); cargar();
@@ -465,7 +583,7 @@ function MiCalendario() {
       <div className="lista">
         {envios.map((e) => (
           <button key={e.id} type="button" className="fila" onClick={() => setViendo(e)}>
-            <span className="fila-txt"><b>Calendario laboral {e.anio}</b><small>{e.datos.equipo} · {e.estado === 'firmado' ? `firmado el ${fechaCorta(e.firmado_en!.slice(0, 10))}` : 'pendiente de firma'}</small></span>
+            <span className="fila-txt"><b>Calendario laboral {e.anio}</b><small>{e.datos.calendario ?? e.datos.equipo} · {e.estado === 'firmado' ? `firmado el ${fechaCorta(e.firmado_en!.slice(0, 10))}` : 'pendiente de firma'}</small></span>
             <span className={'chapa ' + e.estado}>{e.estado === 'firmado' ? 'Firmado' : 'Firmar'}</span>
           </button>
         ))}
@@ -511,7 +629,7 @@ function Documento({ envio, alCerrar, alFirmar, alAnular }: { envio: Envio; alCe
           <button type="button" className="boton sec" onClick={() => window.print()}>Imprimir o PDF</button>
           {puedeFirmar && <button type="button" className="boton" onClick={() => setFirmando(true)}>Firmar</button>}</>}>
       <div className="documento">
-        <p className="doc-cab"><b>{d.unidad}</b> · Calendario laboral {d.anio}<br />{d.trabajador} · {d.equipo}</p>
+        <p className="doc-cab"><b>{d.unidad}</b> · Calendario laboral {d.anio}<br />{d.trabajador} · {d.calendario ?? d.equipo}</p>
         {!firmando ? (
           <>
             <Leyenda />
