@@ -66,7 +66,7 @@ test('el jefe marca dos festivos en el calendario del equipo', async ({ page }) 
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal');
   await expect(page.getByRole('button', { name: 'Calendario', pressed: true })).toBeVisible();
-  await expect(page.locator('.lista-dias')).toContainText('Año nuevo');
+  await expect(page.locator('.lista-dias').first()).toContainText('Año nuevo');
   await page.getByRole('button', { name: new RegExp(`^6 de enero`) }).click();
   await page.getByRole('button', { name: new RegExp(`^19 de marzo`) }).click();
   await expect(page.locator('.barra-abajo')).toContainText('2 días elegidos');
@@ -74,10 +74,29 @@ test('el jefe marca dos festivos en el calendario del equipo', async ({ page }) 
   await page.getByLabel('Nombre (opcional)').fill('Fiesta local');
   await page.getByLabel(/También en Fin de semana/).check();
   await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
-  await expect(page.locator('.lista-dias')).toContainText('Fiesta local');
+  await expect(page.locator('.lista-dias').first()).toContainText('Fiesta local');
   const llamada = sim.find((l) => l.ruta.includes('/rpc/marcar_dias'))!;
   expect(llamada.perfil).toBe('personal');
   expect(llamada.cuerpo).toMatchObject({ p_empresa: UNIDAD, p_equipos: [SEMANA, FINDE], p_fechas: [`${ANIO}-01-06`, `${ANIO}-03-19`], p_tipo: 'festivo', p_nombre: 'Fiesta local' });
+  expect(errores).toEqual([]);
+});
+
+test('desde el calendario: elegir días y ponerlos de vacaciones a quien se quiera', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/calendario');
+  await expect(page.locator('.lista-dias').last()).toContainText('Ana Prueba');
+  for (const d of ['^20 de abril', '^21 de abril', '^24 de abril']) await page.getByRole('button', { name: new RegExp(d) }).click();
+  await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
+  await page.getByRole('dialog').locator('.opcion', { hasText: 'Para todo el equipo' }).click();
+  await expect(page.getByText('¿Quién? (2 de 2)')).toBeVisible();
+  await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').uncheck();
+  await page.getByLabel('Nota (opcional)').fill('Semana Santa');
+  await page.getByRole('button', { name: 'Poner vacaciones' }).click();
+  await expect(page.getByText('Vacaciones puestas')).toBeVisible();
+  const nuevas = sim.tablas.vacaciones.filter((v) => v.nota === 'Semana Santa');
+  expect(nuevas.map((v) => [v.persona_id, v.desde, v.hasta])).toEqual([[ANA, `${ANIO}-04-20`, `${ANIO}-04-21`], [ANA, `${ANIO}-04-24`, `${ANIO}-04-24`]]);
+  await expect(page.locator('.lista-dias').last()).toContainText('Semana Santa');
   expect(errores).toEqual([]);
 });
 

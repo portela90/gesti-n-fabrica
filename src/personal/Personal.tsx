@@ -90,15 +90,33 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
   const [elegidos, setElegidos] = useState<Set<string>>(new Set());
   const [marcar, setMarcar] = useState(false);
   const [copiar, setCopiar] = useState(false);
-  const editable = puede('personal.calendario.editar');
+  const editable = puede('personal.calendario.editar') || puede('personal.vacaciones.editar');
+  const personas = usePersonasEquipo(equipo);
+  const [vacs, setVacs] = useState<Vacacion[]>([]);
 
   const cargar = useCallback(async () => {
-    const { data, error } = await personal().from('dias').select('fecha, tipo, nombre, horario')
-      .eq('empresa_id', empresa!.id).eq('equipo_id', equipo.id).gte('fecha', `${anio}-01-01`).lte('fecha', `${anio}-12-31`).order('fecha');
-    if (error) { aviso(error.message); return; }
-    setDias((data ?? []) as Dia[]);
+    const [d, v] = await Promise.all([
+      personal().from('dias').select('fecha, tipo, nombre, horario')
+        .eq('empresa_id', empresa!.id).eq('equipo_id', equipo.id).gte('fecha', `${anio}-01-01`).lte('fecha', `${anio}-12-31`).order('fecha'),
+      personal().from('vacaciones').select('id, persona_id, desde, hasta, nota')
+        .eq('empresa_id', empresa!.id).lte('desde', `${anio}-12-31`).gte('hasta', `${anio}-01-01`).order('desde'),
+    ]);
+    if (d.error) { aviso(d.error.message); return; }
+    setDias((d.data ?? []) as Dia[]); setVacs((v.data ?? []) as Vacacion[]);
   }, [empresa, equipo, anio]);
   useEffect(() => { cargar(); }, [cargar]);
+
+  // vacaciones de la gente de este equipo; en el calendario sale en verde el día que está de vacaciones todo el equipo
+  const delEquipo = useMemo(() => vacs.filter((v) => personas?.some((p) => p.id === v.persona_id)), [vacs, personas]);
+  const deTodos = useMemo(() => {
+    if (!personas?.length) return [] as Vacacion[];
+    const dias: string[] = [];
+    for (let m = 0; m < 12; m++) for (let d = 1; d <= new Date(Date.UTC(anio, m + 1, 0)).getUTCDate(); d++) {
+      const f = `${anio}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+      if (personas.every((p) => delEquipo.some((v) => v.persona_id === p.id && v.desde <= f && f <= v.hasta))) dias.push(f);
+    }
+    return dias.map((f) => ({ desde: f, hasta: f, nota: null }));
+  }, [personas, delEquipo, anio]);
 
   const tocar = (f: string) => setElegidos((s) => { const n = new Set(s); if (n.has(f)) n.delete(f); else n.add(f); return n; });
   const cuenta = (t: TipoDia) => (dias ?? []).filter((d) => d.tipo === t).length;
@@ -111,11 +129,18 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
       {editable && (
         <p className="nota no-imprimir">Toca los días para elegirlos y pulsa «Marcar». {equipos.length > 1 &&
           <button type="button" className="boton txt peq" onClick={() => setCopiar(true)}>Copiar de otro equipo</button>}</p>)}
-      <Leyenda conVacaciones={false} />
+      <Leyenda />
       {dias === null ? <p className="nota">Cargando…</p>
-        : <Anio anio={anio} dias={dias} diasEquipo={equipo.dias} elegidos={editable ? elegidos : undefined} alTocar={editable ? tocar : undefined} />}
+        : <Anio anio={anio} dias={dias} vacaciones={deTodos} diasEquipo={equipo.dias} elegidos={editable ? elegidos : undefined} alTocar={editable ? tocar : undefined} />}
+      <p className="nota">En verde, los días que está de vacaciones todo el equipo. Las de cada uno, en la lista de abajo.</p>
       <h2 className="subtitulo">Días marcados</h2>
       <ListaDias dias={dias ?? []} />
+      <h2 className="subtitulo">Vacaciones del equipo</h2>
+      {delEquipo.length ? (
+        <ul className="lista-dias">
+          {delEquipo.map((v) => <li key={v.id}><i className="t-vacaciones" aria-hidden="true" /><b>{personas?.find((p) => p.id === v.persona_id)?.nombre}</b>
+            <span>{periodo(v)}{v.nota ? ` · ${v.nota}` : ''}</span></li>)}
+        </ul>) : <p className="nota">Nadie de {equipo.nombre} tiene vacaciones en {anio}.</p>}
       {editable && elegidos.size > 0 && (
         <div className="barra-abajo no-imprimir">
           <span><b>{elegidos.size}</b> {elegidos.size === 1 ? 'día elegido' : 'días elegidos'}</span>
@@ -123,19 +148,32 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
           <button type="button" className="boton" onClick={() => setMarcar(true)}>Marcar</button>
         </div>
       )}
-      {marcar && <Marcar fechas={[...elegidos].sort()} equipo={equipo} equipos={equipos} dias={dias ?? []}
+      {marcar && <Marcar fechas={[...elegidos].sort()} equipo={equipo} equipos={equipos} dias={dias ?? []} personas={personas ?? []}
         alCerrar={() => setMarcar(false)} alGuardar={() => { setMarcar(false); setElegidos(new Set()); cargar(); }} />}
       {copiar && <Copiar anio={anio} equipo={equipo} equipos={equipos} alCerrar={() => setCopiar(false)} alGuardar={() => { setCopiar(false); cargar(); }} />}
     </>
   );
 }
 
-function Marcar({ fechas, equipo, equipos, dias, alCerrar, alGuardar }: {
-  fechas: string[]; equipo: Equipo; equipos: Equipo[]; dias: Dia[]; alCerrar: () => void; alGuardar: () => void;
+/** Agrupa fechas sueltas en periodos seguidos: [1,2,3,7] → 1–3 y 7. */
+function periodos(fechas: string[]) {
+  const dia = (f: string) => { const [a, m, d] = f.split('-').map(Number); return Date.UTC(a, m - 1, d) / 864e5; };
+  const out: { desde: string; hasta: string }[] = [];
+  for (const f of [...fechas].sort()) {
+    const ult = out[out.length - 1];
+    if (ult && dia(f) - dia(ult.hasta) === 1) ult.hasta = f; else out.push({ desde: f, hasta: f });
+  }
+  return out;
+}
+
+function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }: {
+  fechas: string[]; equipo: Equipo; equipos: Equipo[]; dias: Dia[]; personas: Persona[]; alCerrar: () => void; alGuardar: () => void;
 }) {
-  const { empresa } = useSesion();
+  const { empresa, puede } = useSesion();
   const uno = fechas.length === 1 ? dias.find((d) => d.fecha === fechas[0]) : undefined;
-  const [tipo, setTipo] = useState<TipoDia | ''>(uno?.tipo ?? 'festivo');
+  const conDias = puede('personal.calendario.editar'), conVacaciones = puede('personal.vacaciones.editar');
+  const [tipo, setTipo] = useState<TipoDia | '' | 'vacaciones'>(uno?.tipo ?? (conDias ? 'festivo' : 'vacaciones'));
+  const [quien, setQuien] = useState<Set<string>>(new Set(personas.map((p) => p.id)));
   const [nombre, setNombre] = useState(uno?.nombre ?? '');
   const [horario, setHorario] = useState(uno?.horario ?? '');
   const [todos, setTodos] = useState(false);
@@ -144,6 +182,15 @@ function Marcar({ fechas, equipo, equipos, dias, alCerrar, alGuardar }: {
 
   async function guardar() {
     setOcupado(true); setError(null);
+    if (tipo === 'vacaciones') {
+      if (!quien.size) { setOcupado(false); setError('Elige a quién.'); return; }
+      const filas = [...quien].flatMap((pid) => periodos(fechas).map((r) => ({ ...r, nota: nombre.trim() || null, empresa_id: empresa!.id, persona_id: pid })));
+      const { error } = await personal().from('vacaciones').insert(filas);
+      setOcupado(false);
+      if (error) { setError(textoError(error.message)); return; }
+      aviso(quien.size === 1 ? 'Vacaciones puestas' : `Vacaciones puestas a ${quien.size} trabajadores`); alGuardar();
+      return;
+    }
     const { error } = await personal().rpc('marcar_dias', {
       p_empresa: empresa!.id, p_equipos: todos ? equipos.map((e) => e.id) : [equipo.id], p_fechas: fechas,
       p_tipo: tipo || null, p_nombre: nombre || null, p_horario: ['intensiva', 'especial', 'trabaja'].includes(tipo) ? horario || null : null,
@@ -156,25 +203,44 @@ function Marcar({ fechas, equipo, equipos, dias, alCerrar, alGuardar }: {
   return (
     <Ventana titulo={fechas.length === 1 ? fechaCorta(fechas[0]) : `${fechas.length} días`} alCerrar={alCerrar}
       pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button>
-        <button type="button" className="boton" disabled={ocupado} onClick={guardar}>{tipo ? 'Marcar' : 'Quitar la marca'}</button></>}>
+        <button type="button" className="boton" disabled={ocupado} onClick={guardar}>{tipo === 'vacaciones' ? 'Poner vacaciones' : tipo ? 'Marcar' : 'Quitar la marca'}</button></>}>
       <fieldset className="formulario">
         <legend className="nota" style={{ marginBottom: 8 }}>Tipo de día</legend>
         <div className="opciones">
-          {TIPOS.map((t) => (
+          {conVacaciones && (
+            <label className={'opcion' + (tipo === 'vacaciones' ? ' sel' : '')}>
+              <input type="radio" name="tipo" checked={tipo === 'vacaciones'} onChange={() => setTipo('vacaciones')} />
+              <i className="t-vacaciones" /><span><b>Vacaciones</b><small>Para todo el equipo o solo para algunos</small></span></label>)}
+          {conDias && TIPOS.map((t) => (
             <label key={t.tipo} className={'opcion' + (tipo === t.tipo ? ' sel' : '')}>
               <input type="radio" name="tipo" checked={tipo === t.tipo} onChange={() => setTipo(t.tipo)} />
               <i className={'t-' + t.tipo} /><span><b>{t.nombre}</b><small>{t.ayuda}</small></span></label>
           ))}
-          <label className={'opcion' + (tipo === '' ? ' sel' : '')}>
+          {conDias && <label className={'opcion' + (tipo === '' ? ' sel' : '')}>
             <input type="radio" name="tipo" checked={tipo === ''} onChange={() => setTipo('')} />
-            <i /><span><b>Normal</b><small>Quitar la marca</small></span></label>
+            <i /><span><b>Normal</b><small>Quitar la marca</small></span></label>}
         </div>
       </fieldset>
-      {tipo && <label className="campo"><span>Nombre (opcional)</span>
+      {tipo === 'vacaciones' && (
+        <>
+          <p className="nota" style={{ margin: '0 0 6px' }}>¿Quién? ({quien.size} de {personas.length})</p>
+          <div className="lista compacta" style={{ marginBottom: 12 }}>
+            {personas.map((p) => (
+              <label key={p.id} className="fila check">
+                <input type="checkbox" checked={quien.has(p.id)} onChange={() => setQuien((q) => { const n = new Set(q); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })} />
+                <span className="fila-txt"><b>{p.nombre}</b></span>
+              </label>
+            ))}
+          </div>
+          <label className="campo"><span>Nota (opcional)</span><input value={nombre} maxLength={200} placeholder="Por ejemplo: Verano" onChange={(e) => setNombre(e.target.value)} /></label>
+          <p className="nota">Para cambiar o quitar las vacaciones de alguien, ve a la pestaña Vacaciones.</p>
+        </>
+      )}
+      {tipo && tipo !== 'vacaciones' && <label className="campo"><span>Nombre (opcional)</span>
         <input value={nombre} maxLength={120} placeholder={tipo === 'festivo' ? 'Por ejemplo: Fiesta local' : ''} onChange={(e) => setNombre(e.target.value)} /></label>}
       {['intensiva', 'especial', 'trabaja'].includes(tipo) && <label className="campo"><span>Horario</span>
         <input value={horario} maxLength={120} placeholder="Por ejemplo: 7:00 a 15:00" onChange={(e) => setHorario(e.target.value)} /></label>}
-      {equipos.length > 1 && <label className="check"><input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
+      {tipo !== 'vacaciones' && equipos.length > 1 && <label className="check"><input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
         También en {equipos.filter((e) => e.id !== equipo.id).map((e) => e.nombre).join(' y ')}</label>}
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
