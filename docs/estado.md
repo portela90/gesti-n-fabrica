@@ -30,8 +30,8 @@ Calendario laboral (festivos, cierres, vacaciones, firmas) y Toolbox (charlas, E
 Migrar desde limpieza-cie (tablas `cal_dia`, `cal_vac`, `cal_firma`, `prl_*`) con historial completo y comprobar
 que cuadra antes de dejar la app vieja en solo consulta.
 
-### 1.1 Calendario laboral (Personal): HECHO EN EL CÓDIGO, falta ponerlo en marcha
-- Migraciones nuevas, **sin aplicar todavía** en Supabase (las pega Cristian en el SQL Editor, en orden):
+### 1.1 Calendario laboral (Personal): APLICADO en Supabase el 13/11 (falta dar de alta equipos y trabajadores)
+- Migraciones aplicadas por Cristian en el SQL Editor el 13/11 (comprobado: tablas, funciones, permisos e historial):
   - `0008_firma_imagen.sql`: la imagen de la firma (PNG) se guarda en `nucleo.firmas.imagen` (sin Storage).
   - `0009_personal_calendario.sql`: esquema `personal` con `dias` (por equipo), `vacaciones`, `envios` (foto fija
     del calendario + huella sha256; solo se anulan) y la vista `v_envios` (pendiente / firmado / anulado).
@@ -71,6 +71,10 @@ que cuadra antes de dejar la app vieja en solo consulta.
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera
   `Content-Profile: public` (COLADA `supabase/migraciones/limpieza_envios_almacen_esquema_public.sql`). Cualquier llamada
   nueva entre proyectos debe decir siempre el esquema.
+- 13/11: el de por defecto había quedado `graphql_public`. Arreglado: `public` vuelve a ser el primero (comprobado con
+  una llamada sin esquema → 200). **Para exponer un esquema nuevo**, en dos guardados: 1) dejar solo `public` y guardar;
+  2) marcar los demás (`nucleo`, `personal`, …, `graphql_public` el último) y guardar. Nunca desmarcar `public`.
+  Comprobarlo después con `net.http_get` a una tabla de `public` sin cabecera de esquema.
 - No pedir ni guardar contraseñas ni claves; si Cristian pega una en el chat, decirle que la cambie.
 - El revisor de Supabase avisa de funciones de las apps viejas que se pueden llamar sin entrar (p. ej.
   `errores_listar`): pendiente de revisar en COLADA, no tocado.
