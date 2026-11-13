@@ -113,7 +113,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
      Los 5 PDF oficiales (F40R304, FO-014, FO-018, FO-072, FP-022) copiados tal cual a `public/prevencion/plantillas/`
      para los siguientes pasos (decidido por Cristian: los de la app vieja, sin cambios).
    - **Envío a prevención** (14/11): con el mes cerrado, «Enviar desde mi correo» (compartir en el móvil / mailto en el
-     ordenador, con el PDF y el texto) y «Ya lo he enviado» → `prevencion.apuntar_envio` (`0014_prevencion_envio.sql`:
+     ordenador, con el PDF y el texto) y «Ya lo he enviado» → `prevencion.apuntar_envio` (`0014_prevencion_envio.sql`, APLICADO 14/11:
      `sesiones.prev_enviado_en/prev_destino/prev_por`; se puede apuntar con la sesión cerrada). En «Datos por defecto»:
      correo y nombre del técnico, empresa y **firma del formador** (sale en el PDF). El envío **automático** (Gmail
      desde el servidor, como la app vieja) queda para cuando Cristian ponga la cuenta de envío como secreto en Supabase.
