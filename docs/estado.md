@@ -57,7 +57,8 @@ que cuadra antes de dejar la app vieja en solo consulta.
    La app vieja sigue en uso hasta tener el PIN: antes de dejarla en solo consulta, volver a comparar y traer lo que
    haya cambiado allí. En la vieja: el 12/10/2026 está en `festivos` pero no en `cal_dia` (no se trajo); Ahmed tiene
    dos vacaciones solapadas en verano de 2026 (se trajeron tal cual).
-4. **Prevención** (Toolbox). Hecho en el código (13/11), **sin aplicar** en Supabase:
+4. **Prevención** (Toolbox). 1.ª parte **aplicada en Supabase el 13/11** (0010 + 6 prendas de Limpieza; `prevencion`
+   expuesto con `public` el primero, comprobado):
    - `0010_prevencion.sql`: esquema `prevencion` con `fichas` (DNI, puesto, alta/baja y motivo, contacto, idioma,
      tallas; sin datos de salud), `prendas`, `charlas` (contenido de cada mes), `sesiones` (fecha, lugar, formador,
      previstos, enviada, cerrada), `asistencias` (nombre y puesto al firmar; la firma en `nucleo.firmas`, documento
