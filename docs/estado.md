@@ -58,6 +58,17 @@ que cuadra antes de dejar la app vieja en solo consulta.
   todos o algunos; avisa si alguien se cambia de calendario); «Para N personas · cambiar»; borrar si no se ha enviado.
 - Pruebas: 61 de base de datos (40-personal-calendario) y 7 de pantallas de Personal.
 
+### 1.1 ter · Horas anuales que tienen que cuadrar (13/11, noche)
+- Decidido por Cristian: horas al año del calendario y, a quien sea distinto, las suyas (`calendario_personas.horas_anuales`);
+  horas de un día normal por día de la semana (`calendarios.horas_dia`, [dom..sáb]); intensiva, especial y «trabaja»
+  con sus horas (`dias.horas`); festivos, cierres, descansos y **vacaciones restan**; **no se envía a firmar si a alguien
+  no le cuadra al 100 %** (`enviar_calendario` da `NO_CUADRA: nombres` o `SIN_HORAS: nombres`).
+- `0012_personal_horas.sql`: `horas_personas(calendario)` = por persona: objetivo, horas que salen y días de vacaciones.
+  La foto firmada lleva `horas_anuales` y `horas`.
+- Pantallas: horas por día de la semana y horas al año en el formulario del calendario; cuadro «Horas del año» (cuadra /
+  faltan / sobran, «Otras horas» por persona); al marcar intensiva, especial o trabaja se ponen las horas del día.
+- Pruebas: 70 de base de datos (cuenta exacta de un año de ejemplo) y 9 de pantallas de Personal.
+
 ### Lo siguiente de la Fase 1, en orden
 1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13
    trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que

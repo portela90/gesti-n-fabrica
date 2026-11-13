@@ -99,6 +99,29 @@ select pruebas.falla($q$insert into personal.vacaciones (empresa_id, persona_id,
 select pruebas.falla($q$insert into personal.vacaciones (empresa_id, persona_id, desde, hasta) values ('11111111-0000-0000-0000-000000000001', '22222222-0000-0000-0000-0000000000f1', '2031-09-01', '2031-09-02')$q$,
   'no se ponen vacaciones a un trabajador de otra unidad');
 
+-- horas anuales (L-J 8 h, V 6 h; festivos, cierres y vacaciones no suman)
+update personal.calendarios set horas_dia = '{0,8,8,8,8,6,0}', horas_anuales = 1968 where id = '11111111-0000-0000-0000-0000000000c1';
+select pruebas.ok((select horas from personal.horas_personas('11111111-0000-0000-0000-0000000000c1') where persona_id = '11111111-0000-0000-0000-0000000000f1') = 1872,
+  'horas de Ana: 1968 del año menos sus vacaciones = 1872');
+select pruebas.ok((select vacaciones from personal.horas_personas('11111111-0000-0000-0000-0000000000c1') where persona_id = '11111111-0000-0000-0000-0000000000f1') = 18,
+  'y cuenta sus 18 días de vacaciones de 2031');
+select pruebas.falla($q$select personal.enviar_calendario('11111111-0000-0000-0000-0000000000c1')$q$, 'no se envía si no cuadran las horas (Ana: 1872 de 1968)');
+update personal.calendarios set horas_anuales = 1872 where id = '11111111-0000-0000-0000-0000000000c1';
+select personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-07-03']::date[], 'intensiva', null, '7:00 a 13:00', 6);
+select pruebas.ok((select horas from personal.horas_personas('11111111-0000-0000-0000-0000000000c1') where persona_id = '11111111-0000-0000-0000-0000000000f1') = 1870,
+  'un jueves de intensiva con 6 h resta 2 h');
+select personal.marcar_dias(array['11111111-0000-0000-0000-0000000000c1']::uuid[], array['2031-07-05']::date[], 'trabaja', null, null, 2);
+select pruebas.ok((select horas from personal.horas_personas('11111111-0000-0000-0000-0000000000c1') where persona_id = '11111111-0000-0000-0000-0000000000f1') = 1872,
+  'un sábado que trabaja 2 h las suma: vuelve a cuadrar');
+select pruebas.ok((select horas from personal.dias where fecha = '2031-07-05') = 2, 'el día guarda sus horas');
+-- quien tiene otras horas (Bruno en Refuerzo, L-X-V)
+update personal.calendarios set horas_dia = '{0,8,0,8,0,6,0}', horas_anuales = 2000 where id = '11111111-0000-0000-0000-0000000000c3';
+update personal.calendario_personas set horas_anuales = (select horas from personal.horas_personas('11111111-0000-0000-0000-0000000000c3') where persona_id = '11111111-0000-0000-0000-0000000000f2')
+ where persona_id = '11111111-0000-0000-0000-0000000000f2';
+select pruebas.ok((select objetivo = horas from personal.horas_personas('11111111-0000-0000-0000-0000000000c3') where persona_id = '11111111-0000-0000-0000-0000000000f2'),
+  'Bruno tiene sus propias horas (no las 2000 del calendario) y le cuadran');
+select pruebas.falla($q$select personal.enviar_calendario('11111111-0000-0000-0000-0000000000c2')$q$, 'sin horas anuales puestas no se envía (Fin de semana)');
+
 -- enviar a firmar
 select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-0000000000c1') = 1, 'enviar Semana sin decir a quién: a todos los del calendario (Ana)');
 select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-0000000000c3', array['11111111-0000-0000-0000-0000000000f2', '11111111-0000-0000-0000-0000000000f1']::uuid[]) = 1,
@@ -106,7 +129,9 @@ select pruebas.ok(personal.enviar_calendario('11111111-0000-0000-0000-0000000000
 select pruebas.ok((select datos ->> 'calendario' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f2') = 'Refuerzo 2031', 'la foto dice qué calendario es');
 select pruebas.ok((select datos -> 'dias_equipo' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f2') = '[1,3,5]', 'y qué días de la semana se trabaja');
 select pruebas.ok((select datos -> 'vacaciones' -> 0 ->> 'desde' from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = '2031-01-01', 'la foto recorta las vacaciones al año');
-select pruebas.ok((select jsonb_array_length(datos -> 'dias') from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = 4, 'la foto lleva los días del calendario');
+select pruebas.ok((select jsonb_array_length(datos -> 'dias') from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1') = 6, 'la foto lleva los días del calendario');
+select pruebas.ok((select (datos ->> 'horas_anuales')::numeric = 1872 and (datos ->> 'horas')::numeric = 1872 from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1'),
+  'la foto lleva las horas del año');
 select pruebas.ok((select sha256 = personal.huella(datos) from personal.envios where persona_id = '11111111-0000-0000-0000-0000000000f1'), 'el envío guarda la huella de la foto');
 select pruebas.ok(pruebas.cuantas($q$select * from personal.v_envios where estado = 'pendiente'$q$) = 2, 'los 2 envíos están pendientes');
 select pruebas.falla($q$insert into personal.envios (empresa_id, anio, calendario_id, persona_id, datos, sha256) values ('11111111-0000-0000-0000-000000000001', 2031, '11111111-0000-0000-0000-0000000000c1', '11111111-0000-0000-0000-0000000000f1', '{}', repeat('0', 64))$q$,

@@ -9,13 +9,16 @@ import {
 } from './calendario';
 
 /** Un calendario del año (nombre, días de la semana que se trabaja y quién va en él). */
-interface Equipo { id: string; nombre: string; dias: number[]; personas: string[] }
+interface Equipo { id: string; nombre: string; dias: number[]; personas: string[]; horas_dia: number[] | null; horas_anuales: number | null }
+interface Horas { persona_id: string; nombre: string; objetivo: number | null; horas: number; vacaciones: number }
+const fmtH = (n: number) => n.toLocaleString('es-ES', { maximumFractionDigits: 2 });
 interface Persona { id: string; nombre: string; baja?: string | null }
 interface Envio {
   id: string; anio: number; calendario_id: string; persona_id: string; enviado: string; anulado: string | null;
   estado: 'pendiente' | 'firmado' | 'anulado'; firmado_en: string | null; conforme: boolean | null; comentario: string | null;
   firma_imagen: string | null; sha256: string;
-  datos: { anio: number; unidad: string; calendario?: string; equipo: string; trabajador: string; dias_equipo: number[] | null; dias: Dia[]; vacaciones: Vacacion[] };
+  datos: { anio: number; unidad: string; calendario?: string; equipo: string; trabajador: string; dias_equipo: number[] | null; dias: Dia[]; vacaciones: Vacacion[];
+    horas_anuales?: number | null; horas?: number | null };
 }
 
 type Pestana = 'mio' | 'calendario' | 'vacaciones' | 'firmas';
@@ -30,14 +33,15 @@ function useCalendarios(anio: number) {
   const [cals, setCals] = useState<Equipo[] | null>(null);
   const cargar = useCallback(async () => {
     const [c, cp] = await Promise.all([
-      personal().from('calendarios').select('id, nombre, dias_semana').eq('empresa_id', empresa!.id).eq('anio', anio).order('nombre'),
+      personal().from('calendarios').select('id, nombre, dias_semana, horas_dia, horas_anuales').eq('empresa_id', empresa!.id).eq('anio', anio).order('nombre'),
       personal().from('calendario_personas').select('persona_id, calendario_id').eq('empresa_id', empresa!.id).eq('anio', anio),
     ]);
     const miembros = (cp.data ?? []) as { persona_id: string; calendario_id: string }[];
     // primero el que empieza antes la semana (lunes), luego el de fin de semana
     const primerDia = (d: number[]) => Math.min(...d.map((x) => (x + 6) % 7), 7);
-    setCals(((c.data ?? []) as { id: string; nombre: string; dias_semana: number[] }[])
-      .map((x) => ({ id: x.id, nombre: x.nombre, dias: x.dias_semana, personas: miembros.filter((m) => m.calendario_id === x.id).map((m) => m.persona_id) }))
+    setCals(((c.data ?? []) as { id: string; nombre: string; dias_semana: number[]; horas_dia: number[] | null; horas_anuales: number | null }[])
+      .map((x) => ({ id: x.id, nombre: x.nombre, dias: x.dias_semana, horas_dia: x.horas_dia, horas_anuales: x.horas_anuales,
+        personas: miembros.filter((m) => m.calendario_id === x.id).map((m) => m.persona_id) }))
       .sort((a, b) => primerDia(a.dias) - primerDia(b.dias) || a.nombre.localeCompare(b.nombre, 'es')));
   }, [empresa, anio]);
   useEffect(() => { setCals(null); cargar(); }, [cargar]);
@@ -131,7 +135,10 @@ function FormCalendario({ anio, cal, cals, alCerrar, alGuardar }: {
   const { empresa } = useSesion();
   const personas = usePersonas().filter((p) => !p.baja || cal?.personas.includes(p.id));
   const [nombre, setNombre] = useState(cal?.nombre ?? '');
-  const [dias, setDias] = useState<number[]>(cal?.dias ?? [1, 2, 3, 4, 5]);
+  // horas de un día normal por día de la semana (índice 0 = domingo); vacío = no se trabaja
+  const [horasDia, setHorasDia] = useState<string[]>(() => [0, 1, 2, 3, 4, 5, 6].map((d) =>
+    cal?.horas_dia ? (cal.horas_dia[d] ? String(cal.horas_dia[d]).replace('.', ',') : '') : (cal ? cal.dias : [1, 2, 3, 4, 5]).includes(d) ? '8' : ''));
+  const [anuales, setAnuales] = useState(cal?.horas_anuales != null ? String(cal.horas_anuales).replace('.', ',') : '');
   const [quien, setQuien] = useState<Set<string>>(new Set(cal?.personas ?? []));
   const [copiarDe, setCopiarDe] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -141,9 +148,14 @@ function FormCalendario({ anio, cal, cals, alCerrar, alGuardar }: {
 
   async function guardarCal() {
     if (!nombre.trim()) { setError('Ponle un nombre.'); return; }
-    if (!dias.length) { setError('Elige qué días de la semana se trabaja.'); return; }
+    const num = (x: string) => (x.trim() === '' ? 0 : Number(x.replace(',', '.')));
+    const hd = horasDia.map(num);
+    if (hd.some((h) => Number.isNaN(h) || h < 0 || h > 24)) { setError('Las horas de cada día tienen que ser un número entre 0 y 24.'); return; }
+    if (!hd.some((h) => h > 0)) { setError('Pon las horas de los días que se trabaja.'); return; }
+    const ha = anuales.trim() === '' ? null : num(anuales);
+    if (ha !== null && (Number.isNaN(ha) || ha < 0 || ha > 4000)) { setError('Las horas al año no están bien escritas.'); return; }
     setOcupado(true); setError(null);
-    const fila = { nombre: nombre.trim(), dias_semana: [...dias].sort() };
+    const fila = { nombre: nombre.trim(), dias_semana: [0, 1, 2, 3, 4, 5, 6].filter((d) => hd[d] > 0), horas_dia: hd, horas_anuales: ha };
     const r = cal ? await personal().from('calendarios').update(fila).eq('id', cal.id).select('id').single()
       : await personal().from('calendarios').insert({ ...fila, empresa_id: empresa!.id, anio }).select('id').single();
     if (r.error) { setOcupado(false); setError(r.error.message.includes('duplicate') ? 'Ya hay un calendario con ese nombre este año.' : textoError(r.error.message)); return; }
@@ -169,11 +181,15 @@ function FormCalendario({ anio, cal, cals, alCerrar, alGuardar }: {
       pie={<>{cal && <button type="button" className="boton sec" onClick={borrar}>Borrar</button>}
         <button type="button" className="boton" disabled={ocupado} onClick={guardarCal}>{cal ? 'Guardar' : 'Crear'}</button></>}>
       <label className="campo"><span>Nombre</span><input value={nombre} maxLength={80} placeholder={`Por ejemplo: Refuerzo ${anio}`} onChange={(e) => setNombre(e.target.value)} /></label>
-      <div className="campo"><span>Días de la semana que se trabaja</span>
-        <div className="dias" role="group" aria-label="Días de la semana que se trabaja">
-          {DIAS_SEMANA.map(([d, l]) => <button key={d} type="button" aria-pressed={dias.includes(d)}
-            onClick={() => setDias((x) => (x.includes(d) ? x.filter((y) => y !== d) : [...x, d]))}>{l}</button>)}
+      <div className="campo"><span>Horas de un día normal (vacío = no se trabaja)</span>
+        <div className="horas-semana" role="group" aria-label="Horas de un día normal">
+          {DIAS_SEMANA.map(([d, l]) => <label key={d}><small>{l}</small>
+            <input inputMode="decimal" aria-label={`Horas del ${['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado'][d]}`} value={horasDia[d]}
+              onChange={(e) => setHorasDia((x) => x.map((y, i) => (i === d ? e.target.value : y)))} /></label>)}
         </div></div>
+      <label className="campo"><span>Horas que hay que trabajar al año</span>
+        <input inputMode="decimal" value={anuales} placeholder="Por ejemplo: 1712" onChange={(e) => setAnuales(e.target.value)} />
+        <span className="nota">A quien tenga otras (jornada parcial…), se las pones luego en el cuadro de horas.</span></label>
       {!cal && cals.length > 0 && <label className="campo"><span>Copiar los días marcados de (opcional)</span>
         <select value={copiarDe} onChange={(e) => setCopiarDe(e.target.value)}>
           <option value="">— Empezar en blanco —</option>{cals.map((c) => <option key={c.id} value={c.id}>{c.nombre}</option>)}
@@ -212,16 +228,20 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
   const editable = puede('personal.calendario.editar') || puede('personal.vacaciones.editar');
   const personas = usePersonasEquipo(equipo);
   const [vacs, setVacs] = useState<Vacacion[]>([]);
+  const [horas, setHoras] = useState<Horas[]>([]);
+  const [otrasHoras, setOtrasHoras] = useState<Horas | null>(null);
 
   const cargar = useCallback(async () => {
     const [d, v] = await Promise.all([
-      personal().from('dias').select('fecha, tipo, nombre, horario')
+      personal().from('dias').select('fecha, tipo, nombre, horario, horas')
         .eq('calendario_id', equipo.id).order('fecha'),
       personal().from('vacaciones').select('id, persona_id, desde, hasta, nota')
         .eq('empresa_id', empresa!.id).lte('desde', `${anio}-12-31`).gte('hasta', `${anio}-01-01`).order('desde'),
     ]);
     if (d.error) { aviso(d.error.message); return; }
     setDias((d.data ?? []) as Dia[]); setVacs((v.data ?? []) as Vacacion[]);
+    const h = await personal().rpc('horas_personas', { p_calendario: equipo.id });
+    setHoras((h.data ?? []) as Horas[]);
   }, [empresa, equipo, anio]);
   useEffect(() => { cargar(); }, [cargar]);
 
@@ -242,6 +262,7 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
 
   return (
     <>
+      <CuadroHoras cal={equipo} horas={horas} editable={puede('personal.calendario.editar')} alCambiar={setOtrasHoras} />
       <div className="cifras-linea">
         {TIPOS.map((t) => <span key={t.tipo}><i className={'t-' + t.tipo} /> {t.nombre}: <b>{cuenta(t.tipo)}</b></span>)}
       </div>
@@ -270,6 +291,7 @@ function Calendario({ anio, equipo, equipos }: { anio: number; equipo: Equipo; e
       {marcar && <Marcar fechas={[...elegidos].sort()} equipo={equipo} equipos={equipos} dias={dias ?? []} personas={personas ?? []}
         alCerrar={() => setMarcar(false)} alGuardar={() => { setMarcar(false); setElegidos(new Set()); cargar(); }} />}
       {copiar && <Copiar anio={anio} equipo={equipo} equipos={equipos} alCerrar={() => setCopiar(false)} alGuardar={() => { setCopiar(false); cargar(); }} />}
+      {otrasHoras && <OtrasHoras cal={equipo} h={otrasHoras} alCerrar={() => setOtrasHoras(null)} alGuardar={() => { setOtrasHoras(null); cargar(); }} />}
     </>
   );
 }
@@ -295,6 +317,8 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
   const [quien, setQuien] = useState<Set<string>>(new Set(personas.map((p) => p.id)));
   const [nombre, setNombre] = useState(uno?.nombre ?? '');
   const [horario, setHorario] = useState(uno?.horario ?? '');
+  const [horasDia, setHorasDia] = useState(uno?.horas != null ? String(uno.horas).replace('.', ',') : '');
+  const conHoras = ['intensiva', 'especial', 'trabaja'].includes(tipo);
   const [todos, setTodos] = useState(false);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -310,9 +334,12 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
       aviso(quien.size === 1 ? 'Vacaciones puestas' : `Vacaciones puestas a ${quien.size} trabajadores`); alGuardar();
       return;
     }
+    const h = horasDia.trim() === '' ? null : Number(horasDia.replace(',', '.'));
+    if (conHoras && h !== null && (Number.isNaN(h) || h < 0 || h > 24)) { setOcupado(false); setError('Las horas de ese día tienen que ser un número entre 0 y 24.'); return; }
+    if (tipo === 'trabaja' && h === null) { setOcupado(false); setError('Pon cuántas horas se trabaja ese día.'); return; }
     const { error } = await personal().rpc('marcar_dias', {
       p_calendarios: todos ? equipos.map((e) => e.id) : [equipo.id], p_fechas: fechas,
-      p_tipo: tipo || null, p_nombre: nombre || null, p_horario: ['intensiva', 'especial', 'trabaja'].includes(tipo) ? horario || null : null,
+      p_tipo: tipo || null, p_nombre: nombre || null, p_horario: conHoras ? horario || null : null, p_horas: conHoras ? h : null,
     });
     setOcupado(false);
     if (error) { setError(textoError(error.message)); return; }
@@ -357,7 +384,9 @@ function Marcar({ fechas, equipo, equipos, dias, personas, alCerrar, alGuardar }
       )}
       {tipo && tipo !== 'vacaciones' && <label className="campo"><span>Nombre (opcional)</span>
         <input value={nombre} maxLength={120} placeholder={tipo === 'festivo' ? 'Por ejemplo: Fiesta local' : ''} onChange={(e) => setNombre(e.target.value)} /></label>}
-      {['intensiva', 'especial', 'trabaja'].includes(tipo) && <label className="campo"><span>Horario</span>
+      {conHoras && <label className="campo"><span>Horas de ese día{tipo === 'trabaja' ? '' : ' (vacío = las de un día normal)'}</span>
+        <input inputMode="decimal" value={horasDia} placeholder="Por ejemplo: 7" onChange={(e) => setHorasDia(e.target.value)} /></label>}
+      {conHoras && <label className="campo"><span>Horario</span>
         <input value={horario} maxLength={120} placeholder="Por ejemplo: 7:00 a 15:00" onChange={(e) => setHorario(e.target.value)} /></label>}
       {tipo !== 'vacaciones' && equipos.length > 1 && <label className="check"><input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
         También en {equipos.filter((e) => e.id !== equipo.id).map((e) => e.nombre).join(' y ')}</label>}
@@ -485,6 +514,7 @@ function FormVacacion({ v, equipo, personas, alCerrar, alGuardar }: { v: Partial
 // Firmas: enviar el calendario a firmar y ver quién ha firmado
 // ---------------------------------------------------------------------------------------------
 function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
+  const [errorEnvio, setErrorEnvio] = useState<string | null>(null);
   const { empresa, puede } = useSesion();
   const personas = usePersonasEquipo(equipo);
   const [envios, setEnvios] = useState<Envio[]>([]);
@@ -511,7 +541,13 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
     setOcupado(true);
     const { data, error } = await personal().rpc('enviar_calendario', { p_calendario: equipo.id, p_personas: [...elegidos] });
     setOcupado(false);
-    if (error) { aviso(textoError(error.message)); return; }
+    if (error) {
+      const m = error.message.match(/(NO_CUADRA|SIN_HORAS): (.*)/);
+      setErrorEnvio(m ? (m[1] === 'NO_CUADRA' ? `No se puede enviar: no cuadran las horas de ${m[2]}. Míralo en la pestaña Calendario.`
+        : `No se puede enviar: faltan las horas al año de ${m[2]}. Ponlas en el calendario («Para N personas · cambiar»).`) : textoError(error.message));
+      return;
+    }
+    setErrorEnvio(null);
     aviso(`Enviado a ${data} ${data === 1 ? 'trabajador' : 'trabajadores'}`); setElegidos(new Set()); cargar();
   }
   async function anular(e: Envio) {
@@ -541,6 +577,7 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
           );
         })}
       </div>
+      {errorEnvio && <p className="error" role="alert">{errorEnvio}</p>}
       {enviar && (
         <div className="botonera no-imprimir">
           <button type="button" className="boton txt" onClick={() => setElegidos(new Set(personas.filter((p) => !vigente.get(p.id)).map((p) => p.id)))}>Elegir los que faltan</button>
@@ -629,7 +666,8 @@ function Documento({ envio, alCerrar, alFirmar, alAnular }: { envio: Envio; alCe
           <button type="button" className="boton sec" onClick={() => window.print()}>Imprimir o PDF</button>
           {puedeFirmar && <button type="button" className="boton" onClick={() => setFirmando(true)}>Firmar</button>}</>}>
       <div className="documento">
-        <p className="doc-cab"><b>{d.unidad}</b> · Calendario laboral {d.anio}<br />{d.trabajador} · {d.calendario ?? d.equipo}</p>
+        <p className="doc-cab"><b>{d.unidad}</b> · Calendario laboral {d.anio}<br />{d.trabajador} · {d.calendario ?? d.equipo}
+          {d.horas_anuales != null && <><br />Horas de trabajo al año: <b>{fmtH(d.horas ?? 0)} h</b> (de {fmtH(d.horas_anuales)} h)</>}</p>
         {!firmando ? (
           <>
             <Leyenda />
@@ -665,3 +703,52 @@ function Documento({ envio, alCerrar, alFirmar, alAnular }: { envio: Envio; alCe
   );
 }
 
+
+/** Cuadro de horas: lo que sale a cada persona frente a lo que tiene que hacer al año. */
+function CuadroHoras({ cal, horas, editable, alCambiar }: { cal: Equipo; horas: Horas[]; editable: boolean; alCambiar: (h: Horas) => void }) {
+  if (!horas.length) return null;
+  const mal = horas.filter((h) => h.objetivo == null || Math.abs(h.horas - h.objetivo) > 0.005).length;
+  return (
+    <section className="horas" aria-label="Horas del año">
+      <h2 className="subtitulo" style={{ marginTop: 0 }}>Horas del año {mal ? <span className="chapa sin-cuadrar">{mal} sin cuadrar</span> : <span className="chapa firmado">Todo cuadra</span>}</h2>
+      {cal.horas_anuales == null && <p className="nota" style={{ marginTop: 0 }}>Este calendario aún no tiene las horas al año («Para N personas · cambiar»).</p>}
+      <div className="lista">
+        {horas.map((h) => {
+          const dif = h.objetivo == null ? null : Math.round((h.horas - h.objetivo) * 100) / 100;
+          return (
+            <div key={h.persona_id} className="fila fija centrada">
+              <span className="fila-txt"><b>{h.nombre}</b>
+                <small>{fmtH(h.horas)} h{h.objetivo != null ? ` de ${fmtH(h.objetivo)} h` : ''}{h.vacaciones ? ` · ${h.vacaciones} días de vacaciones` : ''}
+                  {h.objetivo != null && cal.horas_anuales != null && h.objetivo !== cal.horas_anuales ? ' · horas propias' : ''}</small></span>
+              <span className={'chapa ' + (dif === 0 ? 'firmado' : 'sin-cuadrar')}>{dif === null ? 'Sin horas' : dif === 0 ? 'Cuadra' : dif < 0 ? `Faltan ${fmtH(-dif)} h` : `Sobran ${fmtH(dif)} h`}</span>
+              {editable && <button type="button" className="boton txt peq" onClick={() => alCambiar(h)}>Otras horas</button>}
+            </div>
+          );
+        })}
+      </div>
+    </section>
+  );
+}
+
+/** Horas al año propias de una persona (si no son las del calendario). */
+function OtrasHoras({ cal, h, alCerrar, alGuardar }: { cal: Equipo; h: Horas; alCerrar: () => void; alGuardar: () => void }) {
+  const propias = h.objetivo != null && h.objetivo !== cal.horas_anuales;
+  const [v, setV] = useState(propias ? String(h.objetivo).replace('.', ',') : '');
+  const [error, setError] = useState<string | null>(null);
+  async function guardar(valor: string) {
+    const n = valor.trim() === '' ? null : Number(valor.replace(',', '.'));
+    if (n !== null && (Number.isNaN(n) || n < 0 || n > 4000)) { setError('No es un número de horas válido.'); return; }
+    const { error } = await personal().from('calendario_personas').update({ horas_anuales: n }).eq('calendario_id', cal.id).eq('persona_id', h.persona_id);
+    if (error) { setError(textoError(error.message)); return; }
+    aviso('Horas guardadas'); alGuardar();
+  }
+  return (
+    <Ventana titulo={`Horas al año · ${h.nombre}`} alCerrar={alCerrar}
+      pie={<>{propias && <button type="button" className="boton sec" onClick={() => guardar('')}>Usar las del calendario</button>}
+        <button type="button" className="boton" onClick={() => guardar(v)}>Guardar</button></>}>
+      <p className="nota" style={{ marginTop: 0 }}>Las del calendario son {cal.horas_anuales != null ? `${fmtH(cal.horas_anuales)} h` : 'ninguna todavía'}. Pon aquí las suyas si son otras (por ejemplo, jornada parcial).</p>
+      <label className="campo"><span>Sus horas al año</span><input inputMode="decimal" value={v} onChange={(e) => setV(e.target.value)} /></label>
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}

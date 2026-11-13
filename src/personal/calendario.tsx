@@ -4,7 +4,7 @@ import { supabase } from '../nucleo/supabase';
 export const personal = () => supabase.schema('personal');
 
 export type TipoDia = 'festivo' | 'cierre' | 'intensiva' | 'especial' | 'trabaja' | 'descanso';
-export interface Dia { fecha: string; tipo: TipoDia; nombre: string | null; horario: string | null }
+export interface Dia { fecha: string; tipo: TipoDia; nombre: string | null; horario: string | null; horas?: number | null }
 export interface Vacacion { id?: string; persona_id?: string; desde: string; hasta: string; nota: string | null }
 
 export const TIPOS: { tipo: TipoDia; nombre: string; ayuda: string }[] = [
@@ -88,7 +88,7 @@ export function ListaDias({ dias }: { dias: Dia[] }) {
     <ul className="lista-dias">
       {dias.map((d) => (
         <li key={d.fecha}><i className={'t-' + d.tipo} aria-hidden="true" /><b>{fechaCorta(d.fecha)}</b>
-          <span>{d.nombre || nombreTipo(d.tipo)}{d.horario ? ` · ${d.horario}` : ''}</span></li>
+          <span>{d.nombre || nombreTipo(d.tipo)}{d.horas != null ? ` · ${String(d.horas).replace('.', ',')} h` : ''}{d.horario ? ` · ${d.horario}` : ''}</span></li>
       ))}
     </ul>
   );

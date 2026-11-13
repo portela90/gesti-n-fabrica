@@ -211,3 +211,10 @@ button.dia { cursor: pointer; }
 .tabla-firmas img { height: 42px; max-width: 140px; object-fit: contain; }
 @media print { .charla img { max-height: 180px; } .tabla-firmas img, .firma-mini { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 .acciones-cal { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: -4px 0 12px; }
+.horas-semana { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.horas-semana label { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.horas-semana small { font-weight: 700; color: var(--tinta2); }
+.horas-semana input { width: 100%; min-height: 44px; padding: 6px 2px; text-align: center; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
+.horas { margin: 0 0 16px; }
+.chapa.sin-cuadrar { background: color-mix(in srgb, var(--mal) 14%, transparent); color: var(--mal); }
+.subtitulo .chapa { margin-left: 8px; vertical-align: middle; }

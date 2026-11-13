@@ -30,8 +30,9 @@ const envio = (persona: string, estado: 'pendiente' | 'firmado') => ({
 });
 
 const tablas = () => ({
-  calendarios: [{ id: SEMANA, empresa_id: UNIDAD, anio: ANIO, nombre: 'Semana', dias_semana: [1, 2, 3, 4, 5] }, { id: FINDE, empresa_id: UNIDAD, anio: ANIO, nombre: 'Fin de semana', dias_semana: [0, 6] }],
-  calendario_personas: [{ empresa_id: UNIDAD, anio: ANIO, persona_id: ANA, calendario_id: SEMANA }, { empresa_id: UNIDAD, anio: ANIO, persona_id: BRUNO, calendario_id: SEMANA }],
+  calendarios: [{ id: SEMANA, empresa_id: UNIDAD, anio: ANIO, nombre: 'Semana', dias_semana: [1, 2, 3, 4, 5], horas_dia: [0, 8, 8, 8, 8, 6, 0], horas_anuales: 1712 },
+    { id: FINDE, empresa_id: UNIDAD, anio: ANIO, nombre: 'Fin de semana', dias_semana: [0, 6], horas_dia: null, horas_anuales: null }],
+  calendario_personas: [{ empresa_id: UNIDAD, anio: ANIO, persona_id: ANA, calendario_id: SEMANA, horas_anuales: null }, { empresa_id: UNIDAD, anio: ANIO, persona_id: BRUNO, calendario_id: SEMANA, horas_anuales: null }],
   personas: [{ id: ANA, empresa_id: UNIDAD, nombre: 'Ana Prueba', baja: null }, { id: BRUNO, empresa_id: UNIDAD, nombre: 'Bruno Prueba', baja: null },
     { id: CARLA, empresa_id: UNIDAD, nombre: 'Carla Finde', baja: null }],
   usuarios: [{ id: USUARIO.id, nombre: 'Ana Prueba', persona_id: ANA }],
@@ -44,10 +45,18 @@ const rpc = {
   marcar_dias: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
     const fechas = b.p_fechas as string[], cals = b.p_calendarios as string[];
     t.dias.splice(0, t.dias.length, ...t.dias.filter((d) => !(cals.includes(String(d.calendario_id)) && fechas.includes(String(d.fecha)))));
-    if (b.p_tipo) for (const c of cals) for (const f of fechas) t.dias.push({ empresa_id: UNIDAD, calendario_id: c, fecha: f, tipo: b.p_tipo, nombre: b.p_nombre, horario: b.p_horario });
+    if (b.p_tipo) for (const c of cals) for (const f of fechas) t.dias.push({ empresa_id: UNIDAD, calendario_id: c, fecha: f, tipo: b.p_tipo, nombre: b.p_nombre, horario: b.p_horario, horas: b.p_horas ?? null });
     return fechas.length * cals.length;
   },
   enviar_calendario: (b: Record<string, unknown>) => (b.p_personas as string[]).length,
+  // horas: Ana cuadra; Bruno, que tiene sus propias 1000 h, no
+  horas_personas: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => t.calendario_personas
+    .filter((m) => m.calendario_id === b.p_calendario).map((m) => {
+      const cal = t.calendarios.find((c) => c.id === m.calendario_id)!;
+      const objetivo = (m.horas_anuales ?? cal.horas_anuales) as number | null;
+      return { persona_id: m.persona_id, nombre: m.persona_id === ANA ? 'Ana Prueba' : m.persona_id === BRUNO ? 'Bruno Prueba' : 'Carla Finde',
+        objetivo, horas: m.persona_id === BRUNO ? 1704 : objetivo ?? 0, vacaciones: m.persona_id === ANA ? 10 : 0 };
+    }),
   poner_personas: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
     const ps = b.p_personas as string[];
     t.calendario_personas.splice(0, t.calendario_personas.length, ...t.calendario_personas.filter((m) => m.calendario_id !== b.p_calendario && !ps.includes(String(m.persona_id))));
@@ -120,8 +129,10 @@ test('crear un calendario solo para algunos, copiando los días de otro', async 
   await expect(page.getByRole('button', { name: 'Para 2 personas · cambiar' })).toBeVisible();
   await page.getByRole('button', { name: '+ Nuevo calendario' }).click();
   await page.getByLabel('Nombre').fill(`Refuerzo ${ANIO}`);
-  await page.getByRole('group', { name: 'Días de la semana que se trabaja' }).getByRole('button', { name: 'M', exact: true }).click();
-  await page.getByRole('group', { name: 'Días de la semana que se trabaja' }).getByRole('button', { name: 'J', exact: true }).click();
+  await page.getByLabel('Horas del martes').fill('');
+  await page.getByLabel('Horas del jueves').fill('');
+  await page.getByLabel('Horas del viernes').fill('6,5');
+  await page.getByLabel('Horas que hay que trabajar al año').fill('1000');
   await page.getByLabel('Copiar los días marcados de (opcional)').selectOption({ label: 'Semana' });
   await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').check();
   await expect(page.locator('.fila.check', { hasText: 'Bruno Prueba' })).toContainText('Ahora en «Semana»');
@@ -129,13 +140,54 @@ test('crear un calendario solo para algunos, copiando los días de otro', async 
   await page.getByRole('button', { name: 'Crear' }).click();
   await expect(page.getByText('Calendario creado')).toBeVisible();
   const nuevo = sim.tablas.calendarios.find((c) => c.nombre === `Refuerzo ${ANIO}`)!;
-  expect(nuevo).toMatchObject({ empresa_id: UNIDAD, anio: ANIO, dias_semana: [1, 3, 5] });
+  expect(nuevo).toMatchObject({ empresa_id: UNIDAD, anio: ANIO, dias_semana: [1, 3, 5], horas_dia: [0, 8, 0, 8, 0, 6.5, 0], horas_anuales: 1000 });
   expect(sim.find((l) => l.ruta.includes('/rpc/poner_personas'))!.cuerpo).toEqual({ p_calendario: nuevo.id, p_personas: [BRUNO] });
   expect(sim.find((l) => l.ruta.includes('/rpc/copiar_dias'))!.cuerpo).toEqual({ p_de: SEMANA, p_a: nuevo.id });
   await expect(page.getByLabel('Calendario')).toHaveValue(String(nuevo.id));
   await expect(page.getByRole('button', { name: 'Para 1 persona · cambiar' })).toBeVisible();
   await expect(page.locator('.lista-dias').first()).toContainText('Año nuevo');
   expect(errores).toEqual([]);
+});
+
+test('horas del año: ver quién cuadra, poner horas propias y no dejar enviar si no cuadra', async ({ page }) => {
+  const errores = vigilar(page);
+  const t = tablas();
+  t.calendario_personas[1].horas_anuales = 1000;
+  const r = { ...rpc, enviar_calendario: () => { throw new Error('NO_CUADRA: Bruno Prueba'); } };
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: t, rpc: r });
+  await page.goto('./#/m/personal/calendario');
+  const cuadro = page.getByRole('region', { name: 'Horas del año' });
+  await expect(cuadro).toContainText('1 sin cuadrar');
+  await expect(cuadro.locator('.fila', { hasText: 'Ana Prueba' })).toContainText('1712 h de 1712 h · 10 días de vacaciones');
+  await expect(cuadro.locator('.fila', { hasText: 'Ana Prueba' }).locator('.chapa')).toHaveText('Cuadra');
+  await expect(cuadro.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('horas propias');
+  await expect(cuadro.locator('.fila', { hasText: 'Bruno Prueba' }).locator('.chapa')).toHaveText('Sobran 704 h');
+  await cuadro.locator('.fila', { hasText: 'Bruno Prueba' }).getByRole('button', { name: 'Otras horas' }).click();
+  await page.getByLabel('Sus horas al año').fill('1704');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(cuadro).toContainText('Todo cuadra');
+  expect(sim.tablas.calendario_personas[1].horas_anuales).toBe(1704);
+
+  // si no cuadra, la app no deja enviar y dice a quién
+  await page.getByRole('button', { name: 'Firmas' }).click();
+  await page.getByLabel('Elegir a Bruno Prueba').check();
+  await page.getByRole('button', { name: 'Enviar a firmar (1)' }).click();
+  await expect(page.getByRole('alert')).toHaveText('No se puede enviar: no cuadran las horas de Bruno Prueba. Míralo en la pestaña Calendario.');
+  expect(errores).toEqual([]);
+});
+
+test('marcar un día que trabaja pide sus horas', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/calendario');
+  await page.getByRole('button', { name: new RegExp('^4 de julio') }).click();
+  await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
+  await page.getByRole('dialog').locator('.opcion', { hasText: 'Día de trabajo aunque no sea' }).click();
+  await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
+  await expect(page.getByText('Pon cuántas horas se trabaja ese día.')).toBeVisible();
+  await page.getByLabel(/^Horas de ese día/).fill('4,5');
+  await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
+  await expect(page.locator('.lista-dias').first()).toContainText('Trabaja · 4,5 h');
+  expect(sim.find((l) => l.ruta.includes('/rpc/marcar_dias'))!.cuerpo).toMatchObject({ p_tipo: 'trabaja', p_horas: 4.5 });
 });
 
 test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', async ({ page }) => {
