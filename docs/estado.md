@@ -69,7 +69,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
   faltan / sobran, «Otras horas» por persona); al marcar intensiva, especial o trabaja se ponen las horas del día.
 - Pruebas: 70 de base de datos (cuenta exacta de un año de ejemplo) y 9 de pantallas de Personal.
 
-### 1.1 cuater · Calendario por operario (13/11, noche)
+### 1.1 cuater · Calendario por operario (13/11, noche) — APLICADO (0013 pegado el 13/11; comprobado)
 - Cristian: «seleccionar un operario (o varios), meterle sus horas anuales, ir marcando los días y poniendo las horas de
   cada día hasta completar el calendario y darle a guardar». La pestaña **Calendario** es ahora una lista de operarios
   (con su calendario y si le cuadran las horas); se toca uno o se marcan varios → editor (`src/personal/PorOperario.tsx`).
