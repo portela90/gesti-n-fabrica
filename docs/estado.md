@@ -40,6 +40,10 @@ que cuadra antes de dejar la app vieja en solo consulta.
     quiere que salgan los días entre semana en el calendario que se firma.
 
 ## Avisos
+- Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
+  `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera
+  `Content-Profile: public` (COLADA `supabase/migraciones/limpieza_envios_almacen_esquema_public.sql`). Cualquier llamada
+  nueva entre proyectos debe decir siempre el esquema.
 - No pedir ni guardar contraseñas ni claves; si Cristian pega una en el chat, decirle que la cambie.
 - El revisor de Supabase avisa de funciones de las apps viejas que se pueden llamar sin entrar (p. ej.
   `errores_listar`): pendiente de revisar en COLADA, no tocado.
