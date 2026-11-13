@@ -52,8 +52,11 @@ que cuadra antes de dejar la app vieja en solo consulta.
    trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que
    llegan con Prevención). Ahmed El Hait estaba en los dos equipos: puesto en Semana. Usuario de Cristian enlazado a su ficha.
 2. **Entrar con nombre y PIN** (operarios): hace falta para que firmen en su móvil. Por decidir cómo (ver abajo).
-3. **Traer los datos del calendario** de limpieza-cie (`cal_dia` → `personal.dias`, `cal_vac` → `personal.vacaciones`,
-   `cal_firma` está vacía) con `origen` = tabla:id vieja, y comprobar que cuadra.
+3. ~~Traer los datos del calendario~~ HECHO 13/11: 53 días (`cal_dia`) y 35 vacaciones (`cal_vac`, mismo id) con `origen`;
+   `cal_firma` vacía. **Comprobado: idénticos** (misma huella md5 en los dos proyectos, día a día y vacación a vacación).
+   La app vieja sigue en uso hasta tener el PIN: antes de dejarla en solo consulta, volver a comparar y traer lo que
+   haya cambiado allí. En la vieja: el 12/10/2026 está en `festivos` pero no en `cal_dia` (no se trajo); Ahmed tiene
+   dos vacaciones solapadas en verano de 2026 (se trajeron tal cual).
 4. **Prevención** (Toolbox): datos del trabajador, charlas mensuales, formación F40R304, documentos PRL y EPIs,
    certificados, tallas, expediente PDF. Y traer `prl_*`.
 5. App vieja de Calendario y Toolbox en solo consulta.
