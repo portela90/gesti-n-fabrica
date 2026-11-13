@@ -37,12 +37,15 @@ que cuadra antes de dejar la app vieja en solo consulta.
     del calendario + huella sha256; solo se anulan) y la vista `v_envios` (pendiente / firmado / anulado).
     Funciones: `marcar_dias`, `copiar_dias`, `enviar_calendario`, `anular_envio`, `firmar_calendario`.
     Permisos `personal.*` (tarea.ver, calendario.ver/editar, vacaciones.editar, firma.enviar/ver/recoger, historial.ver).
-- Después de aplicarlas: añadir `personal` a «Exposed schemas» y encender el módulo Personal en Limpieza.
+- Después de aplicarlas: añadir `personal` **al final** de «Exposed schemas» (que `public` siga el primero: el primero es
+  el de por defecto y las apps viejas dependen de él, ver Avisos) y encender el módulo Personal en Limpieza.
+- Subido a `dev` el 13/11 sin aplicar nada en Supabase: mientras no se apliquen 0008–0009 no existen los permisos
+  `personal.*`, así que nadie ve el módulo nuevo y nada cambia para nadie.
 - Pantallas (`src/personal/`): Mi calendario (ver y firmar con el dedo, conforme o con observaciones), Calendario
   (tocar días y marcarlos, también en el otro equipo; copiar de otro equipo), Vacaciones, Firmas (quién ha firmado,
   enviar a firmar, anular, ver la firma). «Imprimir o PDF» con el diálogo de imprimir del móvil.
   Recuadro de firma reutilizable: `src/componentes/Firma.tsx` (lo usará Prevención).
-- Pruebas: `supabase/pruebas/40-personal-calendario.sql` (49) y `pruebas/personal.spec.ts` (5).
+- Pruebas: `supabase/pruebas/40-personal-calendario.sql` (52) y `pruebas/personal.spec.ts` (5).
 
 ### Lo siguiente de la Fase 1, en orden
 1. **Dar de alta Limpieza de verdad**: equipos Semana y Fin de semana y los trabajadores (desde limpieza-cie).
