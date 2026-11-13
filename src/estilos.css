@@ -230,3 +230,15 @@ button.dia { cursor: pointer; }
 .acciones-dias { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
 .acciones-dias input { width: 64px; min-height: 36px; padding: 4px 8px; text-align: center; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
 .barra-abajo .boton:not(.peq) { flex: 1; }
+/* editor: contador y «pincel» fijos arriba */
+.pegado { position: sticky; top: 72px; z-index: 3; margin: 0 0 10px; }
+.pegado .contador { position: static; margin: 0 0 6px; }
+.pincel { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 10px; background: var(--sup); border: 1px solid var(--linea); border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.pincel > span { font-size: 14px; color: var(--tinta2); font-weight: 600; }
+.pincel button, .pincel-horas { min-height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; }
+.pincel button[aria-pressed="true"], .pincel-horas.sel { border-color: var(--area); background: color-mix(in srgb, var(--area) 12%, transparent); color: var(--area); }
+.pincel-horas input { width: 48px; min-height: 30px; padding: 2px 4px; text-align: center; border-radius: 8px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; font-weight: 700; }
+.pincel { gap: 4px; padding: 6px 8px; }
+.pincel > span { font-size: 13px; }
+.pincel button, .pincel-horas { min-height: 36px; padding: 0 9px; font-size: 14px; }
+.pincel-horas input { width: 42px; }

@@ -94,9 +94,11 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
   const [anuales, setAnuales] = useState(deUno?.horas_anuales != null ? String(deUno.horas_anuales).replace('.', ',') : '');
   const [dias, setDias] = useState<Map<string, DiaEd> | null>(null);
   const [vacs, setVacs] = useState<(Vacacion & { persona_id: string })[]>([]);
-  const [nuevasVac, setNuevasVac] = useState<{ persona_id: string; desde: string; hasta: string; nota: string | null }[]>([]);
-  const [elegidos, setElegidos] = useState<Set<string>>(new Set());
-  const [horasPoner, setHorasPoner] = useState('8');
+  // vacaciones nuevas: los días tocados en modo Vacaciones (valen para todos los elegidos)
+  const [nuevasVac, setNuevasVac] = useState<Set<string>>(new Set());
+  // el «pincel»: lo que se pone al tocar un día
+  const [modo, setModo] = useState<'horas' | 'festivo' | 'vacaciones'>('horas');
+  const [horasPincel, setHorasPincel] = useState('8');
   const [cambiado, setCambiado] = useState(false);
   const [rellenar, setRellenar] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +128,13 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const todasVac = useMemo(() => [...vacs, ...nuevasVac], [vacs, nuevasVac]);
+  const nuevasPeriodos = useMemo(() => periodos([...nuevasVac]), [nuevasVac]);
+  const guardadaVac = (pid: string, f: string) => vacs.some((v) => v.persona_id === pid && v.desde <= f && f <= v.hasta);
+  // vacaciones nuevas de cada uno: los días tocados que aún no tenía de vacaciones
+  const nuevasDe = (pid: string) => periodos([...nuevasVac].filter((f) => !guardadaVac(pid, f))).map((r) => ({ persona_id: pid, ...r, nota: null }));
+  const todasVac = useMemo(() => [...vacs, ...ids.flatMap(nuevasDe)],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [vacs, nuevasVac]);
   const deVac = (pid: string, f: string) => todasVac.some((v) => v.persona_id === pid && v.desde <= f && f <= v.hasta);
   const objetivo = num(anuales);
   const cuentas = useMemo(() => personas.map((p) => {
@@ -136,22 +144,30 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
   }), [dias, todasVac, personas]);
   const iguales = cuentas.every((c) => c.horas === cuentas[0].horas);
 
-  const tocar = (f: string) => setElegidos((s) => { const n = new Set(s); if (n.has(f)) n.delete(f); else n.add(f); return n; });
-  function aplicar(fn: (m: Map<string, DiaEd>, f: string) => void) {
-    setDias((d) => { const m = new Map(d!); elegidos.forEach((f) => fn(m, f)); return m; });
-    setElegidos(new Set()); setCambiado(true); setError(null);
+  // tocar un día pone lo que haya en el pincel; si ya lo tenía, se quita. El contador se recalcula al momento.
+  function tocar(f: string) {
+    setError(null);
+    if (modo === 'vacaciones') {
+      if (ids.every((pid) => guardadaVac(pid, f)) && !nuevasVac.has(f)) {
+        setError('Ese día ya estaba de vacaciones (guardado): se cambia en la pestaña Vacaciones.'); return;
+      }
+      setNuevasVac((s) => { const n = new Set(s); if (n.has(f)) n.delete(f); else n.add(f); return n; });
+      setCambiado(true); return;
+    }
+    let h = 0;
+    if (modo === 'horas') {
+      h = num(horasPincel);
+      if (Number.isNaN(h) || h <= 0 || h > 24) { setError('Escribe arriba las horas que quieres poner (entre 0 y 24).'); return; }
+    }
+    setDias((d) => {
+      const m = new Map(d!), x = m.get(f);
+      if (modo === 'horas') { if (x?.tipo === 'trabaja' && x.horas === h) m.delete(f); else m.set(f, { tipo: 'trabaja', horas: h, nombre: null }); }
+      else if (x?.tipo === 'festivo') m.delete(f); else m.set(f, { tipo: 'festivo', horas: null, nombre: null });
+      return m;
+    });
+    setNuevasVac((s) => { if (!s.has(f)) return s; const n = new Set(s); n.delete(f); return n; });
+    setCambiado(true);
   }
-  function ponerHoras() {
-    const h = num(horasPoner);
-    if (Number.isNaN(h) || h <= 0 || h > 24) { setError('Pon las horas (un número entre 0 y 24).'); return; }
-    aplicar((m, f) => m.set(f, { tipo: 'trabaja', horas: h, nombre: null }));
-  }
-  function ponerVacaciones() {
-    const ps = periodos([...elegidos]);
-    setNuevasVac((v) => [...v, ...ids.flatMap((pid) => ps.map((r) => ({ persona_id: pid, ...r, nota: null })))]);
-    setElegidos(new Set()); setCambiado(true);
-  }
-  function quitarVacacionesNuevas(f: string) { setNuevasVac((v) => v.filter((x) => !(x.desde <= f && f <= x.hasta))); }
 
   async function guardar() {
     if (!nombre.trim()) { setError('Ponle un nombre al calendario.'); return; }
@@ -160,7 +176,7 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
     const lista = [...dias!.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([fecha, d]) => ({ fecha, tipo: d.tipo, horas: d.horas, nombre: d.nombre }));
     const { error } = await personal().rpc('guardar_calendario', {
       p_empresa: empresa!.id, p_anio: anio, p_calendario: mismo?.id ?? null, p_nombre: nombre.trim(), p_horas_anuales: objetivo,
-      p_personas: ids, p_dias: lista, p_vacaciones: nuevasVac,
+      p_personas: ids, p_dias: lista, p_vacaciones: ids.flatMap(nuevasDe),
     });
     setOcupado(false);
     if (error) { setError(error.message.includes('duplicate') ? 'Ya hay otro calendario con ese nombre este año.' : textoError(error.message)); return; }
@@ -194,39 +210,34 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
         <label className="campo"><span>Nombre del calendario</span>
           <input value={nombre} maxLength={80} onChange={(e) => { setNombre(e.target.value); setCambiado(true); }} /></label>
       </div>
-      <div className="contador" role="status" aria-label="Horas que llevas">
-        {iguales ? <span>Llevas {resumen(cuentas[0].horas)}</span>
-          : cuentas.map((c) => <span key={c.p.id}>{c.p.nombre.split(' ')[0]}: {resumen(c.horas)}</span>)}
+      <div className="pegado">
+        <div className="contador" role="status" aria-label="Horas que llevas">
+          {iguales ? <span>Llevas {resumen(cuentas[0].horas)}</span>
+            : cuentas.map((c) => <span key={c.p.id}>{c.p.nombre.split(' ')[0]}: {resumen(c.horas)}</span>)}
+        </div>
+        <div className="pincel" role="group" aria-label="Al tocar un día se pone">
+          <span>Al tocar:</span>
+          <label className={'pincel-horas' + (modo === 'horas' ? ' sel' : '')} onClick={() => setModo('horas')}>
+            <input inputMode="decimal" aria-label="Horas que se ponen al tocar un día" value={horasPincel}
+              onFocus={() => setModo('horas')} onChange={(e) => { setHorasPincel(e.target.value); setModo('horas'); }} /> h</label>
+          <button type="button" aria-pressed={modo === 'festivo'} onClick={() => setModo('festivo')}>Festivo</button>
+          {conVacaciones && <button type="button" aria-pressed={modo === 'vacaciones'} onClick={() => setModo('vacaciones')}>Vacaciones</button>}
+        </div>
       </div>
       <div className="botonera" style={{ justifyContent: 'flex-start', margin: '0 0 10px' }}>
         <button type="button" className="boton sec peq" onClick={() => setRellenar(true)}>Rellenar por días de la semana</button>
         <button type="button" className="boton txt peq" onClick={() => { if (confirm('¿Borrar todos los días de este calendario?')) { setDias(new Map()); setCambiado(true); } }}>Borrar todo</button>
       </div>
-      <p className="nota" style={{ margin: '0 0 8px' }}>Toca los días y abajo ponles las horas, márcalos como festivo{conVacaciones ? ' o vacaciones' : ''}, o quítalos.</p>
+      <p className="nota" style={{ margin: '0 0 8px' }}>Elige arriba qué poner (unas horas, festivo{conVacaciones ? ' o vacaciones' : ''}) y toca los días: se suma al momento. Tocar otra vez lo quita.</p>
       <Leyenda conHoras sinTipos />
-      <Anio anio={anio} dias={especiales} vacaciones={vacTodos} diasEquipo={[]} horas={horasMap} elegidos={elegidos} alTocar={tocar} />
-      {nuevasVac.length > 0 && <>
+      <Anio anio={anio} dias={especiales} vacaciones={vacTodos} diasEquipo={[]} horas={horasMap} elegidos={new Set()} alTocar={tocar} />
+      {nuevasPeriodos.length > 0 && <>
         <h3 className="subtitulo">Vacaciones nuevas (se guardan al pulsar Guardar)</h3>
-        <ul className="lista-dias">{nuevasVac.filter((v, i, a) => a.findIndex((x) => x.desde === v.desde && x.hasta === v.hasta) === i)
-          .map((r) => <li key={r.desde + r.hasta}><i className="t-vacaciones" /><span>{periodo(r)}</span>
-            <button type="button" className="boton txt peq" onClick={() => quitarVacacionesNuevas(r.desde)}>Quitar</button></li>)}</ul></>}
+        <ul className="lista-dias">{nuevasPeriodos.map((r) => <li key={r.desde}><i className="t-vacaciones" /><span>{periodo(r)}</span></li>)}</ul></>}
       {error && <p className="error" role="alert">{error}</p>}
       <div className="barra-abajo no-imprimir">
-        {elegidos.size > 0 ? (
-          <div className="acciones-dias">
-            <span><b>{elegidos.size}</b> {elegidos.size === 1 ? 'día' : 'días'}</span>
-            <input inputMode="decimal" aria-label="Horas de los días elegidos" value={horasPoner} onChange={(e) => setHorasPoner(e.target.value)} />
-            <button type="button" className="boton peq" onClick={ponerHoras}>Poner horas</button>
-            <button type="button" className="boton sec peq" onClick={() => aplicar((m, f) => m.set(f, { tipo: 'festivo', horas: null, nombre: null }))}>Festivo</button>
-            {conVacaciones && <button type="button" className="boton sec peq" onClick={ponerVacaciones}>Vacaciones</button>}
-            <button type="button" className="boton txt peq" onClick={() => aplicar((m, f) => m.delete(f))}>Quitar</button>
-          </div>
-        ) : (
-          <>
-            <button type="button" className="boton sec" onClick={salir}>Salir</button>
-            <button type="button" className="boton" disabled={ocupado} onClick={guardar}>Guardar</button>
-          </>
-        )}
+        <button type="button" className="boton sec" onClick={salir}>Salir</button>
+        <button type="button" className="boton" disabled={ocupado} onClick={guardar}>Guardar</button>
       </div>
       {rellenar && <Rellenar anio={anio} dias={dias} alCerrar={() => setRellenar(false)}
         alAplicar={(m) => { setDias(m); setCambiado(true); setRellenar(false); }} />}

@@ -82,6 +82,9 @@ que cuadra antes de dejar la app vieja en solo consulta.
   calendarios del año que se quedan sin nadie y sin envíos. Vacaciones y Firmas siguen eligiendo calendario; en Firmas
   está el cuadro «Horas del año».
 - Pruebas: `45-calendario-operario.sql` (12) y 4 de pantallas nuevas.
+- Cambio pedido por Cristian (13/11, 23:54): **tocar un día suma al momento** («pincel»): arriba se elige qué se pone al
+  tocar (unas horas, Festivo o Vacaciones); tocar otra vez lo quita; el contador se recalcula en cada toque. Ya no hay
+  «elegir días y luego Poner horas». Las vacaciones nuevas se ponen solo a quien aún no las tenía ese día.
 
 ### Lo siguiente de la Fase 1, en orden
 1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13

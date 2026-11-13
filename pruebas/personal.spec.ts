@@ -84,7 +84,7 @@ async function firmarConElDedo(page: Page) {
   await page.mouse.up();
 }
 
-test('calendario de un operario: horas al año, tocar días, poner horas, festivo y guardar', async ({ page }) => {
+test('calendario de un operario: al tocar los días se suman las horas al momento', async ({ page }) => {
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal/calendario');
@@ -95,17 +95,26 @@ test('calendario de un operario: horas al año, tocar días, poner horas, festiv
   page.once('dialog', (d) => d.accept());
   await page.getByRole('button', { name: 'Borrar todo' }).click();
   await page.getByLabel('Horas al año').fill('22');
-  await expect(page.getByRole('status', { name: 'Horas que llevas' })).toContainText('Llevas 0 h de 22 h · faltan 22 h');
-  for (const d of ['^2 de marzo', '^3 de marzo']) await page.getByRole('button', { name: new RegExp(d) }).click();
-  await page.getByLabel('Horas de los días elegidos').fill('8');
-  await page.getByRole('button', { name: 'Poner horas' }).click();
+  const contador = page.getByRole('status', { name: 'Horas que llevas' });
+  await expect(contador).toContainText('Llevas 0 h de 22 h · faltan 22 h');
+  // con 8 h en el pincel: cada toque suma 8 al momento
+  await page.getByRole('button', { name: /^2 de marzo/ }).click();
+  await expect(contador).toContainText('Llevas 8 h de 22 h · faltan 14 h');
+  await page.getByRole('button', { name: /^3 de marzo/ }).click();
+  await expect(contador).toContainText('Llevas 16 h de 22 h · faltan 6 h');
+  await page.getByRole('button', { name: /^4 de marzo/ }).click();
+  await expect(contador).toContainText('Llevas 24 h de 22 h · sobran 2 h');
+  await page.getByRole('button', { name: /^4 de marzo/ }).click(); // tocar otra vez lo quita
+  await expect(contador).toContainText('Llevas 16 h de 22 h · faltan 6 h');
+  // cambio a 6 h y toco el viernes
+  await page.getByLabel('Horas que se ponen al tocar un día').fill('6');
   await page.getByRole('button', { name: /^6 de marzo/ }).click();
-  await page.getByLabel('Horas de los días elegidos').fill('6');
-  await page.getByRole('button', { name: 'Poner horas' }).click();
+  await expect(contador).toContainText('22 h de 22 h · Cuadra al 100 %');
   await expect(page.getByRole('button', { name: /^6 de marzo · 6 h/ })).toBeVisible();
+  // festivo
+  await page.getByRole('group', { name: 'Al tocar un día se pone' }).getByRole('button', { name: 'Festivo' }).click();
   await page.getByRole('button', { name: /^19 de marzo/ }).click();
-  await page.getByRole('button', { name: 'Festivo', exact: true }).click();
-  await expect(page.getByRole('status', { name: 'Horas que llevas' })).toContainText('22 h de 22 h · Cuadra al 100 %');
+  await expect(page.getByRole('button', { name: /^19 de marzo · Festivo/ })).toBeVisible();
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByText('Calendario guardado')).toBeVisible();
   const b = sim.find((l) => l.ruta.includes('/rpc/guardar_calendario'))!.cuerpo as Record<string, unknown>;
@@ -116,7 +125,7 @@ test('calendario de un operario: horas al año, tocar días, poner horas, festiv
   expect(errores).toEqual([]);
 });
 
-test('varios operarios a la vez, con vacaciones, y rellenar por días de la semana', async ({ page }) => {
+test('varios operarios a la vez, con vacaciones que restan al momento, y rellenar por días de la semana', async ({ page }) => {
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal/calendario');
   await page.getByLabel('Elegir a Ana Prueba').check();
@@ -131,16 +140,20 @@ test('varios operarios a la vez, con vacaciones, y rellenar por días de la sema
   await page.getByRole('button', { name: 'Rellenar', exact: true }).click();
   await expect(page.getByRole('button', { name: /^5 de enero · 8 h/ })).toBeVisible(); // lunes
   await expect(page.getByRole('button', { name: /^2 de enero$/ })).toBeVisible();      // viernes: sin horas
+  const contador = page.getByRole('status', { name: 'Horas que llevas' });
+  const antes = await contador.textContent();
+  await page.getByRole('group', { name: 'Al tocar un día se pone' }).getByRole('button', { name: 'Vacaciones' }).click();
+  // 10 y 11 de agosto (lunes y martes de 2026): a cada uno le restan 16 h
   await page.getByRole('button', { name: /^10 de agosto/ }).click();
   await page.getByRole('button', { name: /^11 de agosto/ }).click();
-  await page.locator('.acciones-dias').getByRole('button', { name: 'Vacaciones', exact: true }).click();
+  await expect(contador).not.toHaveText(antes ?? '');
   await expect(page.getByText('Vacaciones nuevas (se guardan al pulsar Guardar)')).toBeVisible();
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByText('Calendario guardado')).toBeVisible();
   const b = sim.find((l) => l.ruta.includes('/rpc/guardar_calendario'))!.cuerpo as Record<string, unknown>;
   expect(b).toMatchObject({ p_calendario: SEMANA, p_nombre: 'Semana', p_personas: [ANA, BRUNO] });
-  expect(b.p_vacaciones).toEqual([
-    { persona_id: ANA, desde: `${ANIO}-08-10`, hasta: `${ANIO}-08-11`, nota: null }, { persona_id: BRUNO, desde: `${ANIO}-08-10`, hasta: `${ANIO}-08-11`, nota: null }]);
+  // Ana ya tenía vacaciones esos días (guardadas): solo se le ponen a Bruno
+  expect(b.p_vacaciones).toEqual([{ persona_id: BRUNO, desde: `${ANIO}-08-10`, hasta: `${ANIO}-08-11`, nota: null }]);
   const dias = b.p_dias as { fecha: string; horas: number }[];
   expect(dias.every((d) => new Date(d.fecha + 'T12:00:00Z').getUTCDay() >= 1 && new Date(d.fecha + 'T12:00:00Z').getUTCDay() <= 4 && d.horas === 8)).toBe(true);
 });
@@ -263,7 +276,6 @@ test('Personal en el móvil más estrecho: nada se aplasta ni se sale', async ({
   expect(await desbordes(page), 'documento').toEqual([]);
   await page.goto('./#/m/personal/calendario');
   await page.getByRole('button', { name: /^Ana Prueba/ }).click();
-  await page.getByRole('button', { name: /^2 de marzo/ }).click();
-  await expect(page.getByRole('button', { name: 'Poner horas' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Al tocar un día se pone' })).toBeVisible();
   expect(await desbordes(page), 'editor').toEqual([]);
 });
