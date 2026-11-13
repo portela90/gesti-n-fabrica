@@ -1,0 +1,699 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { nucleo, supabase } from '../nucleo/supabase';
+import { useSesion } from '../nucleo/sesion';
+import { aviso, Ventana } from '../componentes/basicos';
+import { Firma } from '../componentes/Firma';
+
+/** Tablas y funciones de Prevención (esquema «prevencion»). */
+const prev = () => supabase.schema('prevencion');
+
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const fechaCorta = (f: string | null) => { if (!f) return ''; const [a, m, d] = f.slice(0, 10).split('-').map(Number); return `${d}/${m}/${a}`; };
+const ANIO_ACTUAL = new Date().getFullYear();
+
+interface Charla {
+  id: string; empresa_id: string; anio: number; mes: number; codigo: string | null; compromiso: string; cuerpo: string | null;
+  puntos: string[]; tema: string | null; tema_intro: string | null; tema_puntos: string[]; imagen: string | null;
+}
+interface Sesion {
+  id: string; charla_id: string; denominacion: string | null; fecha: string | null; centro: string | null; duracion: number | null;
+  formador: string | null; observaciones: string | null; previstos: string[]; enviada_en: string | null; cerrada_en: string | null;
+}
+interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre: string; puesto: string | null; firma_id: string | null; anulada: string | null; creado: string }
+interface Persona { id: string; nombre: string; categoria: string | null; baja: string | null }
+
+const ERRORES: Record<string, string> = {
+  NO_PERMISO: 'No tienes permiso para hacer esto.', CERRADA: 'Este mes ya está cerrado.', YA_FIRMADO: 'Ya está firmada.',
+  FIRMA_MAL: 'Falta la firma.', NO_ENVIADA: 'Esta charla aún no se ha enviado.', SIN_PREVISTOS: 'Elige antes quién tiene que firmarla.',
+  TIENE_SESION: 'Esta charla ya tiene sesión; no se puede borrar.', duplicate: 'Ya hay una charla para ese mes.', dni_check: 'El DNI no está bien escrito (solo letras y números, sin espacios).',
+};
+const textoError = (m: string) => { const k = Object.keys(ERRORES).find((x) => m.includes(x)); return k ? ERRORES[k] : m; };
+
+type Pestana = 'mias' | 'charlas' | 'fichas';
+
+/** Módulo Prevención: mis charlas (todos) y, según permisos, las charlas de cada mes y las fichas de los trabajadores. */
+export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
+  const { puede } = useSesion();
+  const pestanas = ([
+    ['mias', 'Mis charlas', true],
+    ['charlas', 'Charlas', puede('prevencion.charla.ver')],
+    ['fichas', 'Fichas', puede('prevencion.ficha.ver')],
+  ] as [Pestana, string, boolean][]).filter((p) => p[2]);
+  const pedida = (ruta.split('/')[3] ?? '') as Pestana;
+  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.length > 1 ? 'charlas' : 'mias');
+  return (
+    <main className="contenido" style={{ ['--area' as string]: '#b91c1c' }}>
+      {pestanas.length > 1 && (
+        <nav className="pestanas no-imprimir" aria-label="Prevención">
+          {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/prevencion/${c}`)}>{n}</button>)}
+        </nav>
+      )}
+      {actual === 'mias' && <MisCharlas />}
+      {actual === 'charlas' && <Charlas />}
+      {actual === 'fichas' && <Fichas />}
+    </main>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Charlas: los 12 meses del año
+// ---------------------------------------------------------------------------------------------
+function Charlas() {
+  const { empresa, puede } = useSesion();
+  const [anio, setAnio] = useState(ANIO_ACTUAL);
+  const [charlas, setCharlas] = useState<Charla[] | null>(null);
+  const [sesiones, setSesiones] = useState<Sesion[]>([]);
+  const [firmas, setFirmas] = useState<Asistencia[]>([]);
+  const [abierto, setAbierto] = useState<number | null>(null);
+  const [ajustes, setAjustes] = useState(false);
+  const editable = puede('prevencion.charla.editar');
+
+  const cargar = useCallback(async () => {
+    const { data, error } = await prev().from('charlas').select('*').eq('empresa_id', empresa!.id).eq('anio', anio).order('mes');
+    if (error) { aviso(error.message); return; }
+    const cs = (data ?? []) as Charla[];
+    const ids = cs.map((c) => c.id);
+    const s = ids.length ? await prev().from('sesiones').select('*').in('charla_id', ids) : { data: [] };
+    const sids = ((s.data ?? []) as Sesion[]).map((x) => x.id);
+    const a = sids.length && puede('prevencion.firma.ver') ? await prev().from('asistencias').select('*').in('sesion_id', sids).is('anulada', null) : { data: [] };
+    setCharlas(cs); setSesiones((s.data ?? []) as Sesion[]); setFirmas((a.data ?? []) as Asistencia[]);
+  }, [empresa, anio, puede]);
+  useEffect(() => { cargar(); }, [cargar]);
+
+  return (
+    <>
+      <div className="filtros">
+        <label className="campo"><span>Año</span>
+          <select value={anio} onChange={(e) => setAnio(Number(e.target.value))}>
+            {[ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1].map((a) => <option key={a}>{a}</option>)}
+          </select></label>
+        {editable && <div className="campo"><span aria-hidden="true">&nbsp;</span><button type="button" className="boton sec" onClick={() => setAjustes(true)}>Datos por defecto</button></div>}
+      </div>
+      {charlas === null ? <p className="nota">Cargando…</p> : (
+        <div className="lista">
+          {MESES.map((nombre, i) => {
+            const c = charlas.find((x) => x.mes === i + 1);
+            const s = c && sesiones.find((x) => x.charla_id === c.id);
+            const n = s ? firmas.filter((f) => f.sesion_id === s.id).length : 0;
+            const estado = !c ? 'Sin charla' : !s?.enviada_en ? 'Sin enviar' : s.cerrada_en ? 'Cerrada' : 'Firmando';
+            return (
+              <button key={nombre} type="button" className={'fila' + (!c ? ' de-baja' : '')} disabled={!c && !editable} onClick={() => setAbierto(i + 1)}>
+                <span className="fila-txt"><b>{nombre}</b>
+                  <small>{c ? (c.tema || c.compromiso) : editable ? 'Toca para escribirla' : 'Todavía no hay charla'}</small>
+                  {s && <small>{s.cerrada_en ? `Cerrada el ${fechaCorta(s.cerrada_en)}` : s.enviada_en ? `Enviada el ${fechaCorta(s.enviada_en)}` : 'Sin enviar'}
+                    {' · '}{n} de {s.previstos.length} firmas</small>}</span>
+                <span className={'chapa ' + (estado === 'Cerrada' ? 'firmado' : estado === 'Firmando' ? 'pendiente' : 'sin')}>{estado}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {abierto && <Mes anio={anio} mes={abierto} charla={charlas?.find((c) => c.mes === abierto) ?? null}
+        sesion={sesiones.find((s) => s.charla_id === charlas?.find((c) => c.mes === abierto)?.id) ?? null}
+        alCerrar={() => setAbierto(null)} alCambiar={cargar} />}
+      {ajustes && <Ajustes alCerrar={() => setAjustes(false)} />}
+    </>
+  );
+}
+
+/** Datos por defecto para las sesiones nuevas (en nucleo.ajustes, módulo prevención). */
+const CLAVES_AJUSTES = [['centro', 'Lugar donde se da'], ['duracion', 'Duración (minutos)'], ['formador', 'Formador']] as const;
+function useAjustes() {
+  const { empresa } = useSesion();
+  const [v, setV] = useState<Record<string, string>>({});
+  useEffect(() => {
+    nucleo().from('ajustes').select('clave, valor, centro_id').eq('empresa_id', empresa!.id).eq('modulo', 'prevencion').is('centro_id', null)
+      .then(({ data }) => setV(Object.fromEntries(((data ?? []) as { clave: string; valor: unknown }[]).map((x) => [x.clave, String(x.valor ?? '')]))));
+  }, [empresa]);
+  return v;
+}
+function Ajustes({ alCerrar }: { alCerrar: () => void }) {
+  const { empresa } = useSesion();
+  const actuales = useAjustes();
+  const [v, setV] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
+  const valor = (k: string) => v[k] ?? actuales[k] ?? '';
+  async function guardar() {
+    for (const [k] of CLAVES_AJUSTES) {
+      if (v[k] === undefined) continue;
+      const { error } = await nucleo().from('ajustes').upsert({ empresa_id: empresa!.id, centro_id: null, modulo: 'prevencion', clave: k, valor: v[k].trim() },
+        { onConflict: 'empresa_id,centro_id,modulo,clave' });
+      if (error) { setError(error.message); return; }
+    }
+    aviso('Guardado'); alCerrar();
+  }
+  return (
+    <Ventana titulo="Datos por defecto de las charlas" alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={guardar}>Guardar</button></>}>
+      <p className="nota" style={{ marginTop: 0 }}>Se ponen solos cada vez que preparas la sesión de un mes nuevo. Luego puedes cambiarlos en cada mes.</p>
+      {CLAVES_AJUSTES.map(([k, n]) => <label key={k} className="campo"><span>{n}</span>
+        <input value={valor(k)} inputMode={k === 'duracion' ? 'numeric' : undefined} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} /></label>)}
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Un mes: contenido, sesión y firmas
+// ---------------------------------------------------------------------------------------------
+function Mes({ anio, mes, charla, sesion, alCerrar, alCambiar }: {
+  anio: number; mes: number; charla: Charla | null; sesion: Sesion | null; alCerrar: () => void; alCambiar: () => void;
+}) {
+  const { puede } = useSesion();
+  const [pest, setPest] = useState<'contenido' | 'sesion' | 'firmas'>(charla ? (sesion ? 'firmas' : 'sesion') : 'contenido');
+  // recién escrita la charla de un mes nuevo, lo siguiente es preparar la sesión
+  const [habia] = useState(!!charla);
+  useEffect(() => { if (charla && !habia && !sesion) setPest('sesion'); }, [charla, habia, sesion]);
+  const titulo = `${MESES[mes - 1]} ${anio}`;
+  if (!charla) {
+    return puede('prevencion.charla.editar')
+      ? <EditarCharla titulo={`Charla de ${titulo}`} anio={anio} mes={mes} charla={null} alCerrar={alCerrar} alGuardar={() => { alCambiar(); }} />
+      : null;
+  }
+  return (
+    <Ventana titulo={titulo} alCerrar={alCerrar}>
+      <div className="segmentos tres no-imprimir" role="group" aria-label="Partes del mes">
+        <button type="button" aria-pressed={pest === 'contenido'} onClick={() => setPest('contenido')}>Contenido</button>
+        <button type="button" aria-pressed={pest === 'sesion'} onClick={() => setPest('sesion')}>Sesión</button>
+        <button type="button" aria-pressed={pest === 'firmas'} onClick={() => setPest('firmas')} disabled={!sesion}>Firmas</button>
+      </div>
+      {pest === 'contenido' && <VerCharla charla={charla} sesion={sesion} alCambiar={alCambiar} />}
+      {pest === 'sesion' && <DatosSesion anio={anio} mes={mes} charla={charla} sesion={sesion} alGuardar={() => { alCambiar(); }} />}
+      {pest === 'firmas' && sesion && <FirmasSesion charla={charla} sesion={sesion} alCambiar={alCambiar} />}
+    </Ventana>
+  );
+}
+
+/** El texto de la charla tal como lo lee el trabajador. */
+function TextoCharla({ c }: { c: Charla }) {
+  return (
+    <div className="charla">
+      {c.imagen && <img src={c.imagen} alt="" />}
+      <p className="charla-compromiso">«{c.compromiso}»</p>
+      {c.cuerpo && c.cuerpo.split(/\n+/).map((p, i) => <p key={i}>{p}</p>)}
+      {c.puntos.length > 0 && <><h3 className="subtitulo">Para hablar</h3><ul>{c.puntos.map((p, i) => <li key={i}>{p}</li>)}</ul></>}
+      {c.tema && <h3 className="subtitulo">{c.tema}</h3>}
+      {c.tema_intro && <p>{c.tema_intro}</p>}
+      {c.tema_puntos.length > 0 && <ul>{c.tema_puntos.map((p, i) => <li key={i}>{p}</li>)}</ul>}
+    </div>
+  );
+}
+
+function VerCharla({ charla, sesion, alCambiar }: { charla: Charla; sesion: Sesion | null; alCambiar: () => void }) {
+  const { puede } = useSesion();
+  const [editando, setEditando] = useState(false);
+  const cerrada = !!sesion?.cerrada_en;
+  return (
+    <>
+      <TextoCharla c={charla} />
+      {puede('prevencion.charla.editar') && !cerrada && (
+        <div className="botonera"><button type="button" className="boton sec" onClick={() => setEditando(true)}>Cambiar el contenido</button></div>)}
+      {sesion?.enviada_en && !cerrada && <p className="nota">Ya se ha enviado: si lo cambias, quien firme a partir de ahora firmará el texto nuevo.</p>}
+      {editando && <EditarCharla titulo="Cambiar el contenido" anio={charla.anio} mes={charla.mes} charla={charla}
+        alCerrar={() => setEditando(false)} alGuardar={() => { setEditando(false); alCambiar(); }} />}
+    </>
+  );
+}
+
+/** Reduce una foto a JPEG de como mucho 1000 px (para que no pese). */
+function aJpeg(archivo: File): Promise<string> {
+  return new Promise((ok, mal) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1000 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d')!.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(img.src); ok(c.toDataURL('image/jpeg', 0.82));
+    };
+    img.onerror = () => mal(new Error('No se ha podido leer la imagen'));
+    img.src = URL.createObjectURL(archivo);
+  });
+}
+const lineas = (t: string) => t.split('\n').map((x) => x.trim()).filter(Boolean);
+
+function EditarCharla({ titulo, anio, mes, charla, alCerrar, alGuardar }: {
+  titulo: string; anio: number; mes: number; charla: Charla | null; alCerrar: () => void; alGuardar: () => void;
+}) {
+  const { empresa } = useSesion();
+  const [v, setV] = useState({
+    compromiso: charla?.compromiso ?? '', cuerpo: charla?.cuerpo ?? '', puntos: (charla?.puntos ?? []).join('\n'),
+    tema: charla?.tema ?? '', tema_intro: charla?.tema_intro ?? '', tema_puntos: (charla?.tema_puntos ?? []).join('\n'), codigo: charla?.codigo ?? '',
+  });
+  const [imagen, setImagen] = useState<string | null>(charla?.imagen ?? null);
+  const [error, setError] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const pon = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
+  async function guardar() {
+    if (!v.compromiso.trim()) { setError('Falta el compromiso del mes.'); return; }
+    setOcupado(true); setError(null);
+    const fila = {
+      compromiso: v.compromiso.trim(), cuerpo: v.cuerpo.trim() || null, puntos: lineas(v.puntos), tema: v.tema.trim() || null,
+      tema_intro: v.tema_intro.trim() || null, tema_puntos: lineas(v.tema_puntos), imagen, codigo: v.codigo.trim() || null,
+    };
+    const { error } = charla ? await prev().from('charlas').update(fila).eq('id', charla.id)
+      : await prev().from('charlas').insert({ ...fila, empresa_id: empresa!.id, anio, mes });
+    setOcupado(false);
+    if (error) { setError(textoError(error.message)); return; }
+    aviso('Charla guardada'); alGuardar();
+  }
+  return (
+    <Ventana titulo={titulo} alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" disabled={ocupado} onClick={guardar}>Guardar</button></>}>
+      <label className="campo"><span>Compromiso del mes</span><textarea rows={2} maxLength={500} value={v.compromiso} onChange={pon('compromiso')} /></label>
+      <label className="campo"><span>Texto de la charla</span><textarea rows={5} maxLength={4000} value={v.cuerpo} onChange={pon('cuerpo')} /></label>
+      <label className="campo"><span>Preguntas para hablar (una por línea)</span><textarea rows={3} value={v.puntos} onChange={pon('puntos')} /></label>
+      <label className="campo"><span>Tema HSE del mes</span><input maxLength={200} value={v.tema} onChange={pon('tema')} /></label>
+      <label className="campo"><span>Introducción del tema (opcional)</span><textarea rows={2} maxLength={2000} value={v.tema_intro} onChange={pon('tema_intro')} /></label>
+      <label className="campo"><span>Consejos del tema (uno por línea)</span><textarea rows={4} value={v.tema_puntos} onChange={pon('tema_puntos')} /></label>
+      <div className="campo"><span>Imagen (opcional)</span>
+        {imagen && <img src={imagen} alt="Imagen de la charla" className="miniatura" />}
+        <div className="botonera" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
+          <label className="boton sec peq archivo">{imagen ? 'Cambiar imagen' : 'Elegir imagen'}
+            <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { setImagen(await aJpeg(f)); } catch (x) { setError((x as Error).message); } } }} /></label>
+          {imagen && <button type="button" className="boton txt peq" onClick={() => setImagen(null)}>Quitar</button>}
+        </div></div>
+      <label className="campo"><span>Código del documento (opcional)</span><input maxLength={60} value={v.codigo} onChange={pon('codigo')} /></label>
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}
+
+/** Personas de la unidad (para la lista de quién tiene que firmar). */
+function usePersonas() {
+  const { empresa, puede } = useSesion();
+  const [personas, setPersonas] = useState<Persona[]>([]);
+  useEffect(() => {
+    if (!puede('nucleo.persona.ver')) return;
+    nucleo().from('personas').select('id, nombre, categoria, baja').eq('empresa_id', empresa!.id).order('nombre')
+      .then(({ data }) => setPersonas((data ?? []) as Persona[]));
+  }, [empresa, puede]);
+  return personas;
+}
+
+function DatosSesion({ anio, mes, charla, sesion, alGuardar }: { anio: number; mes: number; charla: Charla; sesion: Sesion | null; alGuardar: () => void }) {
+  const { empresa, puede } = useSesion();
+  const ajustes = useAjustes();
+  const personas = usePersonas();
+  const activas = personas.filter((p) => !p.baja);
+  const editable = puede('prevencion.charla.editar') && !sesion?.cerrada_en;
+  const [v, setV] = useState<Record<string, string>>({});
+  const [previstos, setPrevistos] = useState<Set<string> | null>(sesion ? new Set(sesion.previstos) : null);
+  const [error, setError] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const inicial: Record<string, string> = {
+    denominacion: sesion?.denominacion ?? `Toolbox Talk HSE ${MESES[mes - 1]} ${String(anio).slice(2)}`,
+    fecha: sesion?.fecha ?? '', centro: sesion?.centro ?? ajustes.centro ?? '', duracion: String(sesion?.duracion ?? ajustes.duracion ?? ''),
+    formador: sesion?.formador ?? ajustes.formador ?? '', observaciones: sesion?.observaciones ?? '',
+  };
+  const val = (k: string) => v[k] ?? inicial[k];
+  const lista = previstos ?? new Set(activas.map((p) => p.id));
+  const pon = (k: string) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
+
+  async function guardar(): Promise<string | null> {
+    const dur = val('duracion').trim();
+    if (dur && !/^\d+$/.test(dur)) { setError('La duración son minutos (un número).'); return null; }
+    const fila = {
+      denominacion: val('denominacion').trim() || null, fecha: val('fecha') || null, centro: val('centro').trim() || null,
+      duracion: dur ? Number(dur) : null, formador: val('formador').trim() || null, observaciones: val('observaciones').trim() || null, previstos: [...lista],
+    };
+    const r = sesion ? await prev().from('sesiones').update(fila).eq('id', sesion.id).select('id').single()
+      : await prev().from('sesiones').insert({ ...fila, empresa_id: empresa!.id, charla_id: charla.id }).select('id').single();
+    if (r.error) { setError(textoError(r.error.message)); return null; }
+    return (r.data as { id: string }).id;
+  }
+  async function soloGuardar() { setOcupado(true); setError(null); const id = await guardar(); setOcupado(false); if (id) { aviso('Sesión guardada'); alGuardar(); } }
+  async function enviar() {
+    setOcupado(true); setError(null);
+    const id = await guardar();
+    if (!id) { setOcupado(false); return; }
+    const { data, error } = await prev().rpc('enviar_charla', { p_sesion: id });
+    setOcupado(false);
+    if (error) { setError(textoError(error.message)); return; }
+    aviso(data ? `Enviada: faltan ${data} por firmar` : 'Enviada: ya han firmado todos'); alGuardar();
+  }
+  async function cerrar(c: boolean) {
+    if (c && !confirm('¿Cerrar el mes? Ya no se podrá firmar ni cambiar (se puede reabrir).')) return;
+    const { error } = await prev().rpc('cerrar_sesion', { p_sesion: sesion!.id, p_cerrar: c });
+    if (error) { setError(textoError(error.message)); return; }
+    aviso(c ? 'Mes cerrado' : 'Mes reabierto'); alGuardar();
+  }
+
+  return (
+    <>
+    <fieldset className="formulario" disabled={!editable}>
+      {sesion?.cerrada_en && <p className="aviso-linea">Cerrado el {fechaCorta(sesion.cerrada_en)}.</p>}
+      <label className="campo"><span>Denominación</span><input value={val('denominacion')} maxLength={200} onChange={pon('denominacion')} /></label>
+      <div className="dos">
+        <label className="campo"><span>Fecha</span><input type="date" value={val('fecha')} onChange={pon('fecha')} /></label>
+        <label className="campo"><span>Duración (min)</span><input inputMode="numeric" value={val('duracion')} onChange={pon('duracion')} /></label>
+      </div>
+      <label className="campo"><span>Lugar</span><input value={val('centro')} maxLength={200} onChange={pon('centro')} /></label>
+      <label className="campo"><span>Formador</span><input value={val('formador')} maxLength={120} onChange={pon('formador')} /></label>
+      <label className="campo"><span>Observaciones</span><textarea rows={2} maxLength={1000} value={val('observaciones')} onChange={pon('observaciones')} /></label>
+      <p className="nota" style={{ margin: '0 0 6px' }}>Tienen que firmarla ({lista.size}):</p>
+      <div className="lista compacta">
+        {activas.map((p) => (
+          <label key={p.id} className="fila check">
+            <input type="checkbox" checked={lista.has(p.id)} onChange={() => setPrevistos(() => { const n = new Set(lista); if (n.has(p.id)) n.delete(p.id); else n.add(p.id); return n; })} />
+            <span className="fila-txt"><b>{p.nombre}</b>{p.categoria && <small>{p.categoria}</small>}</span>
+          </label>
+        ))}
+        {!activas.length && <p className="nota" style={{ padding: 12 }}>No hay trabajadores en esta unidad.</p>}
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+    </fieldset>
+    {puede('prevencion.charla.editar') && (
+        <div className="botonera">
+          {sesion?.cerrada_en ? <button type="button" className="boton sec" onClick={() => cerrar(false)}>Reabrir el mes</button> : <>
+            <button type="button" className="boton sec" disabled={ocupado} onClick={soloGuardar}>Guardar</button>
+            <button type="button" className="boton" disabled={ocupado || !lista.size} onClick={enviar}>{sesion?.enviada_en ? 'Guardar y volver a avisar' : 'Enviar a firmar'}</button>
+            {sesion?.enviada_en && <button type="button" className="boton sec" onClick={() => cerrar(true)}>Cerrar el mes</button>}
+          </>}
+        </div>
+      )}
+    </>
+  );
+}
+
+/** Quién ha firmado: ver firmas, recoger la de alguien en este móvil, anular una mal hecha, imprimir. */
+function FirmasSesion({ charla, sesion, alCambiar }: { charla: Charla; sesion: Sesion; alCambiar: () => void }) {
+  const { puede } = useSesion();
+  const personas = usePersonas();
+  const [asis, setAsis] = useState<Asistencia[] | null>(null);
+  const [imagenes, setImagenes] = useState<Record<string, string>>({});
+  const [recoger, setRecoger] = useState<Persona | null>(null);
+  const [imprimir, setImprimir] = useState(false);
+  const cerrada = !!sesion.cerrada_en;
+
+  const cargar = useCallback(async () => {
+    const { data } = await prev().from('asistencias').select('*').eq('sesion_id', sesion.id).is('anulada', null).order('creado');
+    const a = (data ?? []) as Asistencia[];
+    setAsis(a);
+    const ids = a.map((x) => x.firma_id).filter(Boolean) as string[];
+    if (ids.length) {
+      const f = await nucleo().from('firmas').select('id, imagen').in('id', ids);
+      setImagenes(Object.fromEntries(((f.data ?? []) as { id: string; imagen: string }[]).map((x) => [x.id, x.imagen])));
+    }
+  }, [sesion]);
+  useEffect(() => { cargar(); }, [cargar]);
+
+  const faltan = useMemo(() => sesion.previstos.filter((id) => !asis?.some((a) => a.persona_id === id))
+    .map((id) => personas.find((p) => p.id === id) ?? { id, nombre: 'Trabajador', categoria: null, baja: null }), [sesion, asis, personas]);
+
+  async function anular(a: Asistencia) {
+    if (!confirm(`¿Anular la firma de ${a.nombre}? Tendrá que volver a firmar.`)) return;
+    const { error } = await prev().rpc('anular_asistencia', { p_asistencia: a.id });
+    if (error) { aviso(textoError(error.message)); return; }
+    aviso('Firma anulada'); cargar(); alCambiar();
+  }
+  if (asis === null) return <p className="nota">Cargando…</p>;
+  return (
+    <>
+      <p className="nota" style={{ marginTop: 0 }}>Han firmado <b>{asis.length}</b> de {sesion.previstos.length}.</p>
+      <div className="lista">
+        {asis.map((a) => (
+          <div key={a.id} className="fila fija centrada">
+            <span className="fila-txt"><b>{a.nombre}</b><small>{a.puesto ?? ''}{a.puesto ? ' · ' : ''}{new Date(a.creado).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}</small></span>
+            {a.firma_id && imagenes[a.firma_id] && <img className="firma-mini" src={imagenes[a.firma_id]} alt={`Firma de ${a.nombre}`} />}
+            {!cerrada && puede('prevencion.firma.anular') && <button type="button" className="boton txt peq" onClick={() => anular(a)}>Anular</button>}
+          </div>
+        ))}
+        {faltan.map((p) => (
+          <div key={p.id} className="fila fija centrada">
+            <span className="fila-txt"><b>{p.nombre}</b><small>Falta por firmar</small></span>
+            <span className="chapa pendiente">Falta</span>
+            {!cerrada && puede('prevencion.firma.recoger') && <button type="button" className="boton txt peq" onClick={() => setRecoger(p)}>Firmar aquí</button>}
+          </div>
+        ))}
+      </div>
+      <div className="botonera"><button type="button" className="boton sec" onClick={() => setImprimir(true)}>Imprimir o PDF</button></div>
+      {recoger && <FirmarCharla charla={charla} sesion={sesion} persona={recoger} alCerrar={() => setRecoger(null)}
+        alFirmar={() => { setRecoger(null); cargar(); alCambiar(); }} />}
+      {imprimir && <HojaFirmas charla={charla} sesion={sesion} asis={asis} imagenes={imagenes} alCerrar={() => setImprimir(false)} />}
+    </>
+  );
+}
+
+/** Hoja para imprimir o guardar en PDF: la charla, los datos de la sesión y las firmas. */
+function HojaFirmas({ charla, sesion, asis, imagenes, alCerrar }: { charla: Charla; sesion: Sesion; asis: Asistencia[]; imagenes: Record<string, string>; alCerrar: () => void }) {
+  const { empresa } = useSesion();
+  return (
+    <Ventana titulo="Hoja de firmas" alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cerrar</button><button type="button" className="boton" onClick={() => window.print()}>Imprimir o PDF</button></>}>
+      <div className="documento">
+        <p className="doc-cab"><b>{sesion.denominacion ?? 'Charla de prevención'}</b>{charla.codigo ? ` · ${charla.codigo}` : ''}<br />
+          {empresa?.nombre}{sesion.centro ? ` · ${sesion.centro}` : ''}<br />
+          {sesion.fecha ? `Fecha: ${fechaCorta(sesion.fecha)}` : ''}{sesion.duracion ? ` · ${sesion.duracion} min` : ''}{sesion.formador ? ` · Formador: ${sesion.formador}` : ''}</p>
+        <TextoCharla c={charla} />
+        <h3 className="subtitulo">Asistentes ({asis.length})</h3>
+        <table className="tabla-firmas">
+          <thead><tr><th>Nombre</th><th>Puesto</th><th>Firma</th></tr></thead>
+          <tbody>{asis.map((a) => <tr key={a.id}><td>{a.nombre}</td><td>{a.puesto}</td><td>{a.firma_id && imagenes[a.firma_id] && <img src={imagenes[a.firma_id]} alt="" />}</td></tr>)}</tbody>
+        </table>
+        {sesion.observaciones && <p><b>Observaciones:</b> {sesion.observaciones}</p>}
+      </div>
+    </Ventana>
+  );
+}
+
+/** Firmar una charla: el propio trabajador o, en el móvil del jefe, otro trabajador. */
+function FirmarCharla({ charla, sesion, persona, alCerrar, alFirmar }: {
+  charla: Charla; sesion: Sesion; persona: { id: string; nombre: string; categoria: string | null }; alCerrar: () => void; alFirmar: () => void;
+}) {
+  const { estado } = useSesion();
+  const [leida, setLeida] = useState(false);
+  const [puesto, setPuesto] = useState('');
+  const [png, setPng] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const yo = estado.fase === 'dentro' ? estado.sesion.usuario : null;
+  async function firmar() {
+    if (!png) { setError('Falta la firma.'); return; }
+    setOcupado(true); setError(null);
+    const { error } = await prev().rpc('firmar_charla', {
+      p_sesion: sesion.id, p_persona: persona.id, p_puesto: puesto.trim() || null, p_imagen: png,
+      p_dispositivo: { agente: navigator.userAgent.slice(0, 200), ancho: innerWidth, alto: innerHeight, recogida_por: yo?.nombre ?? null },
+    });
+    setOcupado(false);
+    if (error) { setError(textoError(error.message)); return; }
+    aviso('Firmada'); alFirmar();
+  }
+  return (
+    <Ventana titulo={sesion.denominacion ?? 'Charla'} alCerrar={alCerrar}
+      pie={leida
+        ? <><button type="button" className="boton sec" onClick={() => setLeida(false)}>Atrás</button><button type="button" className="boton" disabled={ocupado} onClick={firmar}>Firmar</button></>
+        : <button type="button" className="boton" onClick={() => setLeida(true)}>La he leído, firmar</button>}>
+      {!leida ? <TextoCharla c={charla} /> : (
+        <>
+          <p style={{ marginTop: 0 }}><b>{persona.nombre}</b></p>
+          <label className="campo"><span>Puesto (si lo dejas vacío, el de su ficha)</span><input value={puesto} maxLength={80} placeholder={persona.categoria ?? ''} onChange={(e) => setPuesto(e.target.value)} /></label>
+          <p className="nota" style={{ marginBottom: 8 }}>Firmo que he asistido a la charla «{sesion.denominacion}» y la he entendido.</p>
+          <Firma alCambiar={setPng} />
+          {error && <p className="error" role="alert">{error}</p>}
+        </>
+      )}
+    </Ventana>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Mis charlas (cualquier trabajador)
+// ---------------------------------------------------------------------------------------------
+function MisCharlas() {
+  const { empresa, estado } = useSesion();
+  const yo = estado.fase === 'dentro' ? estado.sesion.usuario?.id : null;
+  const [datos, setDatos] = useState<{ persona: { id: string; nombre: string; categoria: string | null }; pendientes: { s: Sesion; c: Charla }[]; firmadas: Asistencia[] } | null>(null);
+  const [sinFicha, setSinFicha] = useState(false);
+  const [firmando, setFirmando] = useState<{ s: Sesion; c: Charla } | null>(null);
+
+  const cargar = useCallback(async () => {
+    const { data: u } = await nucleo().from('usuarios').select('persona_id').eq('id', yo!).maybeSingle();
+    const pid = (u as { persona_id: string | null } | null)?.persona_id;
+    if (!pid) { setSinFicha(true); return; }
+    const [p, s, a] = await Promise.all([
+      nucleo().from('personas').select('id, nombre, categoria').eq('id', pid).maybeSingle(),
+      prev().from('sesiones').select('*').eq('empresa_id', empresa!.id).contains('previstos', [pid]).not('enviada_en', 'is', null).is('cerrada_en', null),
+      prev().from('asistencias').select('*').eq('persona_id', pid).is('anulada', null),
+    ]);
+    const mias = (a.data ?? []) as Asistencia[];
+    const ses = ((s.data ?? []) as Sesion[]).filter((x) => !mias.some((m) => m.sesion_id === x.id));
+    const cids = ses.map((x) => x.charla_id);
+    const cs = cids.length ? ((await prev().from('charlas').select('*').in('id', cids)).data ?? []) as Charla[] : [];
+    setDatos({
+      persona: (p.data as { id: string; nombre: string; categoria: string | null }) ?? { id: pid, nombre: '', categoria: null },
+      pendientes: ses.map((x) => ({ s: x, c: cs.find((c) => c.id === x.charla_id)! })).filter((x) => x.c),
+      firmadas: [...mias].sort((x, y) => y.creado.localeCompare(x.creado)),
+    });
+  }, [empresa, yo]);
+  useEffect(() => { cargar(); }, [cargar]);
+
+  if (sinFicha) return <div className="vacio"><p><b>Tu usuario no está enlazado con tu ficha de trabajador.</b></p><p>Pídeselo a tu administrador (Configuración → Usuarios).</p></div>;
+  if (!datos) return <p className="nota">Cargando…</p>;
+  return (
+    <>
+      {datos.pendientes.length > 0
+        ? <p className="aviso-linea">Tienes {datos.pendientes.length === 1 ? 'una charla' : `${datos.pendientes.length} charlas`} por leer y firmar.</p>
+        : <div className="vacio" style={{ marginBottom: 12 }}><p>No tienes ninguna charla por firmar.</p></div>}
+      {datos.pendientes.length > 0 && (
+        <div className="lista" style={{ marginBottom: 16 }}>
+          {datos.pendientes.map((x) => (
+            <button key={x.s.id} type="button" className="fila" onClick={() => setFirmando(x)}>
+              <span className="fila-txt"><b>{x.s.denominacion ?? `${MESES[x.c.mes - 1]} ${x.c.anio}`}</b><small>{x.c.tema ?? x.c.compromiso}</small></span>
+              <span className="chapa pendiente">Firmar</span>
+            </button>
+          ))}
+        </div>
+      )}
+      {datos.firmadas.length > 0 && <>
+        <h2 className="subtitulo">Ya firmadas</h2>
+        <div className="lista">
+          {datos.firmadas.map((a) => (
+            <div key={a.id} className="fila fija"><span className="fila-txt"><b>Firmada el {fechaCorta(a.creado)}</b>{a.puesto && <small>{a.puesto}</small>}</span>
+              <span className="chapa firmado">Firmada</span></div>
+          ))}
+        </div></>}
+      {firmando && <FirmarCharla charla={firmando.c} sesion={firmando.s} persona={datos.persona} alCerrar={() => setFirmando(null)}
+        alFirmar={() => { setFirmando(null); cargar(); }} />}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Fichas de los trabajadores
+// ---------------------------------------------------------------------------------------------
+interface Ficha {
+  persona_id: string; dni: string | null; puesto: string | null; fecha_alta: string | null; fecha_baja: string | null; motivo_baja: string | null;
+  telefono: string | null; emerg_nombre: string | null; emerg_tel: string | null; idioma: string | null; tallas: Record<string, string>;
+}
+interface Prenda { id: string; codigo: string; nombre: string; orden: number; baja: string | null }
+const MOTIVOS_BAJA = ['Fin de contrato', 'Dimisión', 'Despido', 'Excedencia', 'Fin de obra o proyecto', 'Otro'];
+
+function Fichas() {
+  const { empresa, puede } = useSesion();
+  const personas = usePersonas();
+  const [fichas, setFichas] = useState<Ficha[] | null>(null);
+  const [prendas, setPrendas] = useState<Prenda[]>([]);
+  const [abierta, setAbierta] = useState<Persona | null>(null);
+  const [verBajas, setVerBajas] = useState(false);
+  const [editarPrendas, setEditarPrendas] = useState(false);
+
+  const cargar = useCallback(async () => {
+    const [f, p] = await Promise.all([
+      prev().from('fichas').select('*').eq('empresa_id', empresa!.id),
+      prev().from('prendas').select('*').eq('empresa_id', empresa!.id).order('orden'),
+    ]);
+    setFichas((f.data ?? []) as Ficha[]); setPrendas(((p.data ?? []) as Prenda[]).filter((x) => !x.baja));
+  }, [empresa]);
+  useEffect(() => { cargar(); }, [cargar]);
+
+  if (fichas === null) return <p className="nota">Cargando…</p>;
+  const visibles = personas.filter((p) => verBajas || !p.baja);
+  const bajas = personas.filter((p) => p.baja).length;
+  return (
+    <>
+      <p className="nota" style={{ marginTop: 0 }}>Datos personales: solo los ve quien tiene permiso. El encargado no los ve.</p>
+      <div className="lista">
+        {visibles.map((p) => {
+          const f = fichas.find((x) => x.persona_id === p.id);
+          const faltan = [!f?.dni && 'DNI', !f?.fecha_alta && 'fecha de alta', prendas.some((x) => !f?.tallas?.[x.codigo]) && 'tallas'].filter(Boolean);
+          return (
+            <button key={p.id} type="button" className={'fila' + (p.baja ? ' de-baja' : '')} onClick={() => setAbierta(p)}>
+              <span className="fila-txt"><b>{p.nombre}</b>
+                <small>{p.baja ? 'Dado de baja · ' : ''}{f?.puesto ?? p.categoria ?? ''}{faltan.length ? `${f?.puesto || p.categoria ? ' · ' : ''}Falta: ${faltan.join(', ')}` : ''}</small></span>
+              <span className="fila-flecha" aria-hidden="true">›</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="botonera">
+        {bajas > 0 && <button type="button" className="boton txt" onClick={() => setVerBajas(!verBajas)}>{verBajas ? 'Esconder los dados de baja' : `Ver los dados de baja (${bajas})`}</button>}
+        {puede('prevencion.ficha.editar') && <button type="button" className="boton sec" onClick={() => setEditarPrendas(true)}>Prendas con talla</button>}
+      </div>
+      {abierta && <FormFicha persona={abierta} ficha={fichas.find((x) => x.persona_id === abierta.id) ?? null} prendas={prendas}
+        alCerrar={() => setAbierta(null)} alGuardar={() => { setAbierta(null); cargar(); }} />}
+      {editarPrendas && <Prendas prendas={prendas} alCerrar={() => { setEditarPrendas(false); cargar(); }} />}
+    </>
+  );
+}
+
+function FormFicha({ persona, ficha, prendas, alCerrar, alGuardar }: { persona: Persona; ficha: Ficha | null; prendas: Prenda[]; alCerrar: () => void; alGuardar: () => void }) {
+  const { empresa, puede } = useSesion();
+  const editable = puede('prevencion.ficha.editar');
+  const campos = ['dni', 'puesto', 'fecha_alta', 'fecha_baja', 'motivo_baja', 'telefono', 'emerg_nombre', 'emerg_tel', 'idioma'] as const;
+  const [v, setV] = useState<Record<string, string>>(Object.fromEntries(campos.map((k) => [k, (ficha?.[k] as string | null) ?? ''])));
+  const [tallas, setTallas] = useState<Record<string, string>>(ficha?.tallas ?? {});
+  const [error, setError] = useState<string | null>(null);
+  const pon = (k: string) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: k === 'dni' ? e.target.value.toUpperCase().replace(/[\s.-]/g, '') : e.target.value }));
+  async function guardar() {
+    if (v.fecha_alta && v.fecha_baja && v.fecha_baja < v.fecha_alta) { setError('La fecha de baja no puede ser antes del alta.'); return; }
+    const fila: Record<string, unknown> = Object.fromEntries(campos.map((k) => [k, v[k].trim() || null]));
+    fila.tallas = Object.fromEntries(Object.entries(tallas).map(([k, x]) => [k, x.trim()]).filter(([, x]) => x));
+    const { error } = await prev().from('fichas').upsert({ ...fila, persona_id: persona.id, empresa_id: empresa!.id }, { onConflict: 'persona_id' });
+    if (error) { setError(textoError(error.message)); return; }
+    aviso('Ficha guardada'); alGuardar();
+  }
+  return (
+    <Ventana titulo={persona.nombre} alCerrar={alCerrar}
+      pie={editable ? <><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={guardar}>Guardar</button></> : undefined}>
+      <fieldset className="formulario" disabled={!editable}>
+        <h3 className="subtitulo" style={{ marginTop: 0 }}>Identificación</h3>
+        <div className="dos">
+          <label className="campo"><span>DNI / NIE</span><input value={v.dni} maxLength={12} autoCapitalize="characters" onChange={pon('dni')} /></label>
+          <label className="campo"><span>Puesto</span><input value={v.puesto} maxLength={80} placeholder={persona.categoria ?? ''} onChange={pon('puesto')} /></label>
+          <label className="campo"><span>Fecha de alta</span><input type="date" value={v.fecha_alta} onChange={pon('fecha_alta')} /></label>
+          <label className="campo"><span>Fecha de baja</span><input type="date" value={v.fecha_baja} onChange={pon('fecha_baja')} /></label>
+        </div>
+        {v.fecha_baja && <label className="campo"><span>Motivo de la baja</span>
+          <select value={v.motivo_baja} onChange={pon('motivo_baja')}><option value="">—</option>{MOTIVOS_BAJA.map((m) => <option key={m}>{m}</option>)}</select></label>}
+        <label className="campo"><span>Idioma que mejor entiende</span><input value={v.idioma} maxLength={40} onChange={pon('idioma')} /></label>
+        <h3 className="subtitulo">Contacto</h3>
+        <label className="campo"><span>Teléfono</span><input type="tel" value={v.telefono} maxLength={30} onChange={pon('telefono')} /></label>
+        <div className="dos">
+          <label className="campo"><span>En caso de emergencia, avisar a</span><input value={v.emerg_nombre} maxLength={80} onChange={pon('emerg_nombre')} /></label>
+          <label className="campo"><span>Su teléfono</span><input type="tel" value={v.emerg_tel} maxLength={30} onChange={pon('emerg_tel')} /></label>
+        </div>
+        <h3 className="subtitulo">Tallas</h3>
+        {prendas.length ? <div className="dos">{prendas.map((p) => <label key={p.codigo} className="campo"><span>{p.nombre}</span>
+          <input value={tallas[p.codigo] ?? ''} maxLength={10} onChange={(e) => setTallas((t) => ({ ...t, [p.codigo]: e.target.value }))} /></label>)}</div>
+          : <p className="nota">No hay prendas dadas de alta (botón «Prendas con talla»).</p>}
+        {error && <p className="error" role="alert">{error}</p>}
+      </fieldset>
+    </Ventana>
+  );
+}
+
+function Prendas({ prendas, alCerrar }: { prendas: Prenda[]; alCerrar: () => void }) {
+  const { empresa } = useSesion();
+  const [nueva, setNueva] = useState('');
+  const [lista, setLista] = useState(prendas);
+  const [error, setError] = useState<string | null>(null);
+  async function anadir() {
+    const nombre = nueva.trim(); if (!nombre) return;
+    const base = nombre.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '').slice(0, 30) || 'prenda';
+    let codigo = /^[a-z]/.test(base) ? base : 'p_' + base, n = 2;
+    while (lista.some((p) => p.codigo === codigo)) codigo = `${base}_${n++}`;
+    const { data, error } = await prev().from('prendas').insert({ empresa_id: empresa!.id, codigo, nombre, orden: lista.length + 1 }).select().single();
+    if (error) { setError(error.message); return; }
+    setLista((l) => [...l, data as Prenda]); setNueva('');
+  }
+  async function quitar(p: Prenda) {
+    if (!confirm(`¿Quitar «${p.nombre}» de la lista? Las tallas ya apuntadas no se borran.`)) return;
+    const { error } = await prev().from('prendas').update({ baja: new Date().toISOString() }).eq('id', p.id);
+    if (error) { setError(error.message); return; }
+    setLista((l) => l.filter((x) => x.id !== p.id));
+  }
+  return (
+    <Ventana titulo="Prendas con talla" alCerrar={alCerrar}>
+      <div className="lista" style={{ marginBottom: 12 }}>
+        {lista.map((p) => <div key={p.id} className="fila fija centrada"><span className="fila-txt"><b>{p.nombre}</b></span>
+          <button type="button" className="boton txt peq" onClick={() => quitar(p)}>Quitar</button></div>)}
+        {!lista.length && <p className="nota" style={{ padding: 12 }}>Todavía no hay ninguna.</p>}
+      </div>
+      <div className="barra-lista">
+        <input aria-label="Prenda nueva" placeholder="Por ejemplo: Botas de seguridad" value={nueva} onChange={(e) => setNueva(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') anadir(); }} />
+        <button type="button" className="boton" onClick={anadir}>Añadir</button>
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}

@@ -24,7 +24,8 @@ Encargado, Inicio): un núcleo común configurable y módulos independientes, co
   - [x] Calendario laboral (`src/personal/`, esquema `personal`): días por equipo, vacaciones, enviar a firmar, firmar
         con el dedo (conforme o con observaciones), quién ha firmado, imprimir o PDF.
   - [ ] Entrar con nombre y PIN; traer los datos de limpieza-cie.
-  - [ ] Prevención (Toolbox).
+  - [x] Prevención, 1.ª parte (`src/prevencion/`, esquema `prevencion`): charlas del mes, firmas, fichas y tallas.
+  - [ ] Prevención, 2.ª parte: PDF oficial, EPIs y documentos PRL, formación en el puesto, certificados.
 
 ## Carpetas
 ```

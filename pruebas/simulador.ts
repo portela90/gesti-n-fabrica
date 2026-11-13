@@ -90,6 +90,16 @@ export async function simular(page: Page, op: Opciones = {}) {
         const cuerpo = r.postDataJSON() as object | object[];
         const nuevas = (Array.isArray(cuerpo) ? cuerpo : [cuerpo])
           .map((c, i) => ({ id: `id-${tabla}-${tablas[tabla].length + i + 1}`, baja: null, ...c }) as Record<string, unknown>);
+        // upsert («guardar o actualizar»): on_conflict=col1,col2 y Prefer: resolution=merge-duplicates
+        const claves = (r.headers()['prefer'] ?? '').includes('merge-duplicates') ? (u.searchParams.get('on_conflict') ?? '').split(',').filter(Boolean) : [];
+        if (claves.length) {
+          const hechas = nuevas.map((nueva) => {
+            const ya = tablas[tabla].find((f) => claves.every((k) => String(f[k] ?? null) === String(nueva[k] ?? null)));
+            if (ya) { const { id: _id, baja: _b, ...resto } = nueva; void _id; void _b; return Object.assign(ya, resto); }
+            tablas[tabla].push(nueva); return nueva;
+          });
+          return json(uno ? hechas[0] : hechas, 201);
+        }
         if (nuevas.some((nueva) => tablas[tabla].some((f) => f.codigo && f.codigo === nueva.codigo && f.empresa_id === nueva.empresa_id)))
           return json({ code: '23505', message: 'duplicate key value violates unique constraint' }, 409);
         tablas[tabla].push(...nuevas);

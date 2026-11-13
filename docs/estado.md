@@ -51,15 +51,31 @@ que cuadra antes de dejar la app vieja en solo consulta.
 1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13
    trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que
    llegan con Prevención). Ahmed El Hait estaba en los dos equipos: puesto en Semana. Usuario de Cristian enlazado a su ficha.
-2. **Entrar con nombre y PIN** (operarios): hace falta para que firmen en su móvil. Por decidir cómo (ver abajo).
+2. **Entrar con nombre y PIN** (operarios): se hace antes del cambio, para que Cristian lo pruebe; no se da a nadie hasta el día del cambio.
 3. ~~Traer los datos del calendario~~ HECHO 13/11: 53 días (`cal_dia`) y 35 vacaciones (`cal_vac`, mismo id) con `origen`;
    `cal_firma` vacía. **Comprobado: idénticos** (misma huella md5 en los dos proyectos, día a día y vacación a vacación).
    La app vieja sigue en uso hasta tener el PIN: antes de dejarla en solo consulta, volver a comparar y traer lo que
    haya cambiado allí. En la vieja: el 12/10/2026 está en `festivos` pero no en `cal_dia` (no se trajo); Ahmed tiene
    dos vacaciones solapadas en verano de 2026 (se trajeron tal cual).
-4. **Prevención** (Toolbox): datos del trabajador, charlas mensuales, formación F40R304, documentos PRL y EPIs,
-   certificados, tallas, expediente PDF. Y traer `prl_*`.
-5. App vieja de Calendario y Toolbox en solo consulta.
+4. **Prevención** (Toolbox). Hecho en el código (13/11), **sin aplicar** en Supabase:
+   - `0010_prevencion.sql`: esquema `prevencion` con `fichas` (DNI, puesto, alta/baja y motivo, contacto, idioma,
+     tallas; sin datos de salud), `prendas`, `charlas` (contenido de cada mes), `sesiones` (fecha, lugar, formador,
+     previstos, enviada, cerrada), `asistencias` (nombre y puesto al firmar; la firma en `nucleo.firmas`, documento
+     «charla»; solo se anulan). Funciones `enviar_charla`, `firmar_charla`, `anular_asistencia`, `cerrar_sesion`.
+     Permisos `prevencion.*`; **el encargado y solo lectura ya no tienen `prevencion.*.ver`** (no ven las fichas).
+   - Pantallas (`src/prevencion/`): Mis charlas (leer y firmar), Charlas (12 meses; contenido con imagen, sesión,
+     enviar, firmas, recoger firma, anular, cerrar/reabrir, hoja para imprimir), Fichas, Prendas con talla.
+     Datos por defecto de la sesión (lugar, duración, formador) en `nucleo.ajustes` (módulo prevencion).
+   - Pruebas: `supabase/pruebas/50-prevencion.sql` (39) y `pruebas/prevencion.spec.ts` (6).
+   - Reconocimiento médico: NO se ha pasado (en la app vieja está escondido hasta que prevención lo autorice).
+   - Falta de Prevención: PDF con el formato oficial SH-CORP-FO-IB-031 (hoy sale una hoja sencilla para imprimir),
+     envío a prevención al cerrar el mes, EPIs y documentos PRL (F014, colectivo, F022, botiquín), formación en el
+     puesto F40R304, certificados, tallas que propone el trabajador, expediente PDF.
+   - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a
+     proyecto que pegando SQL).
+5. **Decidido 13/11: los operarios cambian de app UNA sola vez**, cuando la app nueva tenga Personal, Prevención y
+   Limpieza. Hasta entonces siguen con las apps viejas; ese día se vuelven a traer y comparar los datos y se les da el
+   código de alta a todos. Las apps viejas quedan en solo consulta.
 
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).

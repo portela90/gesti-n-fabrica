@@ -133,7 +133,7 @@ h1, h2 { margin: 0; line-height: 1.2; }
 .pestanas button { flex: 1 0 auto; min-height: 44px; padding: 0 14px; border: 0; border-radius: 9px; background: none; font-weight: 600; color: var(--tinta2); cursor: pointer; white-space: nowrap; }
 .pestanas button[aria-pressed="true"] { background: color-mix(in srgb, var(--area) 14%, transparent); color: var(--area); }
 .filtros { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: 10px; max-width: 520px; }
-.dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.dos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; align-items: end; }
 .check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 0 10px; }
 .check input, .marca { width: 22px; height: 22px; flex: none; accent-color: var(--area); }
 .t-festivo { --c: #fecaca; --t: #991b1b; } .t-cierre { --c: #cbd5e1; --t: #1e293b; } .t-intensiva { --c: #fde68a; --t: #854d0e; }
@@ -191,3 +191,22 @@ button.dia { cursor: pointer; }
   .fondo { position: static; background: none; } .ventana { max-height: none; }
   .dia, .lista-dias i, .leyenda i { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* ---------- Prevención: charlas y fichas ---------- */
+.segmentos.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.segmentos button:disabled { opacity: .45; cursor: default; }
+.charla img { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 12px; margin: 0 0 12px; background: var(--fondo); }
+.charla p { margin: 0 0 10px; }
+.charla ul { margin: 0 0 10px; padding-left: 22px; }
+.charla li { margin: 0 0 6px; }
+.charla-compromiso { font-size: 18px; font-weight: 700; color: var(--area); }
+.miniatura { display: block; max-width: 160px; max-height: 120px; border-radius: 8px; margin: 0 0 8px; }
+.archivo { position: relative; display: inline-flex; align-items: center; overflow: hidden; }
+.archivo input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+.firma-mini { height: 40px; max-width: 110px; object-fit: contain; background: #fff; border-radius: 6px; border: 1px solid var(--linea); }
+.lista.compacta .fila { min-height: 48px; }
+.fila.check { cursor: pointer; }
+.tabla-firmas { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla-firmas th, .tabla-firmas td { border: 1px solid var(--linea); padding: 6px 8px; text-align: left; vertical-align: middle; }
+.tabla-firmas img { height: 42px; max-width: 140px; object-fit: contain; }
+@media print { .charla img { max-height: 180px; } .tabla-firmas img, .firma-mini { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
