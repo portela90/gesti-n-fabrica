@@ -47,7 +47,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
   Recuadro de firma reutilizable: `src/componentes/Firma.tsx` (lo usará Prevención).
 - Pruebas: `supabase/pruebas/40-personal-calendario.sql` (52) y `pruebas/personal.spec.ts` (5).
 
-### 1.1 bis · Calendarios con nombre y personas (13/11, noche)
+### 1.1 bis · Calendarios con nombre y personas (13/11, noche) — APLICADO (0011 y 0012 pegados el 13/11; comprobado)
 - Cristian: «hay operarios que tienen calendarios diferentes». Ya no hay un calendario por equipo: `0011_personal_calendarios.sql`
   crea `personal.calendarios` (nombre, año, días de la semana) y `personal.calendario_personas` (**una persona, un calendario
   por año**). `dias` y `envios` van por `calendario_id`. Funciones nuevas: `marcar_dias(p_calendarios, …)`,
@@ -58,7 +58,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
   todos o algunos; avisa si alguien se cambia de calendario); «Para N personas · cambiar»; borrar si no se ha enviado.
 - Pruebas: 61 de base de datos (40-personal-calendario) y 7 de pantallas de Personal.
 
-### 1.1 ter · Horas anuales que tienen que cuadrar (13/11, noche)
+### 1.1 ter · Horas anuales que tienen que cuadrar (13/11, noche) — APLICADO; los 4 calendarios convertidos están aún sin horas
 - Decidido por Cristian: horas al año del calendario y, a quien sea distinto, las suyas (`calendario_personas.horas_anuales`);
   horas de un día normal por día de la semana (`calendarios.horas_dia`, [dom..sáb]); intensiva, especial y «trabaja»
   con sus horas (`dias.horas`); festivos, cierres, descansos y **vacaciones restan**; **no se envía a firmar si a alguien
