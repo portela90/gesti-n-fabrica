@@ -242,3 +242,4 @@ button.dia { cursor: pointer; }
 .pincel > span { font-size: 13px; }
 .pincel button, .pincel-horas { min-height: 36px; padding: 0 9px; font-size: 14px; }
 .pincel-horas input { width: 42px; }
+.boton.txt.peligro { color: var(--mal); }

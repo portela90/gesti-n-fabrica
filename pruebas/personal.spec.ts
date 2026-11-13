@@ -158,6 +158,18 @@ test('varios operarios a la vez, con vacaciones que restan al momento, y rellena
   expect(dias.every((d) => new Date(d.fecha + 'T12:00:00Z').getUTCDay() >= 1 && new Date(d.fecha + 'T12:00:00Z').getUTCDay() <= 4 && d.horas === 8)).toBe(true);
 });
 
+test('borrar el calendario de un operario', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/calendario');
+  await page.getByRole('button', { name: /^Ana Prueba/ }).click();
+  let pregunta = '';
+  page.once('dialog', (d) => { pregunta = d.message(); d.accept(); });
+  await page.getByRole('button', { name: 'Borrar el calendario «Semana»' }).click();
+  await expect(page.getByText('Calendario borrado')).toBeVisible();
+  expect(pregunta).toContain('También lo tienen 1 persona más');
+  expect(sim.some((l) => l.metodo === 'DELETE' && l.ruta.includes('/calendarios') && l.ruta.includes(SEMANA))).toBe(true);
+});
+
 test('salir sin guardar avisa', async ({ page }) => {
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal/calendario');

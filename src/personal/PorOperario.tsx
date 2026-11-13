@@ -183,6 +183,22 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
     aviso('Calendario guardado'); alSalir(true);
   }
   function salir() { if (!cambiado || confirm('Hay cambios sin guardar. ¿Salir sin guardar?')) alSalir(false); }
+  // borrar el calendario que tiene ahora (con todos sus días); su gente se queda sin calendario de ese año
+  async function borrar() {
+    if (!deUno) return;
+    const otros = deUno.personas.length - ids.filter((id) => deUno.personas.includes(id)).length;
+    if (!confirm(`¿Borrar el calendario «${deUno.nombre}» con todos sus días?` + (otros > 0 ? ` También lo tienen ${otros} ${otros === 1 ? 'persona más' : 'personas más'}, que se quedarán sin calendario.` : '')
+      + ' Las vacaciones no se borran.')) return;
+    setOcupado(true);
+    const { error } = await personal().from('calendarios').delete().eq('id', deUno.id);
+    setOcupado(false);
+    if (error) {
+      setError(error.message.includes('foreign key') || error.message.includes('envios')
+        ? 'No se puede borrar: ya se ha enviado a firmar a alguien. Los envíos y las firmas quedan guardados siempre.' : textoError(error.message));
+      return;
+    }
+    aviso('Calendario borrado'); alSalir(true);
+  }
 
   if (!dias) return <p className="nota">Cargando…</p>;
   const horasMap = new Map([...dias].filter(([, d]) => d.tipo === 'trabaja' && d.horas != null).map(([f, d]) => [f, d.horas!]));
@@ -226,6 +242,7 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
       </div>
       <div className="botonera" style={{ justifyContent: 'flex-start', margin: '0 0 10px' }}>
         <button type="button" className="boton sec peq" onClick={() => setRellenar(true)}>Rellenar por días de la semana</button>
+        {deUno && <button type="button" className="boton txt peq peligro" disabled={ocupado} onClick={borrar}>Borrar el calendario «{deUno.nombre}»</button>}
         <button type="button" className="boton txt peq" onClick={() => { if (confirm('¿Borrar todos los días de este calendario?')) { setDias(new Map()); setCambiado(true); } }}>Borrar todo</button>
       </div>
       <p className="nota" style={{ margin: '0 0 8px' }}>Elige arriba qué poner (unas horas, festivo{conVacaciones ? ' o vacaciones' : ''}) y toca los días: se suma al momento. Tocar otra vez lo quita.</p>
