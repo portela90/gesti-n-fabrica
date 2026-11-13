@@ -48,7 +48,9 @@ que cuadra antes de dejar la app vieja en solo consulta.
 - Pruebas: `supabase/pruebas/40-personal-calendario.sql` (52) y `pruebas/personal.spec.ts` (5).
 
 ### Lo siguiente de la Fase 1, en orden
-1. **Dar de alta Limpieza de verdad**: equipos Semana y Fin de semana y los trabajadores (desde limpieza-cie).
+1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13
+   trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que
+   llegan con Prevención). Ahmed El Hait estaba en los dos equipos: puesto en Semana. Usuario de Cristian enlazado a su ficha.
 2. **Entrar con nombre y PIN** (operarios): hace falta para que firmen en su móvil. Por decidir cómo (ver abajo).
 3. **Traer los datos del calendario** de limpieza-cie (`cal_dia` → `personal.dias`, `cal_vac` → `personal.vacaciones`,
    `cal_firma` está vacía) con `origen` = tabla:id vieja, y comprobar que cuadra.
