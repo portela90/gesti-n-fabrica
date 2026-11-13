@@ -108,9 +108,18 @@ que cuadra antes de dejar la app vieja en solo consulta.
      Datos por defecto de la sesión (lugar, duración, formador) en `nucleo.ajustes` (módulo prevencion).
    - Pruebas: `supabase/pruebas/50-prevencion.sql` (39) y `pruebas/prevencion.spec.ts` (6).
    - Reconocimiento médico: NO se ha pasado (en la app vieja está escondido hasta que prevención lo autorice).
-   - Falta de Prevención: PDF con el formato oficial SH-CORP-FO-IB-031 (hoy sale una hoja sencilla para imprimir),
-     envío a prevención al cerrar el mes, EPIs y documentos PRL (F014, colectivo, F022, botiquín), formación en el
-     puesto F40R304, certificados, tallas que propone el trabajador, expediente PDF.
+   - **PDF oficial del Toolbox (SH-CORP-FO-IB-031)** hecho (14/11): `src/prevencion/pdfToolbox.ts`, copia de
+     `construirPDF` de la app vieja con jsPDF (se carga solo al usarlo); logo e iconos del pie en `public/prevencion/`.
+     Los 5 PDF oficiales (F40R304, FO-014, FO-018, FO-072, FP-022) copiados tal cual a `public/prevencion/plantillas/`
+     para los siguientes pasos (decidido por Cristian: los de la app vieja, sin cambios).
+   - **Envío a prevención** (14/11): con el mes cerrado, «Enviar desde mi correo» (compartir en el móvil / mailto en el
+     ordenador, con el PDF y el texto) y «Ya lo he enviado» → `prevencion.apuntar_envio` (`0014_prevencion_envio.sql`:
+     `sesiones.prev_enviado_en/prev_destino/prev_por`; se puede apuntar con la sesión cerrada). En «Datos por defecto»:
+     correo y nombre del técnico, empresa y **firma del formador** (sale en el PDF). El envío **automático** (Gmail
+     desde el servidor, como la app vieja) queda para cuando Cristian ponga la cuenta de envío como secreto en Supabase.
+   - Orden decidido por Cristian (14/11) para lo que falta: 2) Entrega de EPI (FO-014) unida a las tallas;
+     3) Formación en el puesto (F40R304) y entrega de información (FP-022); 4) EPI de altura (FO-072), botiquín (FO-018)
+     y autorización de maquinaria; 5) certificados de cursos y expediente PRL en PDF.
    - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a
      proyecto que pegando SQL).
 5. **Decidido 13/11: los operarios cambian de app UNA sola vez**, cuando la app nueva tenga Personal, Prevención y

@@ -3,6 +3,7 @@ import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
+import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
 
 /** Tablas y funciones de Prevención (esquema «prevencion»). */
 const prev = () => supabase.schema('prevencion');
@@ -18,6 +19,7 @@ interface Charla {
 interface Sesion {
   id: string; charla_id: string; denominacion: string | null; fecha: string | null; centro: string | null; duracion: number | null;
   formador: string | null; observaciones: string | null; previstos: string[]; enviada_en: string | null; cerrada_en: string | null;
+  prev_enviado_en?: string | null; prev_destino?: string | null;
 }
 interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre: string; puesto: string | null; firma_id: string | null; anulada: string | null; creado: string }
 interface Persona { id: string; nombre: string; categoria: string | null; baja: string | null }
@@ -117,7 +119,9 @@ function Charlas() {
 }
 
 /** Datos por defecto para las sesiones nuevas (en nucleo.ajustes, módulo prevención). */
-const CLAVES_AJUSTES = [['centro', 'Lugar donde se da'], ['duracion', 'Duración (minutos)'], ['formador', 'Formador']] as const;
+const CLAVES_AJUSTES = [['centro', 'Lugar donde se da'], ['duracion', 'Duración (minutos)'], ['formador', 'Formador'],
+  ['correo_prl', 'Correo del técnico de prevención (para enviarle el mes)'], ['correo_prl_nombre', 'Nombre del técnico de prevención'],
+  ['empresa', 'Empresa (sale en el asunto del correo)']] as const;
 function useAjustes() {
   const { empresa } = useSesion();
   const [v, setV] = useState<Record<string, string>>({});
@@ -133,8 +137,9 @@ function Ajustes({ alCerrar }: { alCerrar: () => void }) {
   const [v, setV] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
   const valor = (k: string) => v[k] ?? actuales[k] ?? '';
+  const [firmando, setFirmando] = useState(false);
   async function guardar() {
-    for (const [k] of CLAVES_AJUSTES) {
+    for (const k of [...CLAVES_AJUSTES.map(([c]) => c), 'firma_formador']) {
       if (v[k] === undefined) continue;
       const { error } = await nucleo().from('ajustes').upsert({ empresa_id: empresa!.id, centro_id: null, modulo: 'prevencion', clave: k, valor: v[k].trim() },
         { onConflict: 'empresa_id,centro_id,modulo,clave' });
@@ -147,7 +152,13 @@ function Ajustes({ alCerrar }: { alCerrar: () => void }) {
       pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={guardar}>Guardar</button></>}>
       <p className="nota" style={{ marginTop: 0 }}>Se ponen solos cada vez que preparas la sesión de un mes nuevo. Luego puedes cambiarlos en cada mes.</p>
       {CLAVES_AJUSTES.map(([k, n]) => <label key={k} className="campo"><span>{n}</span>
-        <input value={valor(k)} inputMode={k === 'duracion' ? 'numeric' : undefined} onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} /></label>)}
+        <input value={valor(k)} type={k === 'correo_prl' ? 'email' : undefined} inputMode={k === 'duracion' ? 'numeric' : undefined}
+          onChange={(e) => setV((x) => ({ ...x, [k]: e.target.value }))} /></label>)}
+      <div className="campo"><span>Firma del formador (sale en el PDF oficial)</span>
+        {firmando ? <Firma alCambiar={(png) => setV((x) => ({ ...x, firma_formador: png ?? '' }))} />
+          : <>{valor('firma_formador') ? <img src={valor('firma_formador')} alt="Firma del formador" className="firma-guardada" /> : <p className="nota" style={{ margin: 0 }}>Todavía no hay firma.</p>}
+            <button type="button" className="boton sec peq" style={{ alignSelf: 'flex-start' }} onClick={() => setFirmando(true)}>{valor('firma_formador') ? 'Cambiar la firma' : 'Firmar'}</button></>}
+      </div>
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
   );
@@ -362,6 +373,7 @@ function DatosSesion({ anio, mes, charla, sesion, alGuardar }: { anio: number; m
       </div>
       {error && <p className="error" role="alert">{error}</p>}
     </fieldset>
+    {sesion?.cerrada_en && puede('prevencion.charla.editar') && <EnvioPrevencion anio={anio} mes={mes} charla={charla} sesion={sesion} alApuntar={alGuardar} />}
     {puede('prevencion.charla.editar') && (
         <div className="botonera">
           {sesion?.cerrada_en ? <button type="button" className="boton sec" onClick={() => cerrar(false)}>Reabrir el mes</button> : <>
@@ -382,7 +394,14 @@ function FirmasSesion({ charla, sesion, alCambiar }: { charla: Charla; sesion: S
   const [asis, setAsis] = useState<Asistencia[] | null>(null);
   const [imagenes, setImagenes] = useState<Record<string, string>>({});
   const [recoger, setRecoger] = useState<Persona | null>(null);
-  const [imprimir, setImprimir] = useState(false);
+  const [haciendo, setHaciendo] = useState(false);
+  const ajustes = useAjustes();
+  async function pdf() {
+    setHaciendo(true);
+    try { const r = await pdfToolbox(await datosToolbox(charla, sesion, ajustes)); descargar(r.bytes, r.nombre); }
+    catch (e) { aviso('No se ha podido hacer el PDF: ' + (e as Error).message); }
+    setHaciendo(false);
+  }
   const cerrada = !!sesion.cerrada_en;
 
   const cargar = useCallback(async () => {
@@ -426,33 +445,100 @@ function FirmasSesion({ charla, sesion, alCambiar }: { charla: Charla; sesion: S
           </div>
         ))}
       </div>
-      <div className="botonera"><button type="button" className="boton sec" onClick={() => setImprimir(true)}>Imprimir o PDF</button></div>
+      <div className="botonera"><button type="button" className="boton sec" disabled={haciendo} onClick={pdf}>{haciendo ? 'Haciendo el PDF…' : 'PDF oficial'}</button></div>
       {recoger && <FirmarCharla charla={charla} sesion={sesion} persona={recoger} alCerrar={() => setRecoger(null)}
         alFirmar={() => { setRecoger(null); cargar(); alCambiar(); }} />}
-      {imprimir && <HojaFirmas charla={charla} sesion={sesion} asis={asis} imagenes={imagenes} alCerrar={() => setImprimir(false)} />}
     </>
   );
 }
 
-/** Hoja para imprimir o guardar en PDF: la charla, los datos de la sesión y las firmas. */
-function HojaFirmas({ charla, sesion, asis, imagenes, alCerrar }: { charla: Charla; sesion: Sesion; asis: Asistencia[]; imagenes: Record<string, string>; alCerrar: () => void }) {
-  const { empresa } = useSesion();
+/** Todo lo que lleva el PDF oficial del mes: charla, sesión, firmas (con su imagen) y datos por defecto. */
+async function datosToolbox(charla: Charla, sesion: Sesion, ajustes: Record<string, string>): Promise<DatosToolbox> {
+  const { data } = await prev().from('asistencias').select('*').eq('sesion_id', sesion.id).is('anulada', null);
+  const asis = (data ?? []) as Asistencia[];
+  const ids = asis.map((a) => a.firma_id).filter(Boolean) as string[];
+  const f = ids.length ? ((await nucleo().from('firmas').select('id, imagen, firmado_en').in('id', ids)).data ?? []) as { id: string; imagen: string; firmado_en: string }[] : [];
+  return {
+    anio: charla.anio, mes: charla.mes, charla, sesion,
+    firmas: asis.map((a) => { const x = f.find((y) => y.id === a.firma_id); return { nombre: a.nombre, puesto: a.puesto, imagen: x?.imagen ?? null, firmado_en: x?.firmado_en ?? a.creado }; }),
+    ajustes,
+  };
+}
+
+/** Enviar a prevención el mes cerrado: la app prepara el PDF y el correo, se envía desde el móvil y se apunta. */
+function EnvioPrevencion({ anio, mes, charla, sesion, alApuntar }: { anio: number; mes: number; charla: Charla; sesion: Sesion; alApuntar: () => void }) {
+  const { estado } = useSesion();
+  const ajustes = useAjustes();
+  const [paso, setPaso] = useState<'inicio' | 'enviar'>('inicio');
+  const [archivo, setArchivo] = useState<{ bytes: Uint8Array; nombre: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [ocupado, setOcupado] = useState(false);
+  const yo = estado.fase === 'dentro' ? estado.sesion.usuario?.nombre ?? '' : '';
+  const destino = ajustes.correo_prl ?? '';
+  const mesTxt = `${MESES[mes - 1]} ${anio}`;
+  const asunto = `Documentación PRL ${mesTxt} · Toolbox` + (ajustes.empresa ? ` · ${ajustes.empresa}` : '');
+
+  async function preparar() {
+    setOcupado(true); setError(null);
+    try {
+      const datos = await datosToolbox(charla, sesion, ajustes);
+      setArchivo(await pdfToolbox(datos));
+      setPaso('enviar');
+    } catch (e) { setError('No se ha podido hacer el PDF: ' + (e as Error).message); }
+    setOcupado(false);
+  }
+  function texto(firmados: number) {
+    return [`Hola${ajustes.correo_prl_nombre ? ' ' + ajustes.correo_prl_nombre : ''},`, '',
+      `Te adjunto la documentación de prevención de ${mesTxt}${ajustes.centro ? ' (' + ajustes.centro + ')' : ''}:`, '',
+      `- Toolbox del mes${charla.tema ? ': ' + charla.tema : ''}. Han firmado ${firmados} de ${sesion.previstos.length}.`, '',
+      'Un saludo,', yo].join('\n');
+  }
+  async function abrirCorreo() {
+    if (!archivo) return;
+    const { count } = await prev().from('asistencias').select('id', { count: 'exact', head: true }).eq('sesion_id', sesion.id).is('anulada', null);
+    const cuerpo = texto(count ?? 0);
+    const file = new File([archivo.bytes as BlobPart], archivo.nombre, { type: 'application/pdf' });
+    // en el móvil: compartir (se elige Outlook o el correo, con el PDF y el texto ya puestos)
+    if (/Android|iPhone|iPad/i.test(navigator.userAgent) && navigator.canShare?.({ files: [file] })) {
+      try { await navigator.share({ files: [file], title: asunto, text: cuerpo }); } catch (e) { if ((e as Error).name !== 'AbortError') setError((e as Error).message); }
+      return;
+    }
+    // en el ordenador: se descarga el PDF y se abre un correo nuevo con todo puesto
+    descargar(archivo.bytes, archivo.nombre);
+    setTimeout(() => { location.href = `mailto:${destino.split(/\s*[,;]\s*/).filter(Boolean).map(encodeURIComponent).join(',')}?subject=${encodeURIComponent(asunto)}&body=${encodeURIComponent(cuerpo)}`; }, 600);
+  }
+  async function hecho() {
+    setOcupado(true);
+    const { error } = await prev().rpc('apuntar_envio', { p_sesion: sesion.id, p_destino: (destino || 'sin correo puesto') + ' (desde mi correo)' });
+    setOcupado(false);
+    if (error) { setError(textoError(error.message)); return; }
+    aviso('Apuntado como enviado a prevención'); setPaso('inicio'); alApuntar();
+  }
+
   return (
-    <Ventana titulo="Hoja de firmas" alCerrar={alCerrar}
-      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cerrar</button><button type="button" className="boton" onClick={() => window.print()}>Imprimir o PDF</button></>}>
-      <div className="documento">
-        <p className="doc-cab"><b>{sesion.denominacion ?? 'Charla de prevención'}</b>{charla.codigo ? ` · ${charla.codigo}` : ''}<br />
-          {empresa?.nombre}{sesion.centro ? ` · ${sesion.centro}` : ''}<br />
-          {sesion.fecha ? `Fecha: ${fechaCorta(sesion.fecha)}` : ''}{sesion.duracion ? ` · ${sesion.duracion} min` : ''}{sesion.formador ? ` · Formador: ${sesion.formador}` : ''}</p>
-        <TextoCharla c={charla} />
-        <h3 className="subtitulo">Asistentes ({asis.length})</h3>
-        <table className="tabla-firmas">
-          <thead><tr><th>Nombre</th><th>Puesto</th><th>Firma</th></tr></thead>
-          <tbody>{asis.map((a) => <tr key={a.id}><td>{a.nombre}</td><td>{a.puesto}</td><td>{a.firma_id && imagenes[a.firma_id] && <img src={imagenes[a.firma_id]} alt="" />}</td></tr>)}</tbody>
-        </table>
-        {sesion.observaciones && <p><b>Observaciones:</b> {sesion.observaciones}</p>}
-      </div>
-    </Ventana>
+    <section className="envio-prev" aria-label="Enviar a prevención">
+      <h3 className="subtitulo" style={{ marginTop: 0 }}>Enviar a prevención</h3>
+      {sesion.prev_enviado_en
+        ? <p><span className="chapa firmado">Enviado</span> el {new Date(sesion.prev_enviado_en).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })}
+          {sesion.prev_destino ? ` · ${sesion.prev_destino}` : ''}</p>
+        : <p><span className="chapa pendiente">Sin enviar</span>{destino ? ` · a ${destino}` : ''}</p>}
+      {!destino && <p className="nota">Pon el correo del técnico de prevención en «Datos por defecto» (en la lista de meses) para que salga ya puesto.</p>}
+      {paso === 'inicio' ? (
+        <button type="button" className="boton ancho" disabled={ocupado} onClick={preparar}>{ocupado ? 'Haciendo el PDF…' : sesion.prev_enviado_en ? 'Volver a enviar desde mi correo' : 'Enviar desde mi correo'}</button>
+      ) : (
+        <div className="pasos-envio">
+          <ol>
+            <li>Pulsa <b>Abrir el correo</b>: en el móvil, elige Outlook (o tu correo); el PDF y el texto ya van puestos.</li>
+            <li>Pon el destinatario si no sale{destino ? ` (${destino})` : ''} y dale a <b>Enviar</b>.</li>
+            <li>Vuelve aquí y pulsa <b>Ya lo he enviado</b>.</li>
+          </ol>
+          <button type="button" className="boton ancho" onClick={abrirCorreo}>Abrir el correo</button>
+          <button type="button" className="boton sec ancho" disabled={ocupado} onClick={hecho}>Ya lo he enviado</button>
+          <button type="button" className="boton txt ancho" onClick={() => setPaso('inicio')}>Cancelar</button>
+        </div>
+      )}
+      {error && <p className="error" role="alert">{error}</p>}
+    </section>
   );
 }
 

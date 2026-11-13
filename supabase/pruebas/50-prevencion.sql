@@ -102,6 +102,7 @@ select pruebas.ok(prevencion.firmar_charla('33333333-0000-0000-0000-0000000000a1
   'la encargada recoge en su móvil la firma de Dani, que no estaba en la lista');
 select pruebas.ok((select '33333333-0000-0000-0000-0000000000f4' = any(previstos) from prevencion.sesiones), 'Dani pasa a estar en la lista');
 select pruebas.falla($q$select prevencion.anular_asistencia((select id from prevencion.asistencias limit 1))$q$, 'la encargada no anula firmas');
+select pruebas.falla($q$select prevencion.apuntar_envio('33333333-0000-0000-0000-0000000000a1', 'x')$q$, 'la encargada no apunta envíos a prevención');
 update prevencion.charlas set tema = 'otro';
 select pruebas.ok((select tema from prevencion.charlas) = 'Riesgo eléctrico', 'la encargada no cambia la charla');
 
@@ -118,6 +119,8 @@ select pruebas.falla($q$select prevencion.firmar_charla('33333333-0000-0000-0000
 select pruebas.falla($q$update prevencion.sesiones set formador = 'otro'$q$, 'cerrada: la sesión no se cambia');
 select pruebas.falla($q$update prevencion.charlas set tema = 'otro'$q$, 'cerrada: la charla firmada no se cambia');
 select pruebas.falla($q$select prevencion.anular_asistencia((select id from prevencion.asistencias where anulada is null limit 1))$q$, 'cerrada: no se anulan firmas');
+select prevencion.apuntar_envio('33333333-0000-0000-0000-0000000000a1', 'prevencion@ejemplo.com (desde mi correo)');
+select pruebas.ok((select prev_enviado_en is not null and prev_destino like 'prevencion@%' from prevencion.sesiones), 'cerrada: se puede apuntar el envío a prevención');
 select prevencion.cerrar_sesion('33333333-0000-0000-0000-0000000000a1', false);
 select pruebas.ok((select cerrada_en is null from prevencion.sesiones), 'el jefe puede reabrirla');
 select pruebas.falla($q$delete from prevencion.charlas where id = '33333333-0000-0000-0000-0000000000c1'$q$, 'una charla con sesión no se borra');

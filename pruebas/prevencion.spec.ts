@@ -34,11 +34,12 @@ const tablas = () => ({
     { id: CARLA, empresa_id: UNIDAD, nombre: 'Carla Antigua', categoria: 'Peón', baja: '2026-01-01T00:00:00Z' },
   ],
   usuarios: [{ id: USUARIO.id, nombre: 'Ana Prueba', persona_id: ANA }],
-  ajustes: [{ id: 'aj1', empresa_id: UNIDAD, centro_id: null, modulo: 'prevencion', clave: 'formador', valor: 'Jefa Prueba' }],
+  ajustes: [{ id: 'aj1', empresa_id: UNIDAD, centro_id: null, modulo: 'prevencion', clave: 'formador', valor: 'Jefa Prueba' },
+    { id: 'aj2', empresa_id: UNIDAD, centro_id: null, modulo: 'prevencion', clave: 'correo_prl', valor: 'tecnico@ejemplo.com' }],
   charlas: [charla(3)],
   sesiones: [sesionMes(3)],
   asistencias: [{ id: 'as1', empresa_id: UNIDAD, sesion_id: 'se-3', persona_id: ANA, nombre: 'Ana Prueba', puesto: 'Peón', firma_id: 'fi1', anulada: null, creado: `${ANIO}-03-05T09:00:00Z` }],
-  firmas: [{ id: 'fi1', imagen: PNG }],
+  firmas: [{ id: 'fi1', imagen: PNG, firmado_en: `${ANIO}-03-05T09:00:00Z` }],
   fichas: [{ persona_id: ANA, empresa_id: UNIDAD, dni: '00000000T', puesto: 'Limpieza', fecha_alta: `${ANIO}-01-10`, fecha_baja: null, motivo_baja: null,
     telefono: null, emerg_nombre: null, emerg_tel: null, idioma: null, tallas: { pantalon: 'L' } }],
   prendas: [{ id: 'pr1', empresa_id: UNIDAD, codigo: 'pantalon', nombre: 'Pantalón', orden: 1, baja: null }, { id: 'pr2', empresa_id: UNIDAD, codigo: 'bota', nombre: 'Botas', orden: 2, baja: null }],
@@ -56,9 +57,12 @@ const rpc = {
     return 'as-n';
   },
   cerrar_sesion: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => { t.sesiones.find((x) => x.id === b.p_sesion)!.cerrada_en = b.p_cerrar ? new Date().toISOString() : null; return null; },
+  apuntar_envio: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    Object.assign(t.sesiones.find((x) => x.id === b.p_sesion)!, { prev_enviado_en: new Date().toISOString(), prev_destino: b.p_destino }); return null; },
 };
 
 async function firmarConElDedo(page: Page) {
+  await page.locator('.firma canvas').scrollIntoViewIfNeeded();
   const caja = (await page.locator('.firma canvas').boundingBox())!;
   await page.mouse.move(caja.x + 30, caja.y + 120); await page.mouse.down();
   await page.mouse.move(caja.x + 90, caja.y + 50, { steps: 6 }); await page.mouse.move(caja.x + 160, caja.y + 130, { steps: 6 }); await page.mouse.up();
@@ -115,6 +119,52 @@ test('el jefe ve quién ha firmado, recoge la firma de Bruno en su móvil y cier
   await page.getByRole('button', { name: 'Cerrar el mes' }).click();
   await expect(page.getByText('Mes cerrado')).toBeVisible();
   expect(sim.tablas.sesiones[0].cerrada_en).toBeTruthy();
+});
+
+test('PDF oficial del Toolbox (SH-CORP-FO-IB-031)', async ({ page }) => {
+  const errores = vigilar(page);
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/prevencion/charlas');
+  await page.locator('.fila', { hasText: 'Marzo' }).click();
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  const d = await descarga;
+  expect(d.suggestedFilename()).toBe(`SH-CORP-FO-IB-031 Toolbox Talk HSE_Marzo ${String(ANIO).slice(2)}.pdf`);
+  const bytes = await (await import('node:fs/promises')).readFile(await d.path());
+  expect(bytes.subarray(0, 5).toString()).toBe('%PDF-');
+  expect(bytes.length).toBeGreaterThan(20000); // lleva el logo, los iconos y la firma
+  expect(errores).toEqual([]);
+});
+
+test('mes cerrado: enviar a prevención desde mi correo y apuntarlo', async ({ page }) => {
+  const errores = vigilar(page);
+  const t = tablas(); t.sesiones[0].cerrada_en = `${ANIO}-03-31T10:00:00Z`;
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: t, rpc });
+  await page.goto('./#/m/prevencion/charlas');
+  await page.locator('.fila', { hasText: 'Marzo' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Sesión' }).click();
+  const envio = page.getByRole('region', { name: 'Enviar a prevención' });
+  await expect(envio).toContainText('Sin enviar · a tecnico@ejemplo.com');
+  await envio.getByRole('button', { name: 'Enviar desde mi correo' }).click();
+  await expect(envio.getByRole('button', { name: 'Abrir el correo' })).toBeVisible();
+  await envio.getByRole('button', { name: 'Ya lo he enviado' }).click();
+  await expect(page.getByText('Apuntado como enviado a prevención')).toBeVisible();
+  expect(sim.find((l) => l.ruta.includes('/rpc/apuntar_envio'))!.cuerpo).toEqual({ p_sesion: 'se-3', p_destino: 'tecnico@ejemplo.com (desde mi correo)' });
+  expect(errores).toEqual([]);
+});
+
+test('datos por defecto: correo de prevención y firma del formador', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/prevencion/charlas');
+  await page.getByRole('button', { name: 'Datos por defecto' }).click();
+  await expect(page.getByLabel('Correo del técnico de prevención (para enviarle el mes)')).toHaveValue('tecnico@ejemplo.com');
+  await page.getByLabel('Nombre del técnico de prevención').fill('Pedro');
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('Guardado')).toBeVisible();
+  expect(sim.tablas.ajustes.find((a) => a.clave === 'correo_prl_nombre')).toMatchObject({ valor: 'Pedro', modulo: 'prevencion' });
+  expect(String(sim.tablas.ajustes.find((a) => a.clave === 'firma_formador')?.valor)).toMatch(/^data:image\/png;base64,/);
 });
 
 test('la trabajadora ve la charla pendiente, la lee y la firma', async ({ page }) => {
