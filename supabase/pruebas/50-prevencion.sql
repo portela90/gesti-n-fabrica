@@ -136,6 +136,22 @@ select pruebas.ok(pruebas.cuantas('select * from prevencion.fichas') + pruebas.c
   + pruebas.cuantas('select * from prevencion.sesiones') + pruebas.cuantas('select * from prevencion.asistencias') = 0, 'el jefe de otra unidad no ve nada de P');
 select pruebas.falla($q$select prevencion.enviar_charla('33333333-0000-0000-0000-0000000000a1')$q$, 'ni envía sus charlas');
 
+-- ---------- documentos del técnico (PDF en el almacén) ----------
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000003a1', true);
+insert into storage.objects (bucket_id, name) values ('prevencion', '33333333-0000-0000-0000-000000000001/charlas/2031-04-1.pdf');
+insert into prevencion.charlas (empresa_id, anio, mes, documento_ruta, documento_nombre, documento_sha256) values
+  ('33333333-0000-0000-0000-000000000001', 2031, 4, '33333333-0000-0000-0000-000000000001/charlas/2031-04-1.pdf', 'Toolbox abril.pdf', repeat('a', 64));
+select pruebas.ok(pruebas.cuantas('select * from prevencion.charlas where mes = 4 and compromiso is null') = 1, 'una charla puede ser solo el PDF del técnico (sin escribir nada)');
+select pruebas.falla($q$insert into prevencion.charlas (empresa_id, anio, mes) values ('33333333-0000-0000-0000-000000000001', 2031, 5)$q$, 'pero una charla sin texto ni documento no vale');
+select pruebas.falla($q$insert into prevencion.charlas (empresa_id, anio, mes, documento_ruta) values ('33333333-0000-0000-0000-000000000001', 2031, 6, '44444444-0000-0000-0000-000000000001/charlas/x.pdf')$q$,
+  'el documento tiene que estar en la carpeta de su unidad');
+select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '44444444-0000-0000-0000-000000000001/charlas/x.pdf')$q$, 'no se sube a la carpeta de otra unidad');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000003f1', true);
+select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where bucket_id = 'prevencion'$q$) = 1, 'la operaria puede leer el documento de su unidad');
+select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '33333333-0000-0000-0000-000000000001/charlas/y.pdf')$q$, 'la operaria no sube documentos');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000004a1', true);
+select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where bucket_id = 'prevencion'$q$) = 0, 'el jefe de otra unidad no ve los documentos de P');
+
 -- ---------- historial ----------
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000003a1', true);
 select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'prevencion' and tabla = 'fichas'$q$) >= 3, 'los cambios de las fichas quedan en el historial');

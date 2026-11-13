@@ -7,7 +7,7 @@ const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', '
 
 export interface DatosToolbox {
   anio: number; mes: number;
-  charla: { compromiso: string; cuerpo: string | null; puntos: string[]; tema: string | null; tema_intro: string | null; tema_puntos: string[]; imagen: string | null };
+  charla: { compromiso: string | null; documento_nombre?: string | null; cuerpo: string | null; puntos: string[]; tema: string | null; tema_intro: string | null; tema_puntos: string[]; imagen: string | null };
   sesion: { denominacion: string | null; fecha: string | null; centro: string | null; duracion: number | null; formador: string | null; observaciones: string | null };
   firmas: { nombre: string; puesto: string | null; imagen: string | null; firmado_en: string }[];
   ajustes: { centro?: string; duracion?: string; formador?: string; firma_formador?: string };
@@ -104,7 +104,7 @@ export async function pdfToolbox(d: DatosToolbox): Promise<{ bytes: Uint8Array; 
     let yl = y0 + P + 1, yr = y0 + P + 1;
     const fsT = 11 * k, fsB = 7.4 * k, lh = fsB * 0.42, lhT = fsT * 0.43;
     doc.setFont('helvetica', 'bold'); doc.setFontSize(fsT); doc.setTextColor(BLUE[0], BLUE[1], BLUE[2]);
-    let ls: string[] = doc.splitTextToSize(tb.compromiso, COLW_L - 2 * P);
+    let ls: string[] = doc.splitTextToSize(tb.compromiso ?? (tb.documento_nombre ? 'Ver el documento del técnico de prevención adjunto.' : ''), COLW_L - 2 * P);
     if (dibujar) doc.text(ls, L + P, yl + lhT * 0.8, { lineHeightFactor: 1.15 }); yl += ls.length * lhT + 3;
     doc.setFont('helvetica', 'normal'); doc.setFontSize(fsB); color(TXT);
     for (const par of (tb.cuerpo || '').split('\n').filter(Boolean)) { ls = doc.splitTextToSize(par, COLW_L - 2 * P); if (dibujar) doc.text(ls, L + P, yl + lh * 0.8, { lineHeightFactor: 1.15 }); yl += ls.length * lh + 1.6; }

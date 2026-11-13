@@ -4,6 +4,7 @@ import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
 import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
+import { abrirDocumento, bajarDocumento, mesDelNombre, subirDocumento, unirPdfs } from './documentos';
 
 /** Tablas y funciones de Prevención (esquema «prevencion»). */
 const prev = () => supabase.schema('prevencion');
@@ -13,8 +14,9 @@ const fechaCorta = (f: string | null) => { if (!f) return ''; const [a, m, d] = 
 const ANIO_ACTUAL = new Date().getFullYear();
 
 interface Charla {
-  id: string; empresa_id: string; anio: number; mes: number; codigo: string | null; compromiso: string; cuerpo: string | null;
+  id: string; empresa_id: string; anio: number; mes: number; codigo: string | null; compromiso: string | null; cuerpo: string | null;
   puntos: string[]; tema: string | null; tema_intro: string | null; tema_puntos: string[]; imagen: string | null;
+  documento_ruta?: string | null; documento_nombre?: string | null; documento_sha256?: string | null;
 }
 interface Sesion {
   id: string; charla_id: string; denominacion: string | null; fecha: string | null; centro: string | null; duracion: number | null;
@@ -68,6 +70,7 @@ function Charlas() {
   const [firmas, setFirmas] = useState<Asistencia[]>([]);
   const [abierto, setAbierto] = useState<number | null>(null);
   const [ajustes, setAjustes] = useState(false);
+  const [subir, setSubir] = useState<File[] | null>(null);
   const editable = puede('prevencion.charla.editar');
 
   const cargar = useCallback(async () => {
@@ -90,6 +93,9 @@ function Charlas() {
             {[ANIO_ACTUAL - 1, ANIO_ACTUAL, ANIO_ACTUAL + 1].map((a) => <option key={a}>{a}</option>)}
           </select></label>
         {editable && <div className="campo"><span aria-hidden="true">&nbsp;</span><button type="button" className="boton sec" onClick={() => setAjustes(true)}>Datos por defecto</button></div>}
+        {editable && <div className="campo"><span aria-hidden="true">&nbsp;</span>
+          <label className="boton sec archivo">Subir documentos del año
+            <input type="file" accept="application/pdf,.pdf" multiple onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ''; if (f.length) setSubir(f); }} /></label></div>}
       </div>
       {charlas === null ? <p className="nota">Cargando…</p> : (
         <div className="lista">
@@ -101,7 +107,7 @@ function Charlas() {
             return (
               <button key={nombre} type="button" className={'fila' + (!c ? ' de-baja' : '')} disabled={!c && !editable} onClick={() => setAbierto(i + 1)}>
                 <span className="fila-txt"><b>{nombre}</b>
-                  <small>{c ? (c.tema || c.compromiso) : editable ? 'Toca para escribirla' : 'Todavía no hay charla'}</small>
+                  <small>{c ? (c.tema || c.compromiso || c.documento_nombre) : editable ? 'Toca para subir el documento o escribirla' : 'Todavía no hay charla'}</small>
                   {s && <small>{s.cerrada_en ? `Cerrada el ${fechaCorta(s.cerrada_en)}` : s.enviada_en ? `Enviada el ${fechaCorta(s.enviada_en)}` : 'Sin enviar'}
                     {' · '}{n} de {s.previstos.length} firmas</small>}</span>
                 <span className={'chapa ' + (estado === 'Cerrada' ? 'firmado' : estado === 'Firmando' ? 'pendiente' : 'sin')}>{estado}</span>
@@ -114,7 +120,59 @@ function Charlas() {
         sesion={sesiones.find((s) => s.charla_id === charlas?.find((c) => c.mes === abierto)?.id) ?? null}
         alCerrar={() => setAbierto(null)} alCambiar={cargar} />}
       {ajustes && <Ajustes alCerrar={() => setAjustes(false)} />}
+      {subir && charlas && <SubirDelAnio anio={anio} archivos={subir} charlas={charlas} sesiones={sesiones}
+        alCerrar={() => setSubir(null)} alSubir={() => { setSubir(null); cargar(); }} />}
     </>
+  );
+}
+
+/** Subir de una vez los PDF del técnico de todo el año: la app reconoce el mes por el nombre y se puede corregir. */
+function SubirDelAnio({ anio, archivos, charlas, sesiones, alCerrar, alSubir }: {
+  anio: number; archivos: File[]; charlas: Charla[]; sesiones: Sesion[]; alCerrar: () => void; alSubir: () => void;
+}) {
+  const { empresa } = useSesion();
+  const [meses, setMeses] = useState<(number | 0)[]>(() => archivos.map((f) => mesDelNombre(f.name) ?? 0));
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const cerradoEl = (mes: number) => { const c = charlas.find((x) => x.mes === mes); return c ? sesiones.find((s) => s.charla_id === c.id)?.cerrada_en ?? null : null; };
+  const repetidos = meses.filter((m, i) => m && meses.indexOf(m) !== i);
+  async function subir() {
+    if (repetidos.length) { setError(`Hay dos documentos para ${MESES[repetidos[0] - 1]}.`); return; }
+    if (meses.some((m, i) => m && cerradoEl(m) && archivos[i])) { setError('Algún mes elegido ya está cerrado: ese no se puede cambiar.'); return; }
+    setOcupado(true); setError(null);
+    let hechos = 0;
+    for (let i = 0; i < archivos.length; i++) {
+      const mes = meses[i]; if (!mes) continue;
+      try {
+        const d = await subirDocumento(empresa!.id, anio, mes, archivos[i]);
+        const c = charlas.find((x) => x.mes === mes);
+        const { error } = c ? await prev().from('charlas').update(d).eq('id', c.id)
+          : await prev().from('charlas').insert({ ...d, empresa_id: empresa!.id, anio, mes });
+        if (error) throw new Error(textoError(error.message));
+        hechos++;
+      } catch (e) { setError(`${archivos[i].name}: ${(e as Error).message}`); setOcupado(false); if (hechos) aviso(`${hechos} subidos`); return; }
+    }
+    setOcupado(false);
+    aviso(hechos === 1 ? 'Documento subido' : `${hechos} documentos subidos`); alSubir();
+  }
+  return (
+    <Ventana titulo={`Documentos del técnico · ${anio}`} alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button>
+        <button type="button" className="boton" disabled={ocupado || !meses.some(Boolean)} onClick={subir}>{ocupado ? 'Subiendo…' : 'Subir'}</button></>}>
+      <p className="nota" style={{ marginTop: 0 }}>Mira que cada PDF vaya a su mes. Si un mes ya tenía documento, se cambia por este.</p>
+      <div className="lista">
+        {archivos.map((f, i) => (
+          <div key={i} className="fila fija centrada subir-doc">
+            <span className="fila-txt"><b>{f.name}</b>{meses[i] && cerradoEl(meses[i]) ? <small className="error">Ese mes ya está cerrado</small> : null}</span>
+            <select aria-label={`Mes de ${f.name}`} value={meses[i]} onChange={(e) => setMeses((m) => m.map((x, j) => (j === i ? Number(e.target.value) : x)))}>
+              <option value={0}>No subir</option>
+              {MESES.map((n, k) => <option key={n} value={k + 1}>{n}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
   );
 }
 
@@ -199,13 +257,27 @@ function Mes({ anio, mes, charla, sesion, alCerrar, alCambiar }: {
 function TextoCharla({ c }: { c: Charla }) {
   return (
     <div className="charla">
+      {c.documento_ruta && <BotonDocumento c={c} />}
       {c.imagen && <img src={c.imagen} alt="" />}
-      <p className="charla-compromiso">«{c.compromiso}»</p>
+      {c.compromiso && <p className="charla-compromiso">«{c.compromiso}»</p>}
       {c.cuerpo && c.cuerpo.split(/\n+/).map((p, i) => <p key={i}>{p}</p>)}
       {c.puntos.length > 0 && <><h3 className="subtitulo">Para hablar</h3><ul>{c.puntos.map((p, i) => <li key={i}>{p}</li>)}</ul></>}
       {c.tema && <h3 className="subtitulo">{c.tema}</h3>}
       {c.tema_intro && <p>{c.tema_intro}</p>}
       {c.tema_puntos.length > 0 && <ul>{c.tema_puntos.map((p, i) => <li key={i}>{p}</li>)}</ul>}
+    </div>
+  );
+}
+
+/** Abre el PDF del técnico. */
+function BotonDocumento({ c }: { c: Charla }) {
+  const [abriendo, setAbriendo] = useState(false);
+  return (
+    <div className="documento-tecnico">
+      <span>📄 <b>{c.documento_nombre ?? 'Documento del técnico'}</b></span>
+      <button type="button" className="boton" disabled={abriendo} onClick={async () => {
+        setAbriendo(true); try { await abrirDocumento(c.documento_ruta!); } catch (e) { aviso((e as Error).message); } setAbriendo(false);
+      }}>Abrir el documento</button>
     </div>
   );
 }
@@ -251,14 +323,25 @@ function EditarCharla({ titulo, anio, mes, charla, alCerrar, alGuardar }: {
     tema: charla?.tema ?? '', tema_intro: charla?.tema_intro ?? '', tema_puntos: (charla?.tema_puntos ?? []).join('\n'), codigo: charla?.codigo ?? '',
   });
   const [imagen, setImagen] = useState<string | null>(charla?.imagen ?? null);
+  const [doc, setDoc] = useState<File | null>(null);
+  const [quitarDoc, setQuitarDoc] = useState(false);
+  const [escribir, setEscribir] = useState(!!charla?.compromiso);
+  const docActual = !quitarDoc ? charla?.documento_nombre ?? null : null;
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const pon = (k: keyof typeof v) => (e: { target: { value: string } }) => setV((x) => ({ ...x, [k]: e.target.value }));
   async function guardar() {
-    if (!v.compromiso.trim()) { setError('Falta el compromiso del mes.'); return; }
+    const tieneDoc = !!doc || !!docActual;
+    if (!v.compromiso.trim() && !tieneDoc) { setError('Sube el documento del técnico o escribe el compromiso del mes.'); return; }
     setOcupado(true); setError(null);
+    let documento: Record<string, string | null> = {};
+    if (doc) {
+      try { documento = { ...await subirDocumento(empresa!.id, anio, mes, doc) }; }
+      catch (e) { setOcupado(false); setError((e as Error).message); return; }
+    } else if (quitarDoc) documento = { documento_ruta: null, documento_nombre: null, documento_sha256: null };
     const fila = {
-      compromiso: v.compromiso.trim(), cuerpo: v.cuerpo.trim() || null, puntos: lineas(v.puntos), tema: v.tema.trim() || null,
+      ...documento,
+      compromiso: v.compromiso.trim() || null, cuerpo: v.cuerpo.trim() || null, puntos: lineas(v.puntos), tema: v.tema.trim() || null,
       tema_intro: v.tema_intro.trim() || null, tema_puntos: lineas(v.tema_puntos), imagen, codigo: v.codigo.trim() || null,
     };
     const { error } = charla ? await prev().from('charlas').update(fila).eq('id', charla.id)
@@ -270,6 +353,15 @@ function EditarCharla({ titulo, anio, mes, charla, alCerrar, alGuardar }: {
   return (
     <Ventana titulo={titulo} alCerrar={alCerrar}
       pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" disabled={ocupado} onClick={guardar}>Guardar</button></>}>
+      <div className="campo"><span>Documento del técnico (PDF)</span>
+        {(doc || docActual) && <p className="nota" style={{ margin: '0 0 6px' }}>📄 {doc?.name ?? docActual}</p>}
+        <div className="botonera" style={{ justifyContent: 'flex-start', marginTop: 0 }}>
+          <label className="boton sec peq archivo">{doc || docActual ? 'Cambiar el PDF' : 'Subir el PDF del técnico'}
+            <input type="file" accept="application/pdf,.pdf" onChange={(e) => { const f = e.target.files?.[0]; if (f) { setDoc(f); setQuitarDoc(false); } }} /></label>
+          {(doc || docActual) && <button type="button" className="boton txt peq" onClick={() => { setDoc(null); setQuitarDoc(!!charla?.documento_ruta); }}>Quitar</button>}
+        </div></div>
+      {!escribir && <button type="button" className="boton txt" onClick={() => setEscribir(true)}>Escribir también el texto de la charla</button>}
+      {escribir && <>
       <label className="campo"><span>Compromiso del mes</span><textarea rows={2} maxLength={500} value={v.compromiso} onChange={pon('compromiso')} /></label>
       <label className="campo"><span>Texto de la charla</span><textarea rows={5} maxLength={4000} value={v.cuerpo} onChange={pon('cuerpo')} /></label>
       <label className="campo"><span>Preguntas para hablar (una por línea)</span><textarea rows={3} value={v.puntos} onChange={pon('puntos')} /></label>
@@ -283,6 +375,7 @@ function EditarCharla({ titulo, anio, mes, charla, alCerrar, alGuardar }: {
             <input type="file" accept="image/*" onChange={async (e) => { const f = e.target.files?.[0]; if (f) { try { setImagen(await aJpeg(f)); } catch (x) { setError((x as Error).message); } } }} /></label>
           {imagen && <button type="button" className="boton txt peq" onClick={() => setImagen(null)}>Quitar</button>}
         </div></div>
+      </>}
       <label className="campo"><span>Código del documento (opcional)</span><input maxLength={60} value={v.codigo} onChange={pon('codigo')} /></label>
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
@@ -398,7 +491,7 @@ function FirmasSesion({ charla, sesion, alCambiar }: { charla: Charla; sesion: S
   const ajustes = useAjustes();
   async function pdf() {
     setHaciendo(true);
-    try { const r = await pdfToolbox(await datosToolbox(charla, sesion, ajustes)); descargar(r.bytes, r.nombre); }
+    try { const r = await pdfCompleto(charla, sesion, ajustes); descargar(r.bytes, r.nombre); }
     catch (e) { aviso('No se ha podido hacer el PDF: ' + (e as Error).message); }
     setHaciendo(false);
   }
@@ -452,6 +545,13 @@ function FirmasSesion({ charla, sesion, alCambiar }: { charla: Charla; sesion: S
   );
 }
 
+/** PDF oficial de firmas y, detrás, el documento del técnico (si lo hay). */
+async function pdfCompleto(charla: Charla, sesion: Sesion, ajustes: Record<string, string>) {
+  const r = await pdfToolbox(await datosToolbox(charla, sesion, ajustes));
+  if (!charla.documento_ruta) return r;
+  return { nombre: r.nombre, bytes: await unirPdfs(r.bytes, await bajarDocumento(charla.documento_ruta)) };
+}
+
 /** Todo lo que lleva el PDF oficial del mes: charla, sesión, firmas (con su imagen) y datos por defecto. */
 async function datosToolbox(charla: Charla, sesion: Sesion, ajustes: Record<string, string>): Promise<DatosToolbox> {
   const { data } = await prev().from('asistencias').select('*').eq('sesion_id', sesion.id).is('anulada', null);
@@ -481,8 +581,7 @@ function EnvioPrevencion({ anio, mes, charla, sesion, alApuntar }: { anio: numbe
   async function preparar() {
     setOcupado(true); setError(null);
     try {
-      const datos = await datosToolbox(charla, sesion, ajustes);
-      setArchivo(await pdfToolbox(datos));
+      setArchivo(await pdfCompleto(charla, sesion, ajustes));
       setPaso('enviar');
     } catch (e) { setError('No se ha podido hacer el PDF: ' + (e as Error).message); }
     setOcupado(false);
@@ -624,7 +723,7 @@ function MisCharlas() {
         <div className="lista" style={{ marginBottom: 16 }}>
           {datos.pendientes.map((x) => (
             <button key={x.s.id} type="button" className="fila" onClick={() => setFirmando(x)}>
-              <span className="fila-txt"><b>{x.s.denominacion ?? `${MESES[x.c.mes - 1]} ${x.c.anio}`}</b><small>{x.c.tema ?? x.c.compromiso}</small></span>
+              <span className="fila-txt"><b>{x.s.denominacion ?? `${MESES[x.c.mes - 1]} ${x.c.anio}`}</b><small>{x.c.tema ?? x.c.compromiso ?? x.c.documento_nombre}</small></span>
               <span className="chapa pendiente">Firmar</span>
             </button>
           ))}

@@ -248,3 +248,10 @@ button.dia { cursor: pointer; }
 .envio-prev p { margin: 0 0 10px; }
 .pasos-envio { display: flex; flex-direction: column; gap: 8px; }
 .pasos-envio ol { margin: 0 0 4px; padding-left: 20px; font-size: 14px; line-height: 1.5; }
+
+/* Documento del técnico de prevención */
+.documento-tecnico { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; margin: 0 0 12px; border: 1px solid var(--borde, #ddd); border-radius: 10px; }
+.documento-tecnico span { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.subir-doc { flex-wrap: wrap; }
+.subir-doc .fila-txt b { overflow-wrap: anywhere; }
+.subir-doc select { flex: 0 0 auto; }

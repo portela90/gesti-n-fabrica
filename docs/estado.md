@@ -117,6 +117,14 @@ que cuadra antes de dejar la app vieja en solo consulta.
      `sesiones.prev_enviado_en/prev_destino/prev_por`; se puede apuntar con la sesión cerrada). En «Datos por defecto»:
      correo y nombre del técnico, empresa y **firma del formador** (sale en el PDF). El envío **automático** (Gmail
      desde el servidor, como la app vieja) queda para cuando Cristian ponga la cuenta de envío como secreto en Supabase.
+   - **Documentos del técnico** (14/11, pedido por Cristian: «que solo suba yo los documentos a la app», cada año sin
+     programar): `0015_prevencion_documentos.sql` (**PENDIENTE de pegar**): almacén de archivos (bucket privado
+     `prevencion`, solo PDF, 20 MB; ruta `<unidad>/charlas/<año>-<mes>-<marca>.pdf`, cada subida es un archivo nuevo),
+     permisos en `storage.objects` (ver: su unidad; subir/cambiar/borrar: `prevencion.charla.editar`),
+     `charlas.documento_ruta/nombre/sha256`, el compromiso ya no es obligatorio si hay PDF, y la huella de la charla
+     incluye el sha256 del PDF. En pantalla: «Subir documentos del año» (varios PDF a la vez, reconoce el mes por el
+     nombre y se puede corregir), y en cada mes «Subir el PDF del técnico». El trabajador lo abre antes de firmar.
+     El PDF oficial y el envío a prevención llevan detrás el PDF del técnico (pdf-lib). Código en `src/prevencion/documentos.ts`.
    - Orden decidido por Cristian (14/11) para lo que falta: 2) Entrega de EPI (FO-014) unida a las tallas;
      3) Formación en el puesto (F40R304) y entrega de información (FP-022); 4) EPI de altura (FO-072), botiquín (FO-018)
      y autorización de maquinaria; 5) certificados de cursos y expediente PRL en PDF.

@@ -21,6 +21,7 @@ export interface Opciones {
   sesion?: object;             // lo que devuelve nucleo.mi_sesion()
   salud?: object;              // lo que devuelve nucleo.salud() (si no, «sin permiso»)
   tablas?: Record<string, Record<string, unknown>[]>; // filas iniciales de las tablas (del núcleo o de un módulo; se guardan en memoria)
+  archivos?: [string, Buffer][]; // archivos del almacén («bucket/ruta»)
   rpc?: Record<string, (cuerpo: Record<string, unknown>, tablas: Record<string, Record<string, unknown>[]>) => unknown>; // funciones de los módulos
 }
 
@@ -32,6 +33,7 @@ export interface Llamada { metodo: string; ruta: string; cuerpo: unknown; perfil
 
 export async function simular(page: Page, op: Opciones = {}) {
   const llamadas: Llamada[] = [];
+  const archivos = new Map<string, Buffer>(op.archivos ?? []);
   const vacias = ['centros', 'ubicaciones', 'tipos_activo', 'activos', 'almacenes', 'familias', 'articulos', 'proveedores', 'turnos', 'equipos', 'personas', 'asignaciones', 'usuarios', 'roles', 'errores', 'incidencias'];
   const tablas: Record<string, Record<string, unknown>[]> = Object.fromEntries(
     [...new Set([...vacias, ...Object.keys(op.tablas ?? {})])].map((t) => [t, [...(op.tablas?.[t] ?? [])]]));
@@ -57,6 +59,15 @@ export async function simular(page: Page, op: Opciones = {}) {
     if (u.pathname === '/rest/v1/rpc/anotar_error') return route.fulfill({ status: 204 });
     if (u.pathname === '/rest/v1/rpc/salud') return op.salud ? json(op.salud) : json({ code: 'P0001', message: 'NO_PERMISO' }, 400);
     if (u.pathname === '/rest/v1/incidencias' && r.method() === 'POST') return route.fulfill({ status: 201 });
+    // almacén de archivos (Storage): subir, enlace firmado y bajar
+    const sto = u.pathname.match(/^\/storage\/v1\/object\/(sign\/)?([a-z0-9_-]+)\/(.+)$/);
+    if (sto) {
+      const clave = `${sto[2]}/${decodeURIComponent(sto[3])}`;
+      if (sto[1]) return json({ signedURL: `/object/sign/${clave}?token=falso` });
+      if (r.method() === 'POST' || r.method() === 'PUT') { archivos.set(clave, r.postDataBuffer() ?? Buffer.alloc(0)); return json({ Key: clave, Id: clave }); }
+      const b = archivos.get(clave.replace(/^authenticated\//, ''));
+      return b ? route.fulfill({ status: 200, contentType: 'application/pdf', body: b }) : json({ message: 'not found' }, 404);
+    }
     const rpc = u.pathname.match(/^\/rest\/v1\/rpc\/([a-z_]+)$/);
     if (rpc && op.rpc?.[rpc[1]]) {
       try { return json(op.rpc[rpc[1]](r.postDataJSON() as Record<string, unknown>, tablas) ?? null); }
@@ -119,7 +130,7 @@ export async function simular(page: Page, op: Opciones = {}) {
     }
     return json({ message: 'no simulado: ' + u.pathname }, 404);
   });
-  return Object.assign(llamadas, { tablas });
+  return Object.assign(llamadas, { tablas, archivos });
 }
 
 /** Textos aplastados (letra a letra) o cosas que se salen por la derecha. */

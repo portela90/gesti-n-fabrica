@@ -75,6 +75,7 @@ test('el jefe escribe la charla de un mes nuevo, prepara la sesión y la envía'
   await expect(page.getByRole('button', { name: 'Charlas', pressed: true })).toBeVisible();
   await expect(page.locator('.fila', { hasText: 'Marzo' })).toContainText('1 de 2 firmas');
   await page.locator('.fila', { hasText: 'Abril' }).click();
+  await page.getByRole('button', { name: 'Escribir también el texto de la charla' }).click();
   await page.getByLabel('Compromiso del mes').fill('Pido ayuda si no sé hacerlo');
   await page.getByLabel('Preguntas para hablar (una por línea)').fill('¿A quién pides ayuda?\n¿Por qué cuesta?');
   await page.getByLabel('Tema HSE del mes').fill('Caídas al mismo nivel');
@@ -224,4 +225,77 @@ test('Prevención en el móvil más estrecho: nada se aplasta ni se sale', async
   await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
   await expect(page.getByLabel('DNI / NIE')).toHaveValue('00000000T');
   expect(await desbordes(page), 'ficha').toEqual([]);
+});
+
+/** Un PDF pequeño de verdad (una página por cada texto), como los que manda el técnico. */
+async function pdfDelTecnico(...textos: string[]) {
+  const { PDFDocument } = await import('pdf-lib');
+  const d = await PDFDocument.create();
+  textos.forEach((t) => d.addPage().drawText(t, { x: 50, y: 700 }));
+  return Buffer.from(await d.save());
+}
+
+test('el jefe sube los PDF del técnico de todo el año y la app pone cada uno en su mes', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/prevencion/charlas');
+  const pdf = await pdfDelTecnico('Charla');
+  await page.locator('label', { hasText: 'Subir documentos del año' }).locator('input').setInputFiles([
+    { name: 'Toolbox Enero.pdf', mimeType: 'application/pdf', buffer: pdf },
+    { name: '04 - Caídas.pdf', mimeType: 'application/pdf', buffer: pdf },
+    { name: 'otro.pdf', mimeType: 'application/pdf', buffer: pdf },
+  ]);
+  await expect(page.getByLabel('Mes de Toolbox Enero.pdf')).toHaveValue('1');
+  await expect(page.getByLabel('Mes de 04 - Caídas.pdf')).toHaveValue('4');
+  await expect(page.getByLabel('Mes de otro.pdf')).toHaveValue('0');
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.getByLabel('Mes de otro.pdf').selectOption({ label: 'Mayo' });
+  await page.getByRole('button', { name: 'Subir', exact: true }).click();
+  await expect(page.getByText('3 documentos subidos')).toBeVisible();
+  const nuevas = sim.tablas.charlas.filter((c) => c.documento_ruta);
+  expect(nuevas.map((c) => c.mes).sort()).toEqual([1, 4, 5]);
+  expect(nuevas.every((c) => String(c.documento_ruta).startsWith(`${UNIDAD}/charlas/${ANIO}-`) && /^[0-9a-f]{64}$/.test(String(c.documento_sha256)))).toBe(true);
+  expect(sim.archivos.size).toBe(3);
+  await expect(page.locator('.fila', { hasText: 'Abril' })).toContainText('04 - Caídas.pdf');
+  expect(errores).toEqual([]);
+});
+
+test('una charla que es solo el PDF del técnico: se abre, se firma y el PDF oficial lo lleva detrás', async ({ page }) => {
+  const errores = vigilar(page);
+  const ruta = `${UNIDAD}/charlas/${ANIO}-03-1.pdf`;
+  const t = tablas();
+  t.charlas = [{ ...charla(3), compromiso: null, cuerpo: null, puntos: [], tema: null, tema_puntos: [],
+    documento_ruta: ruta, documento_nombre: 'Toolbox Marzo.pdf', documento_sha256: 'a'.repeat(64) } as unknown as ReturnType<typeof charla>];
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: t, rpc, archivos: [[`prevencion/${ruta}`, await pdfDelTecnico('Uno', 'Dos')]] });
+  await page.goto('./#/m/prevencion/charlas');
+  await page.locator('.fila', { hasText: 'Marzo' }).click();
+  await page.getByRole('button', { name: 'Contenido' }).click();
+  await expect(page.getByRole('dialog').getByText('Toolbox Marzo.pdf')).toBeVisible();
+  const abre = page.context().waitForEvent('request', (r) => /\/storage\/v1\/object\/sign\/prevencion\/.+token=/.test(r.url()));
+  await page.getByRole('button', { name: 'Abrir el documento' }).click();
+  await abre; // la pestaña nueva va al enlace firmado del PDF
+  await page.getByRole('button', { name: 'Firmas', exact: true }).click();
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  const bytes = await (await import('node:fs/promises')).readFile(await (await descarga).path());
+  const { PDFDocument } = await import('pdf-lib');
+  const total = await PDFDocument.load(bytes);
+  expect(total.getPageCount()).toBeGreaterThanOrEqual(3); // la hoja oficial + las 2 páginas del técnico
+  expect(errores).toEqual([]);
+});
+
+test('la trabajadora abre el documento del técnico antes de firmar', async ({ page }) => {
+  const ruta = `${UNIDAD}/charlas/${ANIO}-03-1.pdf`;
+  const t = tablas();
+  t.asistencias = [];
+  t.charlas = [{ ...charla(3), compromiso: null, documento_ruta: ruta, documento_nombre: 'Toolbox Marzo.pdf' } as unknown as ReturnType<typeof charla>];
+  await simular(page, { dentro: true, sesion: sesion(['prevencion.modulo.ver'], 'Ana Prueba'), tablas: t, rpc, archivos: [[`prevencion/${ruta}`, await pdfDelTecnico('Uno')]] });
+  await page.goto('./#/m/prevencion');
+  await page.locator('.fila', { hasText: 'Firmar' }).click();
+  await expect(page.getByRole('button', { name: 'Abrir el documento' })).toBeVisible();
+  await page.getByRole('button', { name: 'La he leído, firmar' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await expect(page.getByText('Firmada', { exact: true }).first()).toBeVisible();
 });
