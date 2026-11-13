@@ -137,7 +137,7 @@ h1, h2 { margin: 0; line-height: 1.2; }
 .check { display: flex; align-items: center; gap: 10px; min-height: 44px; margin: 0 0 10px; }
 .check input, .marca { width: 22px; height: 22px; flex: none; accent-color: var(--area); }
 .t-festivo { --c: #fecaca; --t: #991b1b; } .t-cierre { --c: #cbd5e1; --t: #1e293b; } .t-intensiva { --c: #fde68a; --t: #854d0e; }
-.t-especial { --c: #bfdbfe; --t: #1e3a8a; } .t-vacaciones { --c: #bbf7d0; --t: #14532d; }
+.t-especial { --c: #bfdbfe; --t: #1e3a8a; } .t-trabaja { --c: #ddd6fe; --t: #4c1d95; } .t-descanso { --c: #fed7aa; --t: #7c2d12; } .t-vacaciones { --c: #bbf7d0; --t: #14532d; }
 .anio { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin: 0 0 8px; }
 .mes { background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); padding: 10px; }
 .mes h3 { font-size: 15px; margin: 0 0 6px; }

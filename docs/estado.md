@@ -59,8 +59,9 @@ que cuadra antes de dejar la app vieja en solo consulta.
   - Trabaja todos los sábados y domingos salvo: 2–3/1, 21–22/8, 9–10/10, sábado 30/10, 11–12/12 y 25–26/12.
   - Vacaciones: 19/7–15/8 y 23–24/12.
   - Trabaja entre semana: 4–5/1; lunes 11, 18 y 25/1, 1 y 8/2; 29/3; 16–20/8; 11–12/10; 1/11; 27–30/12.
-  - Falta que Cristian confirme: si las vacaciones son para todo el equipo de fin de semana (como en 2026) y cómo
-    quiere que salgan los días entre semana en el calendario que se firma.
+  - Decidido (13/11): las vacaciones y los días entre semana del fin de semana **cambian según el año**, así que los
+    pone Cristian desde la app nueva, no se dejan fijos: tipos de día «Trabaja» (un día fuera de los de su equipo) y
+    «Descanso» (un día de su equipo que no trabaja), y «Vacaciones para todo el equipo» (luego se cambian sueltas).
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

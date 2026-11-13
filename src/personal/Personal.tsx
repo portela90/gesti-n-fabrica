@@ -146,7 +146,7 @@ function Marcar({ fechas, equipo, equipos, dias, alCerrar, alGuardar }: {
     setOcupado(true); setError(null);
     const { error } = await personal().rpc('marcar_dias', {
       p_empresa: empresa!.id, p_equipos: todos ? equipos.map((e) => e.id) : [equipo.id], p_fechas: fechas,
-      p_tipo: tipo || null, p_nombre: nombre || null, p_horario: (tipo === 'intensiva' || tipo === 'especial') ? horario || null : null,
+      p_tipo: tipo || null, p_nombre: nombre || null, p_horario: ['intensiva', 'especial', 'trabaja'].includes(tipo) ? horario || null : null,
     });
     setOcupado(false);
     if (error) { setError(textoError(error.message)); return; }
@@ -172,7 +172,7 @@ function Marcar({ fechas, equipo, equipos, dias, alCerrar, alGuardar }: {
       </fieldset>
       {tipo && <label className="campo"><span>Nombre (opcional)</span>
         <input value={nombre} maxLength={120} placeholder={tipo === 'festivo' ? 'Por ejemplo: Fiesta local' : ''} onChange={(e) => setNombre(e.target.value)} /></label>}
-      {(tipo === 'intensiva' || tipo === 'especial') && <label className="campo"><span>Horario</span>
+      {['intensiva', 'especial', 'trabaja'].includes(tipo) && <label className="campo"><span>Horario</span>
         <input value={horario} maxLength={120} placeholder="Por ejemplo: 7:00 a 15:00" onChange={(e) => setHorario(e.target.value)} /></label>}
       {equipos.length > 1 && <label className="check"><input type="checkbox" checked={todos} onChange={(e) => setTodos(e.target.checked)} />
         También en {equipos.filter((e) => e.id !== equipo.id).map((e) => e.nombre).join(' y ')}</label>}
@@ -233,6 +233,8 @@ function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
   if (!personas.length) return <div className="vacio"><p>No hay trabajadores en {equipo.nombre}. Se asignan en Configuración → Trabajadores.</p></div>;
   return (
     <>
+      {editable && <button type="button" className="boton sec ancho" style={{ marginBottom: 12 }} onClick={() => setEditando({ persona_id: '*' })}>
+        Vacaciones para todo {equipo.nombre}</button>}
       <div className="lista">
         {personas.map((p) => {
           const suyas = vacs.filter((v) => v.persona_id === p.id);
@@ -251,13 +253,16 @@ function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
           );
         })}
       </div>
-      {editando && <FormVacacion v={editando} persona={personas.find((p) => p.id === editando.persona_id)!} alCerrar={() => setEditando(null)}
+      {editando && <FormVacacion v={editando} equipo={equipo} personas={editando.persona_id === '*' ? personas : personas.filter((p) => p.id === editando.persona_id)} alCerrar={() => setEditando(null)}
         alGuardar={() => { setEditando(null); cargar(); }} />}
     </>
   );
 }
 
-function FormVacacion({ v, persona, alCerrar, alGuardar }: { v: Partial<Vacacion>; persona: Persona; alCerrar: () => void; alGuardar: () => void }) {
+/** Vacaciones de un trabajador o, con varios, las mismas fechas para todos (cada uno queda con las suyas y se pueden cambiar sueltas). */
+function FormVacacion({ v, equipo, personas, alCerrar, alGuardar }: { v: Partial<Vacacion>; equipo: Equipo; personas: Persona[]; alCerrar: () => void; alGuardar: () => void }) {
+  const persona = personas[0];
+  const todos = personas.length > 1;
   const { empresa } = useSesion();
   const [desde, setDesde] = useState(v.desde ?? '');
   const [hasta, setHasta] = useState(v.hasta ?? '');
@@ -268,9 +273,9 @@ function FormVacacion({ v, persona, alCerrar, alGuardar }: { v: Partial<Vacacion
     if (hasta < desde) { setError('«Hasta» no puede ser antes de «Desde».'); return; }
     const fila = { desde, hasta, nota: nota.trim() || null };
     const { error } = v.id ? await personal().from('vacaciones').update(fila).eq('id', v.id)
-      : await personal().from('vacaciones').insert({ ...fila, empresa_id: empresa!.id, persona_id: persona.id });
+      : await personal().from('vacaciones').insert(personas.map((p) => ({ ...fila, empresa_id: empresa!.id, persona_id: p.id })));
     if (error) { setError(textoError(error.message)); return; }
-    aviso('Vacaciones guardadas'); alGuardar();
+    aviso(todos ? `Vacaciones puestas a ${personas.length} trabajadores` : 'Vacaciones guardadas'); alGuardar();
   }
   async function quitar() {
     if (!confirm(`¿Quitar estas vacaciones de ${persona.nombre}?`)) return;
@@ -279,13 +284,14 @@ function FormVacacion({ v, persona, alCerrar, alGuardar }: { v: Partial<Vacacion
     aviso('Vacaciones quitadas'); alGuardar();
   }
   return (
-    <Ventana titulo={`Vacaciones · ${persona.nombre}`} alCerrar={alCerrar}
+    <Ventana titulo={`Vacaciones · ${todos ? 'todo ' + equipo.nombre : persona.nombre}`} alCerrar={alCerrar}
       pie={<>{v.id && <button type="button" className="boton sec" onClick={quitar}>Quitar</button>}<button type="button" className="boton" onClick={guardar}>Guardar</button></>}>
       <div className="dos">
         <label className="campo"><span>Desde</span><input type="date" value={desde} onChange={(e) => { setDesde(e.target.value); if (!hasta) setHasta(e.target.value); }} /></label>
         <label className="campo"><span>Hasta (incluido)</span><input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} /></label>
       </div>
       <label className="campo"><span>Nota (opcional)</span><input value={nota} maxLength={200} onChange={(e) => setNota(e.target.value)} /></label>
+      {todos && <p className="nota">Se pone a los {personas.length} de {equipo.nombre}. Luego puedes cambiarlas o quitarlas a cada uno por separado.</p>}
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
   );

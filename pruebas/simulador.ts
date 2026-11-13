@@ -87,11 +87,13 @@ export async function simular(page: Page, op: Opciones = {}) {
       }
       if (r.method() === 'GET') return json(tablas[tabla].filter(cumple).sort((a, b) => String(a.nombre ?? '').localeCompare(String(b.nombre ?? ''))));
       if (r.method() === 'POST') {
-        const nueva = { id: `id-${tabla}-${tablas[tabla].length + 1}`, baja: null, ...(r.postDataJSON() as object) } as Record<string, unknown>;
-        if (tablas[tabla].some((f) => f.codigo && f.codigo === nueva.codigo && f.empresa_id === nueva.empresa_id))
+        const cuerpo = r.postDataJSON() as object | object[];
+        const nuevas = (Array.isArray(cuerpo) ? cuerpo : [cuerpo])
+          .map((c, i) => ({ id: `id-${tabla}-${tablas[tabla].length + i + 1}`, baja: null, ...c }) as Record<string, unknown>);
+        if (nuevas.some((nueva) => tablas[tabla].some((f) => f.codigo && f.codigo === nueva.codigo && f.empresa_id === nueva.empresa_id)))
           return json({ code: '23505', message: 'duplicate key value violates unique constraint' }, 409);
-        tablas[tabla].push(nueva);
-        return json(uno ? nueva : [nueva], 201);
+        tablas[tabla].push(...nuevas);
+        return json(uno ? nuevas[0] : nuevas, 201);
       }
       if (r.method() === 'DELETE') {
         const quedan = tablas[tabla].filter((f) => !cumple(f));

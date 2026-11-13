@@ -3,7 +3,7 @@ import { supabase } from '../nucleo/supabase';
 /** Tablas y funciones de Personal (esquema «personal»). */
 export const personal = () => supabase.schema('personal');
 
-export type TipoDia = 'festivo' | 'cierre' | 'intensiva' | 'especial';
+export type TipoDia = 'festivo' | 'cierre' | 'intensiva' | 'especial' | 'trabaja' | 'descanso';
 export interface Dia { fecha: string; tipo: TipoDia; nombre: string | null; horario: string | null }
 export interface Vacacion { id?: string; persona_id?: string; desde: string; hasta: string; nota: string | null }
 
@@ -12,6 +12,8 @@ export const TIPOS: { tipo: TipoDia; nombre: string; ayuda: string }[] = [
   { tipo: 'cierre', nombre: 'Cierre de fábrica', ayuda: 'La fábrica cierra' },
   { tipo: 'intensiva', nombre: 'Jornada intensiva', ayuda: 'Horario reducido' },
   { tipo: 'especial', nombre: 'Horario especial', ayuda: 'Otro horario ese día' },
+  { tipo: 'trabaja', nombre: 'Trabaja', ayuda: 'Día de trabajo aunque no sea de su equipo (p. ej. un lunes del fin de semana)' },
+  { tipo: 'descanso', nombre: 'Descanso', ayuda: 'No trabaja aunque sea un día de su equipo' },
 ];
 export const nombreTipo = (t: string) => TIPOS.find((x) => x.tipo === t)?.nombre ?? t;
 

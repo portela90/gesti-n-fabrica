@@ -92,6 +92,15 @@ test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', 
   await expect(page.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('5 días');
   expect(sim.tablas.vacaciones.find((v) => v.persona_id === BRUNO)).toMatchObject({ empresa_id: UNIDAD, desde: `${ANIO}-09-07`, hasta: `${ANIO}-09-11` });
 
+  await page.getByRole('button', { name: 'Vacaciones para todo Semana' }).click();
+  await page.getByLabel('Desde').fill(`${ANIO}-12-24`);
+  await page.getByLabel('Hasta (incluido)').fill(`${ANIO}-12-31`);
+  await page.getByLabel('Nota (opcional)').fill('Navidad');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('Vacaciones puestas a 2 trabajadores')).toBeVisible();
+  expect(sim.tablas.vacaciones.filter((v) => v.nota === 'Navidad').map((v) => v.persona_id).sort()).toEqual([ANA, BRUNO]);
+  await expect(page.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('8 días · Navidad');
+
   await page.getByRole('button', { name: 'Firmas' }).click();
   await expect(page.getByText(/Han firmado 1 de 2/)).toBeVisible();
   await expect(page.locator('.fila', { hasText: 'Ana Prueba' }).locator('.chapa')).toHaveText('Firmado');

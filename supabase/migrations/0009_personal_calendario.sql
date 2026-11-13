@@ -18,7 +18,7 @@ create table personal.dias (
   empresa_id  uuid not null references nucleo.empresas(id),
   equipo_id   uuid not null,
   fecha       date not null,
-  tipo        text not null check (tipo in ('festivo', 'cierre', 'intensiva', 'especial')),
+  tipo        text not null check (tipo in ('festivo', 'cierre', 'intensiva', 'especial', 'trabaja', 'descanso')),
   nombre      text check (nombre is null or length(nombre) <= 120),
   horario     text check (horario is null or length(horario) <= 120),
   origen      text,
@@ -27,7 +27,7 @@ create table personal.dias (
   unique (empresa_id, equipo_id, fecha),
   foreign key (empresa_id, equipo_id) references nucleo.equipos(empresa_id, id)
 );
-comment on table personal.dias is 'Días especiales del calendario de cada equipo: festivo, cierre de fábrica, jornada intensiva u horario especial. Los demás días se trabaja según el horario de cada uno.';
+comment on table personal.dias is 'Días especiales del calendario de cada equipo: festivo, cierre de fábrica, jornada intensiva, horario especial, trabaja (un día que no es de su equipo, p. ej. un lunes del equipo de fin de semana) o descanso (un día de su equipo que no trabaja). Los demás días, según los días del equipo.';
 
 -- ---------- vacaciones ----------
 create table personal.vacaciones (

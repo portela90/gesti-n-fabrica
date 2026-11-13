@@ -61,6 +61,12 @@ select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', a
   array['2031-01-06']::date[], null) = 1, 'tipo vacío quita la marca');
 select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[],
   array['2031-07-01', '2031-07-02']::date[], 'intensiva', null, '7:00-15:00') = 2, 'jornada intensiva con horario');
+select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
+  array['2031-01-13']::date[], 'trabaja', null, '6:00 a 14:00') = 1, 'el equipo de fin de semana trabaja un lunes');
+select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
+  array['2031-01-11']::date[], 'descanso') = 1, 'y descansa un domingo');
+select pruebas.ok(personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e2']::uuid[],
+  array['2031-01-11', '2031-01-13']::date[], null) = 2, 'y se puede deshacer');
 select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['11111111-0000-0000-0000-0000000000e1']::uuid[], array['2031-02-01']::date[], 'vacaciones')$q$,
   'un tipo que no existe no se acepta');
 select pruebas.falla($q$select personal.marcar_dias('11111111-0000-0000-0000-000000000001', array['22222222-0000-0000-0000-0000000000e1']::uuid[], array['2031-02-01']::date[], 'festivo')$q$,
