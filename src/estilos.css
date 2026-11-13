@@ -218,3 +218,15 @@ button.dia { cursor: pointer; }
 .horas { margin: 0 0 16px; }
 .chapa.sin-cuadrar { background: color-mix(in srgb, var(--mal) 14%, transparent); color: var(--mal); }
 .subtitulo .chapa { margin-left: 8px; vertical-align: middle; }
+/* días de trabajo con sus horas (calendario por operario) */
+.con-horas { --c: #dbeafe; --t: #1e3a8a; }
+.dia.con-horas { flex-direction: column; line-height: 1; gap: 1px; font-weight: 600; }
+.dia small { font-size: 10px; font-weight: 700; opacity: .85; }
+.boton-fila { background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; }
+.boton-fila:disabled { cursor: default; }
+.contador { position: sticky; top: 72px; z-index: 3; display: flex; flex-direction: column; gap: 2px; margin: 0 0 10px; padding: 10px 14px;
+  background: var(--sup); border: 1px solid var(--linea); border-left: 4px solid var(--area); border-radius: 12px; font-size: 15px; box-shadow: 0 2px 8px rgba(0,0,0,.06); }
+.contador .bien { color: var(--bien); } .contador .mal { color: var(--mal); }
+.acciones-dias { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; width: 100%; }
+.acciones-dias input { width: 64px; min-height: 36px; padding: 4px 8px; text-align: center; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
+.barra-abajo .boton:not(.peq) { flex: 1; }

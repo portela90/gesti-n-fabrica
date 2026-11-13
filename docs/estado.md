@@ -69,6 +69,20 @@ que cuadra antes de dejar la app vieja en solo consulta.
   faltan / sobran, «Otras horas» por persona); al marcar intensiva, especial o trabaja se ponen las horas del día.
 - Pruebas: 70 de base de datos (cuenta exacta de un año de ejemplo) y 9 de pantallas de Personal.
 
+### 1.1 cuater · Calendario por operario (13/11, noche)
+- Cristian: «seleccionar un operario (o varios), meterle sus horas anuales, ir marcando los días y poniendo las horas de
+  cada día hasta completar el calendario y darle a guardar». La pestaña **Calendario** es ahora una lista de operarios
+  (con su calendario y si le cuadran las horas); se toca uno o se marcan varios → editor (`src/personal/PorOperario.tsx`).
+- Editor: horas al año, nombre, **contador fijo arriba** (cuadra / faltan / sobran; por persona si sus vacaciones difieren),
+  tocar días → poner horas / festivo / vacaciones / quitar; «Rellenar por días de la semana»; «Borrar todo»; **Guardar**
+  manda todo junto. Si los elegidos comparten calendario (y solo ellos), se cambia ese; si no, uno nuevo partiendo del
+  calendario del primero (se convierte a horas por día).
+- `0013_personal_guardar_calendario.sql`: `guardar_calendario(empresa, año, calendario|null, nombre, horas al año, personas,
+  días jsonb, vacaciones nuevas jsonb)`, todo o nada; los días de trabajo se guardan como «trabaja» con horas; quita
+  calendarios del año que se quedan sin nadie y sin envíos. Vacaciones y Firmas siguen eligiendo calendario; en Firmas
+  está el cuadro «Horas del año».
+- Pruebas: `45-calendario-operario.sql` (12) y 4 de pantallas nuevas.
+
 ### Lo siguiente de la Fase 1, en orden
 1. ~~Dar de alta Limpieza de verdad~~ HECHO 13/11: equipos «Semana» (`semana`) y «Fin de semana» (`finde`) y 13
    trabajadores con el **mismo id** que en limpieza-cie (2 de baja; sin las fichas de prueba; sin teléfonos ni DNI, que

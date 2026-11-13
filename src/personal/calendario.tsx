@@ -36,9 +36,11 @@ export const periodo = (v: { desde: string; hasta: string }) =>
  * El año entero, mes a mes. Colores por tipo de día; vacaciones en verde; los días que el equipo no trabaja,
  * apagados. Si se pasa «alTocar», los días se pueden elegir.
  */
-export function Anio({ anio, dias, vacaciones = [], diasEquipo, elegidos, alTocar }: {
+export function Anio({ anio, dias, vacaciones = [], diasEquipo, elegidos, alTocar, horas }: {
   anio: number; dias: Dia[]; vacaciones?: Vacacion[]; diasEquipo?: number[] | null;
   elegidos?: Set<string>; alTocar?: (fecha: string) => void;
+  /** horas de cada día de trabajo (se ven dentro del día) */
+  horas?: Map<string, number>;
 }) {
   const porFecha = new Map(dias.map((d) => [d.fecha, d]));
   const deVacaciones = (f: string) => vacaciones.some((v) => v.desde <= f && f <= v.hasta);
@@ -56,12 +58,16 @@ export function Anio({ anio, dias, vacaciones = [], diasEquipo, elegidos, alToca
               {Array.from({ length: total }, (_, i) => {
                 const f = iso(anio, m, i + 1);
                 const d = porFecha.get(f);
-                const libre = diasEquipo && !diasEquipo.includes(diaSemana(f));
-                const clase = ['dia', d ? 't-' + d.tipo : deVacaciones(f) ? 't-vacaciones' : '', libre ? 'libre' : '', elegidos?.has(f) ? 'elegido' : ''].join(' ');
-                const titulo = [fechaLarga(f), d && (d.nombre || nombreTipo(d.tipo)), d?.horario, deVacaciones(f) && 'Vacaciones'].filter(Boolean).join(' · ');
+                const h = horas?.get(f);
+                const vac = deVacaciones(f);
+                const libre = h == null && diasEquipo && !diasEquipo.includes(diaSemana(f));
+                const clase = ['dia', d ? 't-' + d.tipo : vac ? 't-vacaciones' : h != null ? 'con-horas' : '', libre ? 'libre' : '', elegidos?.has(f) ? 'elegido' : ''].join(' ');
+                const hTxt = h != null ? String(h).replace('.', ',') : '';
+                const titulo = [fechaLarga(f), d && (d.nombre || nombreTipo(d.tipo)), h != null && `${hTxt} h`, d?.horario, vac && 'Vacaciones'].filter(Boolean).join(' · ');
+                const dentro = h != null ? <><span>{i + 1}</span><small>{hTxt}</small></> : i + 1;
                 return alTocar
-                  ? <button key={f} type="button" className={clase} title={titulo} aria-label={titulo} aria-pressed={elegidos?.has(f) ?? false} onClick={() => alTocar(f)}>{i + 1}</button>
-                  : <span key={f} className={clase} title={titulo}>{i + 1}</span>;
+                  ? <button key={f} type="button" className={clase} title={titulo} aria-label={titulo} aria-pressed={elegidos?.has(f) ?? false} onClick={() => alTocar(f)}>{dentro}</button>
+                  : <span key={f} className={clase} title={titulo}>{dentro}</span>;
               })}
             </div>
           </section>
@@ -71,21 +77,28 @@ export function Anio({ anio, dias, vacaciones = [], diasEquipo, elegidos, alToca
   );
 }
 
-export function Leyenda({ conVacaciones = true }: { conVacaciones?: boolean }) {
+export function Leyenda({ conVacaciones = true, conHoras = false, sinTipos = false }: { conVacaciones?: boolean; conHoras?: boolean; sinTipos?: boolean }) {
   return (
     <div className="leyenda">
-      {TIPOS.map((t) => <span key={t.tipo}><i className={'t-' + t.tipo} />{t.nombre}</span>)}
+      {TIPOS.filter((t) => !sinTipos || t.tipo === 'festivo' || t.tipo === 'cierre').map((t) => <span key={t.tipo}><i className={'t-' + t.tipo} />{t.nombre}</span>)}
       {conVacaciones && <span><i className="t-vacaciones" />Vacaciones</span>}
+      {conHoras && <span><i className="con-horas" />Día de trabajo (con sus horas)</span>}
       <span><i className="libre" />No trabaja</span>
     </div>
   );
 }
 
 /** Lista de los días marcados (para leerlos sin tener que mirar los colores). */
-export function ListaDias({ dias }: { dias: Dia[] }) {
-  if (!dias.length) return <p className="nota">No hay días marcados.</p>;
+export function ListaDias({ dias: todos }: { dias: Dia[] }) {
+  // los días de trabajo con sus horas no se listan uno a uno (pueden ser 250): se resumen
+  const trabajo = todos.filter((d) => d.tipo === 'trabaja' && d.horas != null);
+  const dias = todos.filter((d) => !(d.tipo === 'trabaja' && d.horas != null));
+  const suma = trabajo.reduce((n, d) => n + Number(d.horas), 0);
+  if (!todos.length) return <p className="nota">No hay días marcados.</p>;
   return (
     <ul className="lista-dias">
+      {trabajo.length > 0 && <li><i className="con-horas" aria-hidden="true" /><b>{trabajo.length} días de trabajo</b>
+        <span>{suma.toLocaleString('es-ES', { maximumFractionDigits: 2 })} h en total (las horas de cada día se ven en el calendario)</span></li>}
       {dias.map((d) => (
         <li key={d.fecha}><i className={'t-' + d.tipo} aria-hidden="true" /><b>{fechaCorta(d.fecha)}</b>
           <span>{d.nombre || nombreTipo(d.tipo)}{d.horas != null ? ` · ${String(d.horas).replace('.', ',')} h` : ''}{d.horario ? ` · ${d.horario}` : ''}</span></li>

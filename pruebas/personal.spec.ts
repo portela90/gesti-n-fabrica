@@ -49,6 +49,7 @@ const rpc = {
     return fechas.length * cals.length;
   },
   enviar_calendario: (b: Record<string, unknown>) => (b.p_personas as string[]).length,
+  guardar_calendario: (b: Record<string, unknown>) => b.p_calendario ?? 'cal-nuevo',
   // horas: Ana cuadra; Bruno, que tiene sus propias 1000 h, no
   horas_personas: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => t.calendario_personas
     .filter((m) => m.calendario_id === b.p_calendario).map((m) => {
@@ -83,111 +84,100 @@ async function firmarConElDedo(page: Page) {
   await page.mouse.up();
 }
 
-test('el jefe marca dos festivos en el calendario del equipo', async ({ page }) => {
-  const errores = vigilar(page);
-  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
-  await page.goto('./#/m/personal');
-  await expect(page.getByRole('button', { name: 'Calendario', pressed: true })).toBeVisible();
-  await expect(page.locator('.lista-dias').first()).toContainText('Año nuevo');
-  await page.getByRole('button', { name: new RegExp(`^6 de enero`) }).click();
-  await page.getByRole('button', { name: new RegExp(`^19 de marzo`) }).click();
-  await expect(page.locator('.barra-abajo')).toContainText('2 días elegidos');
-  await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
-  await page.getByLabel('Nombre (opcional)').fill('Fiesta local');
-  await page.getByLabel(/También en Fin de semana/).check();
-  await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
-  await expect(page.locator('.lista-dias').first()).toContainText('Fiesta local');
-  const llamada = sim.find((l) => l.ruta.includes('/rpc/marcar_dias'))!;
-  expect(llamada.perfil).toBe('personal');
-  expect(llamada.cuerpo).toMatchObject({ p_calendarios: [SEMANA, FINDE], p_fechas: [`${ANIO}-01-06`, `${ANIO}-03-19`], p_tipo: 'festivo', p_nombre: 'Fiesta local' });
-  expect(errores).toEqual([]);
-});
-
-test('desde el calendario: elegir días y ponerlos de vacaciones a quien se quiera', async ({ page }) => {
+test('calendario de un operario: horas al año, tocar días, poner horas, festivo y guardar', async ({ page }) => {
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal/calendario');
-  await expect(page.locator('.lista-dias').last()).toContainText('Ana Prueba');
-  for (const d of ['^20 de abril', '^21 de abril', '^24 de abril']) await page.getByRole('button', { name: new RegExp(d) }).click();
-  await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
-  await page.getByRole('dialog').locator('.opcion', { hasText: 'Para todos los de este calendario' }).click();
-  await expect(page.getByText('¿Quién? (2 de 2)')).toBeVisible();
-  await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').uncheck();
-  await page.getByLabel('Nota (opcional)').fill('Semana Santa');
-  await page.getByRole('button', { name: 'Poner vacaciones' }).click();
-  await expect(page.getByText('Vacaciones puestas')).toBeVisible();
-  const nuevas = sim.tablas.vacaciones.filter((v) => v.nota === 'Semana Santa');
-  expect(nuevas.map((v) => [v.persona_id, v.desde, v.hasta])).toEqual([[ANA, `${ANIO}-04-20`, `${ANIO}-04-21`], [ANA, `${ANIO}-04-24`, `${ANIO}-04-24`]]);
-  await expect(page.locator('.lista-dias').last()).toContainText('Semana Santa');
+  await expect(page.locator('.fila', { hasText: 'Ana Prueba' })).toContainText('Semana · 1712 h de 1712 h');
+  await expect(page.locator('.fila', { hasText: 'Carla Finde' }).locator('.chapa')).toHaveText('Sin hacer');
+  await page.getByRole('button', { name: /^Ana Prueba/ }).click();
+  await expect(page.getByText('se parte del calendario «Semana»')).toBeVisible();
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Borrar todo' }).click();
+  await page.getByLabel('Horas al año').fill('22');
+  await expect(page.getByRole('status', { name: 'Horas que llevas' })).toContainText('Llevas 0 h de 22 h · faltan 22 h');
+  for (const d of ['^2 de marzo', '^3 de marzo']) await page.getByRole('button', { name: new RegExp(d) }).click();
+  await page.getByLabel('Horas de los días elegidos').fill('8');
+  await page.getByRole('button', { name: 'Poner horas' }).click();
+  await page.getByRole('button', { name: /^6 de marzo/ }).click();
+  await page.getByLabel('Horas de los días elegidos').fill('6');
+  await page.getByRole('button', { name: 'Poner horas' }).click();
+  await expect(page.getByRole('button', { name: /^6 de marzo · 6 h/ })).toBeVisible();
+  await page.getByRole('button', { name: /^19 de marzo/ }).click();
+  await page.getByRole('button', { name: 'Festivo', exact: true }).click();
+  await expect(page.getByRole('status', { name: 'Horas que llevas' })).toContainText('22 h de 22 h · Cuadra al 100 %');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('Calendario guardado')).toBeVisible();
+  const b = sim.find((l) => l.ruta.includes('/rpc/guardar_calendario'))!.cuerpo as Record<string, unknown>;
+  expect(b).toMatchObject({ p_empresa: UNIDAD, p_anio: ANIO, p_calendario: null, p_nombre: `Ana Prueba ${ANIO}`, p_horas_anuales: 22, p_personas: [ANA], p_vacaciones: [] });
+  expect(b.p_dias).toEqual([
+    { fecha: `${ANIO}-03-02`, tipo: 'trabaja', horas: 8, nombre: null }, { fecha: `${ANIO}-03-03`, tipo: 'trabaja', horas: 8, nombre: null },
+    { fecha: `${ANIO}-03-06`, tipo: 'trabaja', horas: 6, nombre: null }, { fecha: `${ANIO}-03-19`, tipo: 'festivo', horas: null, nombre: null }]);
   expect(errores).toEqual([]);
 });
 
-test('crear un calendario solo para algunos, copiando los días de otro', async ({ page }) => {
-  const errores = vigilar(page);
+test('varios operarios a la vez, con vacaciones, y rellenar por días de la semana', async ({ page }) => {
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/personal/calendario');
-  await expect(page.getByRole('button', { name: 'Para 2 personas · cambiar' })).toBeVisible();
-  await page.getByRole('button', { name: '+ Nuevo calendario' }).click();
-  await page.getByLabel('Nombre').fill(`Refuerzo ${ANIO}`);
-  await page.getByLabel('Horas del martes').fill('');
-  await page.getByLabel('Horas del jueves').fill('');
-  await page.getByLabel('Horas del viernes').fill('6,5');
-  await page.getByLabel('Horas que hay que trabajar al año').fill('1000');
-  await page.getByLabel('Copiar los días marcados de (opcional)').selectOption({ label: 'Semana' });
-  await page.locator('.fila.check', { hasText: 'Bruno Prueba' }).getByRole('checkbox').check();
-  await expect(page.locator('.fila.check', { hasText: 'Bruno Prueba' })).toContainText('Ahora en «Semana»');
-  await expect(page.getByText('1 persona se cambiará a este')).toBeVisible();
-  await page.getByRole('button', { name: 'Crear' }).click();
-  await expect(page.getByText('Calendario creado')).toBeVisible();
-  const nuevo = sim.tablas.calendarios.find((c) => c.nombre === `Refuerzo ${ANIO}`)!;
-  expect(nuevo).toMatchObject({ empresa_id: UNIDAD, anio: ANIO, dias_semana: [1, 3, 5], horas_dia: [0, 8, 0, 8, 0, 6.5, 0], horas_anuales: 1000 });
-  expect(sim.find((l) => l.ruta.includes('/rpc/poner_personas'))!.cuerpo).toEqual({ p_calendario: nuevo.id, p_personas: [BRUNO] });
-  expect(sim.find((l) => l.ruta.includes('/rpc/copiar_dias'))!.cuerpo).toEqual({ p_de: SEMANA, p_a: nuevo.id });
-  await expect(page.getByLabel('Calendario')).toHaveValue(String(nuevo.id));
-  await expect(page.getByRole('button', { name: 'Para 1 persona · cambiar' })).toBeVisible();
-  await expect(page.locator('.lista-dias').first()).toContainText('Año nuevo');
-  expect(errores).toEqual([]);
+  await page.getByLabel('Elegir a Ana Prueba').check();
+  await page.getByLabel('Elegir a Bruno Prueba').check();
+  await page.getByRole('button', { name: 'Hacer su calendario' }).click();
+  await expect(page.getByText('Ana Prueba, Bruno Prueba')).toBeVisible();
+  await expect(page.getByLabel('Nombre del calendario')).toHaveValue('Semana');
+  page.once('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'Borrar todo' }).click();
+  await page.getByRole('button', { name: 'Rellenar por días de la semana' }).click();
+  await page.getByLabel('Horas del viernes').fill('');
+  await page.getByRole('button', { name: 'Rellenar', exact: true }).click();
+  await expect(page.getByRole('button', { name: /^5 de enero · 8 h/ })).toBeVisible(); // lunes
+  await expect(page.getByRole('button', { name: /^2 de enero$/ })).toBeVisible();      // viernes: sin horas
+  await page.getByRole('button', { name: /^10 de agosto/ }).click();
+  await page.getByRole('button', { name: /^11 de agosto/ }).click();
+  await page.locator('.acciones-dias').getByRole('button', { name: 'Vacaciones', exact: true }).click();
+  await expect(page.getByText('Vacaciones nuevas (se guardan al pulsar Guardar)')).toBeVisible();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('Calendario guardado')).toBeVisible();
+  const b = sim.find((l) => l.ruta.includes('/rpc/guardar_calendario'))!.cuerpo as Record<string, unknown>;
+  expect(b).toMatchObject({ p_calendario: SEMANA, p_nombre: 'Semana', p_personas: [ANA, BRUNO] });
+  expect(b.p_vacaciones).toEqual([
+    { persona_id: ANA, desde: `${ANIO}-08-10`, hasta: `${ANIO}-08-11`, nota: null }, { persona_id: BRUNO, desde: `${ANIO}-08-10`, hasta: `${ANIO}-08-11`, nota: null }]);
+  const dias = b.p_dias as { fecha: string; horas: number }[];
+  expect(dias.every((d) => new Date(d.fecha + 'T12:00:00Z').getUTCDay() >= 1 && new Date(d.fecha + 'T12:00:00Z').getUTCDay() <= 4 && d.horas === 8)).toBe(true);
 });
 
-test('horas del año: ver quién cuadra, poner horas propias y no dejar enviar si no cuadra', async ({ page }) => {
+test('salir sin guardar avisa', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/calendario');
+  await page.getByRole('button', { name: /^Bruno Prueba/ }).click();
+  await page.getByLabel('Horas al año').fill('100');
+  let pregunta = '';
+  page.once('dialog', (d) => { pregunta = d.message(); d.dismiss(); });
+  await page.getByRole('button', { name: 'Salir' }).click();
+  expect(pregunta).toContain('Hay cambios sin guardar');
+  await expect(page.getByLabel('Horas al año')).toHaveValue('100');
+  expect(sim.some((l) => l.ruta.includes('guardar_calendario'))).toBe(false);
+});
+
+test('firmas: cuadro de horas, horas propias y no dejar enviar si no cuadra', async ({ page }) => {
   const errores = vigilar(page);
   const t = tablas();
   t.calendario_personas[1].horas_anuales = 1000;
   const r = { ...rpc, enviar_calendario: () => { throw new Error('NO_CUADRA: Bruno Prueba'); } };
   const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: t, rpc: r });
-  await page.goto('./#/m/personal/calendario');
+  await page.goto('./#/m/personal/firmas');
   const cuadro = page.getByRole('region', { name: 'Horas del año' });
   await expect(cuadro).toContainText('1 sin cuadrar');
-  await expect(cuadro.locator('.fila', { hasText: 'Ana Prueba' })).toContainText('1712 h de 1712 h · 10 días de vacaciones');
   await expect(cuadro.locator('.fila', { hasText: 'Ana Prueba' }).locator('.chapa')).toHaveText('Cuadra');
-  await expect(cuadro.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('horas propias');
   await expect(cuadro.locator('.fila', { hasText: 'Bruno Prueba' }).locator('.chapa')).toHaveText('Sobran 704 h');
   await cuadro.locator('.fila', { hasText: 'Bruno Prueba' }).getByRole('button', { name: 'Otras horas' }).click();
   await page.getByLabel('Sus horas al año').fill('1704');
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(cuadro).toContainText('Todo cuadra');
   expect(sim.tablas.calendario_personas[1].horas_anuales).toBe(1704);
-
-  // si no cuadra, la app no deja enviar y dice a quién
-  await page.getByRole('button', { name: 'Firmas' }).click();
   await page.getByLabel('Elegir a Bruno Prueba').check();
   await page.getByRole('button', { name: 'Enviar a firmar (1)' }).click();
   await expect(page.getByRole('alert')).toHaveText('No se puede enviar: no cuadran las horas de Bruno Prueba. Míralo en la pestaña Calendario.');
   expect(errores).toEqual([]);
-});
-
-test('marcar un día que trabaja pide sus horas', async ({ page }) => {
-  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
-  await page.goto('./#/m/personal/calendario');
-  await page.getByRole('button', { name: new RegExp('^4 de julio') }).click();
-  await page.locator('.barra-abajo').getByRole('button', { name: 'Marcar' }).click();
-  await page.getByRole('dialog').locator('.opcion', { hasText: 'Día de trabajo aunque no sea' }).click();
-  await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
-  await expect(page.getByText('Pon cuántas horas se trabaja ese día.')).toBeVisible();
-  await page.getByLabel(/^Horas de ese día/).fill('4,5');
-  await page.locator('.ventana-pie').getByRole('button', { name: 'Marcar' }).click();
-  await expect(page.locator('.lista-dias').first()).toContainText('Trabaja · 4,5 h');
-  expect(sim.find((l) => l.ruta.includes('/rpc/marcar_dias'))!.cuerpo).toMatchObject({ p_tipo: 'trabaja', p_horas: 4.5 });
 });
 
 test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', async ({ page }) => {
@@ -212,7 +202,7 @@ test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', 
 
   await page.getByRole('button', { name: 'Firmas' }).click();
   await expect(page.getByText(/Han firmado 1 de 2/)).toBeVisible();
-  await expect(page.locator('.fila', { hasText: 'Ana Prueba' }).locator('.chapa')).toHaveText('Firmado');
+  await expect(page.locator('.fila', { hasText: 'Ana Prueba' }).filter({ has: page.getByRole('checkbox') }).locator('.chapa')).toHaveText('Firmado');
   await page.getByLabel('Elegir a Bruno Prueba').check();
   await page.getByRole('button', { name: 'Enviar a firmar (1)' }).click();
   await expect(page.getByText('Enviado a 1 trabajador')).toBeVisible();
@@ -271,4 +261,9 @@ test('Personal en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.locator('.fila', { hasText: 'Ana Prueba' }).getByRole('button', { name: 'Ver' }).click();
   await expect(page.locator('.documento .anio')).toBeVisible();
   expect(await desbordes(page), 'documento').toEqual([]);
+  await page.goto('./#/m/personal/calendario');
+  await page.getByRole('button', { name: /^Ana Prueba/ }).click();
+  await page.getByRole('button', { name: /^2 de marzo/ }).click();
+  await expect(page.getByRole('button', { name: 'Poner horas' })).toBeVisible();
+  expect(await desbordes(page), 'editor').toEqual([]);
 });
