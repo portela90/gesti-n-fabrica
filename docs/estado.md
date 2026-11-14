@@ -120,13 +120,13 @@ que cuadra antes de dejar la app vieja en solo consulta.
    - **Auditoría** (14/11, pedido por Cristian: lo firmado tiene que quedar en la ficha del trabajador):
      en Fichas → trabajador → «Documentos firmados» (todas sus firmas, también anuladas, y el PDF oficial de cada una
      con el documento del técnico detrás; sigue ahí aunque se dé de baja). `0016_prevencion_auditoria.sql`
-     (**PENDIENTE de pegar**): una charla que ya ha firmado alguien no se puede cambiar (YA_FIRMADA; hay que anular
+     (APLICADO 14/11, comprobado): una charla que ya ha firmado alguien no se puede cambiar (YA_FIRMADA; hay que anular
      antes las firmas) y los PDF del técnico no se pueden cambiar ni borrar. Lo siguiente (paso 5): expediente PDF
      completo del trabajador de una vez.
    - **Charlas de 2026 traídas de la app vieja** (14/11, metidas por Claude con el «sí» de Cristian): 10 meses (sin junio
      ni agosto) en `prevencion.charlas` de la unidad `cie`, con texto e imagen (md5 comprobado igual que el original).
    - **Documentos del técnico** (14/11, pedido por Cristian: «que solo suba yo los documentos a la app», cada año sin
-     programar): `0015_prevencion_documentos.sql` (**PENDIENTE de pegar**): almacén de archivos (bucket privado
+     programar): `0015_prevencion_documentos.sql` (APLICADO 14/11): almacén de archivos (bucket privado
      `prevencion`, solo PDF, 20 MB; ruta `<unidad>/charlas/<año>-<mes>-<marca>.pdf`, cada subida es un archivo nuevo),
      permisos en `storage.objects` (ver: su unidad; subir/cambiar/borrar: `prevencion.charla.editar`),
      `charlas.documento_ruta/nombre/sha256`, el compromiso ya no es obligatorio si hay PDF, y la huella de la charla
