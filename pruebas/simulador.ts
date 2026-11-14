@@ -150,7 +150,10 @@ export async function desbordes(page: Page) {
       if (r.width && r.right > W + 1) out.push(`se sale: ${el.tagName}.${el.className} «${(el.textContent ?? '').trim().slice(0, 30)}»`);
       const propio = [...el.childNodes].filter((n) => n.nodeType === 3).map((n) => n.textContent).join('').replace(/\s+/g, '');
       const fs = parseFloat(getComputedStyle(el).fontSize) || 14;
-      if (propio.length >= 4 && r.width > 0 && r.width < fs * 2.6 && r.height > fs * 4.5) out.push(`texto aplastado «${propio.slice(0, 30)}»`);
+      if (propio.length >= 4 && r.width > 0 && r.width < fs * 2.6 && r.height > fs * 2.5) out.push(`texto aplastado «${propio.slice(0, 30)}»`);
+      // texto que no cabe en su caja y se desborda por abajo (la caja es estrecha y el texto se parte letra a letra)
+      if (propio.length >= 4 && r.width > 0 && r.width < fs * 4 && el.scrollHeight > el.clientHeight + fs * 1.5 && getComputedStyle(el).overflowY === 'visible')
+        out.push(`texto que no cabe «${propio.slice(0, 30)}»`);
     });
     return out.slice(0, 5);
   });

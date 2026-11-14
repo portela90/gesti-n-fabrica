@@ -185,12 +185,12 @@ function FormEpi({ v, alCambiar }: { v: DatosEpi; alCambiar: (x: DatosEpi) => vo
             const it = EPI_ITEMS.find((i) => i[0] === k)!; const x = items[k];
             return (
               <div key={k} className="linea-epi">
-                <label className="marca"><input type="checkbox" checked={!!x} onChange={(e) => marca(k, e.target.checked)} /> {it[1]}</label>
+                <label className="casilla"><input type="checkbox" checked={!!x} onChange={(e) => marca(k, e.target.checked)} /> {it[1]}</label>
                 {x && <>
                   <input className="ud" aria-label={`Unidades de ${it[1]}`} type="number" min={1} inputMode="numeric" value={x.u ?? ''} onChange={(e) => pon(k, { ...x, u: e.target.value })} />
                   <Motivo v={x} alCambiar={(y) => pon(k, y)} />
                   {it[5] && <span className="cats">{it[5].map((c) => (
-                    <label key={c} className="marca peq"><input type="checkbox" checked={(x.cat ?? []).includes(c)}
+                    <label key={c} className="casilla peq"><input type="checkbox" checked={(x.cat ?? []).includes(c)}
                       onChange={(e) => pon(k, { ...x, cat: e.target.checked ? [...(x.cat ?? []), c] : (x.cat ?? []).filter((y) => y !== c) })} /> {c}</label>))}</span>}
                 </>}
               </div>
@@ -227,7 +227,7 @@ function FormFormacion({ v, alCambiar }: { v: DatosFormacion; alCambiar: (x: Dat
         <legend>Formación en</legend>
         {[1, 2, 3, 4, 5, 6].map((n) => (
           <div key={n} className="linea-epi">
-            <label className="marca"><input type="checkbox" checked={items.has(n)}
+            <label className="casilla"><input type="checkbox" checked={items.has(n)}
               onChange={(e) => alCambiar({ ...v, items: e.target.checked ? [...items, n].sort() : [...items].filter((x) => x !== n) })} /> {n}. {F_ITEMS[n]}</label>
             {n === 1 && items.has(1) && <input className="otro" aria-label="Otros del punto 1" placeholder="Otros (punto 1, opcional)" maxLength={120} value={v.otros1 ?? ''} onChange={pon('otros1')} />}
             {n === 6 && items.has(6) && <input className="otro" aria-label="¿Qué otra formación?" placeholder="¿Qué otra formación?" maxLength={120} value={v.otros6 ?? ''} onChange={pon('otros6')} />}
@@ -321,7 +321,7 @@ function EditarDocumento({ tipo, doc, alCerrar, alGuardar }: { tipo: TipoDoc; do
             <button type="button" className="boton txt peq" onClick={() => setElegidos(new Set())}>Ninguno</button>
           </div>
           {activos.map((p: Persona) => (
-            <label key={p.id} className="marca"><input type="checkbox" checked={elegidos.has(p.id)}
+            <label key={p.id} className="casilla"><input type="checkbox" checked={elegidos.has(p.id)}
               onChange={(e) => setElegidos((s) => { const n = new Set(s); if (e.target.checked) n.add(p.id); else n.delete(p.id); return n; })} /> {p.nombre}</label>
           ))}
         </fieldset>

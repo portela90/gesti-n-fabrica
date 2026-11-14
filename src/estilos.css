@@ -262,12 +262,12 @@ button.dia { cursor: pointer; }
 .grupo-epi { border: 1px solid var(--linea); border-radius: 10px; padding: 8px 12px 10px; margin: 0 0 12px; min-width: 0; }
 .grupo-epi legend { font-weight: 700; padding: 0 4px; }
 .grupo-epi legend small { font-weight: 400; color: var(--tinta2); }
-.marca { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; overflow-wrap: anywhere; }
-.marca input { width: 20px; height: 20px; flex: 0 0 auto; }
-.marca.peq { min-height: 30px; font-size: .92em; }
+.casilla { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; overflow-wrap: anywhere; }
+.casilla input { width: 20px; height: 20px; flex: 0 0 auto; }
+.casilla.peq { min-height: 30px; font-size: .92em; }
 .linea-epi { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 0; border-top: 1px solid var(--linea); }
 .linea-epi:first-of-type { border-top: 0; }
-.linea-epi > .marca { flex: 1 1 200px; min-width: 0; }
+.linea-epi > .casilla { flex: 1 1 200px; min-width: 0; }
 .linea-epi .ud { width: 72px; flex: 0 0 auto; }
 .linea-epi .otro { flex: 1 1 160px; min-width: 0; }
 .linea-epi .motivo { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; padding-left: 28px; min-width: 0; }
