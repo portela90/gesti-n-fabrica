@@ -144,7 +144,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
      charlas» lo que tiene por firmar y «Mis tallas». PDF: `src/prevencion/epi.ts` (mismas posiciones que la app
      vieja sobre la plantilla). En «Datos por defecto», el sello de la empresa (foto, sin fondo blanco).
    - **Formación en el puesto (F40R304) y entrega de información (FP-022)** (14/11, paso 3):
-     `0018_prevencion_formacion.sql` (**PENDIENTE de pegar**): tipo `formacion` en `prevencion.documentos` y columna
+     `0018_prevencion_formacion.sql` (APLICADO 14/11, comprobado): tipo `formacion` en `prevencion.documentos` y columna
      `evaluacion` (evaluación de la eficacia, se apunta ya firmada; no entra en la huella). La pestaña «Entregas de
      EPI» pasa a llamarse «Documentos», con EPI / Formación / Información arriba. Textos del reverso del F40R304
      copiados de la app vieja (`src/prevencion/formacion.ts`), FP-022 en `src/prevencion/info.ts`. En «Datos por
