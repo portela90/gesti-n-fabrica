@@ -117,6 +117,12 @@ que cuadra antes de dejar la app vieja en solo consulta.
      `sesiones.prev_enviado_en/prev_destino/prev_por`; se puede apuntar con la sesión cerrada). En «Datos por defecto»:
      correo y nombre del técnico, empresa y **firma del formador** (sale en el PDF). El envío **automático** (Gmail
      desde el servidor, como la app vieja) queda para cuando Cristian ponga la cuenta de envío como secreto en Supabase.
+   - **Auditoría** (14/11, pedido por Cristian: lo firmado tiene que quedar en la ficha del trabajador):
+     en Fichas → trabajador → «Documentos firmados» (todas sus firmas, también anuladas, y el PDF oficial de cada una
+     con el documento del técnico detrás; sigue ahí aunque se dé de baja). `0016_prevencion_auditoria.sql`
+     (**PENDIENTE de pegar**): una charla que ya ha firmado alguien no se puede cambiar (YA_FIRMADA; hay que anular
+     antes las firmas) y los PDF del técnico no se pueden cambiar ni borrar. Lo siguiente (paso 5): expediente PDF
+     completo del trabajador de una vez.
    - **Charlas de 2026 traídas de la app vieja** (14/11, metidas por Claude con el «sí» de Cristian): 10 meses (sin junio
      ni agosto) en `prevencion.charlas` de la unidad `cie`, con texto e imagen (md5 comprobado igual que el original).
    - **Documentos del técnico** (14/11, pedido por Cristian: «que solo suba yo los documentos a la app», cada año sin

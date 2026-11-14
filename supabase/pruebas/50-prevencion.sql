@@ -123,6 +123,7 @@ select prevencion.apuntar_envio('33333333-0000-0000-0000-0000000000a1', 'prevenc
 select pruebas.ok((select prev_enviado_en is not null and prev_destino like 'prevencion@%' from prevencion.sesiones), 'cerrada: se puede apuntar el envío a prevención');
 select prevencion.cerrar_sesion('33333333-0000-0000-0000-0000000000a1', false);
 select pruebas.ok((select cerrada_en is null from prevencion.sesiones), 'el jefe puede reabrirla');
+select pruebas.falla($q$update prevencion.charlas set tema = 'otro' where id = '33333333-0000-0000-0000-0000000000c1'$q$, 'abierta pero ya firmada por alguien: la charla no se cambia (cada uno conserva lo que firmó)');
 select pruebas.falla($q$delete from prevencion.charlas where id = '33333333-0000-0000-0000-0000000000c1'$q$, 'una charla con sesión no se borra');
 reset role;
 select set_config('request.jwt.claim.sub', '', true);
@@ -146,6 +147,9 @@ select pruebas.falla($q$insert into prevencion.charlas (empresa_id, anio, mes) v
 select pruebas.falla($q$insert into prevencion.charlas (empresa_id, anio, mes, documento_ruta) values ('33333333-0000-0000-0000-000000000001', 2031, 6, '44444444-0000-0000-0000-000000000001/charlas/x.pdf')$q$,
   'el documento tiene que estar en la carpeta de su unidad');
 select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '44444444-0000-0000-0000-000000000001/charlas/x.pdf')$q$, 'no se sube a la carpeta de otra unidad');
+delete from storage.objects where bucket_id = 'prevencion';
+update storage.objects set name = name || '.viejo' where bucket_id = 'prevencion';
+select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where bucket_id = 'prevencion' and name like '%2031-04-1.pdf'$q$) = 1, 'ni el jefe borra ni cambia un PDF ya subido');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000003f1', true);
 select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where bucket_id = 'prevencion'$q$) = 1, 'la operaria puede leer el documento de su unidad');
 select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '33333333-0000-0000-0000-000000000001/charlas/y.pdf')$q$, 'la operaria no sube documentos');

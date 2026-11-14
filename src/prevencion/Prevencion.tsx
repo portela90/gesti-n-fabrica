@@ -27,7 +27,7 @@ interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre
 interface Persona { id: string; nombre: string; categoria: string | null; baja: string | null }
 
 const ERRORES: Record<string, string> = {
-  NO_PERMISO: 'No tienes permiso para hacer esto.', CERRADA: 'Este mes ya está cerrado.', YA_FIRMADO: 'Ya está firmada.',
+  NO_PERMISO: 'No tienes permiso para hacer esto.', CERRADA: 'Este mes ya está cerrado.', YA_FIRMADO: 'Ya está firmada.', YA_FIRMADA: 'Ya la ha firmado alguien: para cambiarla, anula antes sus firmas.',
   FIRMA_MAL: 'Falta la firma.', NO_ENVIADA: 'Esta charla aún no se ha enviado.', SIN_PREVISTOS: 'Elige antes quién tiene que firmarla.',
   TIENE_SESION: 'Esta charla ya tiene sesión; no se puede borrar.', duplicate: 'Ya hay una charla para ese mes.', dni_check: 'El DNI no está bien escrito (solo letras y números, sin espacios).',
 };
@@ -285,13 +285,19 @@ function BotonDocumento({ c }: { c: Charla }) {
 function VerCharla({ charla, sesion, alCambiar }: { charla: Charla; sesion: Sesion | null; alCambiar: () => void }) {
   const { puede } = useSesion();
   const [editando, setEditando] = useState(false);
+  const [firmadas, setFirmadas] = useState<number | null>(sesion ? null : 0);
+  useEffect(() => {
+    if (!sesion) return;
+    prev().from('asistencias').select('id', { count: 'exact', head: true }).eq('sesion_id', sesion.id).is('anulada', null)
+      .then(({ count }) => setFirmadas(count ?? 0));
+  }, [sesion]);
   const cerrada = !!sesion?.cerrada_en;
   return (
     <>
       <TextoCharla c={charla} />
-      {puede('prevencion.charla.editar') && !cerrada && (
+      {puede('prevencion.charla.editar') && !cerrada && firmadas === 0 && (
         <div className="botonera"><button type="button" className="boton sec" onClick={() => setEditando(true)}>Cambiar el contenido</button></div>)}
-      {sesion?.enviada_en && !cerrada && <p className="nota">Ya se ha enviado: si lo cambias, quien firme a partir de ahora firmará el texto nuevo.</p>}
+      {!cerrada && !!firmadas && <p className="nota">Ya la ha firmado alguien, así que no se puede cambiar: cada trabajador conserva lo que firmó. Para corregirla, anula antes las firmas.</p>}
       {editando && <EditarCharla titulo="Cambiar el contenido" anio={charla.anio} mes={charla.mes} charla={charla}
         alCerrar={() => setEditando(false)} alGuardar={() => { setEditando(false); alCambiar(); }} />}
     </>
@@ -843,7 +849,48 @@ function FormFicha({ persona, ficha, prendas, alCerrar, alGuardar }: { persona: 
           : <p className="nota">No hay prendas dadas de alta (botón «Prendas con talla»).</p>}
         {error && <p className="error" role="alert">{error}</p>}
       </fieldset>
+      {puede('prevencion.firma.ver') && <DocumentosFirmados persona={persona} />}
     </Ventana>
+  );
+}
+
+/** Todo lo que ha firmado el trabajador (para una auditoría): se queda en su ficha aunque se dé de baja. */
+function DocumentosFirmados({ persona }: { persona: Persona }) {
+  const ajustes = useAjustes();
+  const [lista, setLista] = useState<{ a: Asistencia; s: Sesion; c: Charla }[] | null>(null);
+  const [haciendo, setHaciendo] = useState<string | null>(null);
+  useEffect(() => {
+    (async () => {
+      const a = ((await prev().from('asistencias').select('*').eq('persona_id', persona.id)).data ?? []) as Asistencia[];
+      const sids = [...new Set(a.map((x) => x.sesion_id))];
+      const ss = sids.length ? ((await prev().from('sesiones').select('*').in('id', sids)).data ?? []) as Sesion[] : [];
+      const cids = [...new Set(ss.map((x) => x.charla_id))];
+      const cs = cids.length ? ((await prev().from('charlas').select('*').in('id', cids)).data ?? []) as Charla[] : [];
+      setLista(a.map((x) => { const s = ss.find((y) => y.id === x.sesion_id); const c = s && cs.find((y) => y.id === s.charla_id); return s && c ? { a: x, s, c } : null; })
+        .filter(Boolean).sort((x, y) => y!.a.creado.localeCompare(x!.a.creado)) as { a: Asistencia; s: Sesion; c: Charla }[]);
+    })();
+  }, [persona]);
+  async function pdf(x: { a: Asistencia; s: Sesion; c: Charla }) {
+    setHaciendo(x.a.id);
+    try { const r = await pdfCompleto(x.c, x.s, ajustes); descargar(r.bytes, r.nombre); }
+    catch (e) { aviso('No se ha podido hacer el PDF: ' + (e as Error).message); }
+    setHaciendo(null);
+  }
+  return (
+    <section className="firmados">
+      <h3 className="subtitulo">Documentos firmados</h3>
+      {lista === null ? <p className="nota">Cargando…</p> : !lista.length ? <p className="nota">Todavía no ha firmado nada.</p> : (
+        <div className="lista">
+          {lista.map((x) => (
+            <div key={x.a.id} className={'fila fija centrada' + (x.a.anulada ? ' de-baja' : '')}>
+              <span className="fila-txt"><b>{x.s.denominacion ?? `Toolbox ${MESES[x.c.mes - 1]} ${x.c.anio}`}</b>
+                <small>{x.a.anulada ? `Anulada el ${fechaCorta(x.a.anulada)}` : `Firmada el ${fechaCorta(x.a.creado)}`}{x.c.tema ? ` · ${x.c.tema}` : ''}</small></span>
+              {!x.a.anulada && <button type="button" className="boton sec peq" disabled={haciendo === x.a.id} onClick={() => pdf(x)}>{haciendo === x.a.id ? 'Haciendo…' : 'PDF'}</button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

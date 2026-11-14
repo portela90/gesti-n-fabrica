@@ -13,7 +13,7 @@ const fechaCorta = (f) => { if (!f)
     return ''; const [a, m, d] = f.slice(0, 10).split('-').map(Number); return `${d}/${m}/${a}`; };
 const ANIO_ACTUAL = new Date().getFullYear();
 const ERRORES = {
-    NO_PERMISO: 'No tienes permiso para hacer esto.', CERRADA: 'Este mes ya está cerrado.', YA_FIRMADO: 'Ya está firmada.',
+    NO_PERMISO: 'No tienes permiso para hacer esto.', CERRADA: 'Este mes ya está cerrado.', YA_FIRMADO: 'Ya está firmada.', YA_FIRMADA: 'Ya la ha firmado alguien: para cambiarla, anula antes sus firmas.',
     FIRMA_MAL: 'Falta la firma.', NO_ENVIADA: 'Esta charla aún no se ha enviado.', SIN_PREVISTOS: 'Elige antes quién tiene que firmarla.',
     TIENE_SESION: 'Esta charla ya tiene sesión; no se puede borrar.', duplicate: 'Ya hay una charla para ese mes.', dni_check: 'El DNI no está bien escrito (solo letras y números, sin espacios).',
 };
@@ -190,8 +190,15 @@ function BotonDocumento({ c }) {
 function VerCharla({ charla, sesion, alCambiar }) {
     const { puede } = useSesion();
     const [editando, setEditando] = useState(false);
+    const [firmadas, setFirmadas] = useState(sesion ? null : 0);
+    useEffect(() => {
+        if (!sesion)
+            return;
+        prev().from('asistencias').select('id', { count: 'exact', head: true }).eq('sesion_id', sesion.id).is('anulada', null)
+            .then(({ count }) => setFirmadas(count ?? 0));
+    }, [sesion]);
     const cerrada = !!sesion?.cerrada_en;
-    return (_jsxs(_Fragment, { children: [_jsx(TextoCharla, { c: charla }), puede('prevencion.charla.editar') && !cerrada && (_jsx("div", { className: "botonera", children: _jsx("button", { type: "button", className: "boton sec", onClick: () => setEditando(true), children: "Cambiar el contenido" }) })), sesion?.enviada_en && !cerrada && _jsx("p", { className: "nota", children: "Ya se ha enviado: si lo cambias, quien firme a partir de ahora firmar\u00E1 el texto nuevo." }), editando && _jsx(EditarCharla, { titulo: "Cambiar el contenido", anio: charla.anio, mes: charla.mes, charla: charla, alCerrar: () => setEditando(false), alGuardar: () => { setEditando(false); alCambiar(); } })] }));
+    return (_jsxs(_Fragment, { children: [_jsx(TextoCharla, { c: charla }), puede('prevencion.charla.editar') && !cerrada && firmadas === 0 && (_jsx("div", { className: "botonera", children: _jsx("button", { type: "button", className: "boton sec", onClick: () => setEditando(true), children: "Cambiar el contenido" }) })), !cerrada && !!firmadas && _jsx("p", { className: "nota", children: "Ya la ha firmado alguien, as\u00ED que no se puede cambiar: cada trabajador conserva lo que firm\u00F3. Para corregirla, anula antes las firmas." }), editando && _jsx(EditarCharla, { titulo: "Cambiar el contenido", anio: charla.anio, mes: charla.mes, charla: charla, alCerrar: () => setEditando(false), alGuardar: () => { setEditando(false); alCambiar(); } })] }));
 }
 /** Reduce una foto a JPEG de como mucho 1000 px (para que no pese). */
 function aJpeg(archivo) {
@@ -617,8 +624,37 @@ function FormFicha({ persona, ficha, prendas, alCerrar, alGuardar }) {
         aviso('Ficha guardada');
         alGuardar();
     }
-    return (_jsx(Ventana, { titulo: persona.nombre, alCerrar: alCerrar, pie: editable ? _jsxs(_Fragment, { children: [_jsx("button", { type: "button", className: "boton sec", onClick: alCerrar, children: "Cancelar" }), _jsx("button", { type: "button", className: "boton", onClick: guardar, children: "Guardar" })] }) : undefined, children: _jsxs("fieldset", { className: "formulario", disabled: !editable, children: [_jsx("h3", { className: "subtitulo", style: { marginTop: 0 }, children: "Identificaci\u00F3n" }), _jsxs("div", { className: "dos", children: [_jsxs("label", { className: "campo", children: [_jsx("span", { children: "DNI / NIE" }), _jsx("input", { value: v.dni, maxLength: 12, autoCapitalize: "characters", onChange: pon('dni') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Puesto" }), _jsx("input", { value: v.puesto, maxLength: 80, placeholder: persona.categoria ?? '', onChange: pon('puesto') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Fecha de alta" }), _jsx("input", { type: "date", value: v.fecha_alta, onChange: pon('fecha_alta') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Fecha de baja" }), _jsx("input", { type: "date", value: v.fecha_baja, onChange: pon('fecha_baja') })] })] }), v.fecha_baja && _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Motivo de la baja" }), _jsxs("select", { value: v.motivo_baja, onChange: pon('motivo_baja'), children: [_jsx("option", { value: "", children: "\u2014" }), MOTIVOS_BAJA.map((m) => _jsx("option", { children: m }, m))] })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Idioma que mejor entiende" }), _jsx("input", { value: v.idioma, maxLength: 40, onChange: pon('idioma') })] }), _jsx("h3", { className: "subtitulo", children: "Contacto" }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Tel\u00E9fono" }), _jsx("input", { type: "tel", value: v.telefono, maxLength: 30, onChange: pon('telefono') })] }), _jsxs("div", { className: "dos", children: [_jsxs("label", { className: "campo", children: [_jsx("span", { children: "En caso de emergencia, avisar a" }), _jsx("input", { value: v.emerg_nombre, maxLength: 80, onChange: pon('emerg_nombre') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Su tel\u00E9fono" }), _jsx("input", { type: "tel", value: v.emerg_tel, maxLength: 30, onChange: pon('emerg_tel') })] })] }), _jsx("h3", { className: "subtitulo", children: "Tallas" }), prendas.length ? _jsx("div", { className: "dos", children: prendas.map((p) => _jsxs("label", { className: "campo", children: [_jsx("span", { children: p.nombre }), _jsx("input", { value: tallas[p.codigo] ?? '', maxLength: 10, onChange: (e) => setTallas((t) => ({ ...t, [p.codigo]: e.target.value })) })] }, p.codigo)) })
-                    : _jsx("p", { className: "nota", children: "No hay prendas dadas de alta (bot\u00F3n \u00ABPrendas con talla\u00BB)." }), error && _jsx("p", { className: "error", role: "alert", children: error })] }) }));
+    return (_jsxs(Ventana, { titulo: persona.nombre, alCerrar: alCerrar, pie: editable ? _jsxs(_Fragment, { children: [_jsx("button", { type: "button", className: "boton sec", onClick: alCerrar, children: "Cancelar" }), _jsx("button", { type: "button", className: "boton", onClick: guardar, children: "Guardar" })] }) : undefined, children: [_jsxs("fieldset", { className: "formulario", disabled: !editable, children: [_jsx("h3", { className: "subtitulo", style: { marginTop: 0 }, children: "Identificaci\u00F3n" }), _jsxs("div", { className: "dos", children: [_jsxs("label", { className: "campo", children: [_jsx("span", { children: "DNI / NIE" }), _jsx("input", { value: v.dni, maxLength: 12, autoCapitalize: "characters", onChange: pon('dni') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Puesto" }), _jsx("input", { value: v.puesto, maxLength: 80, placeholder: persona.categoria ?? '', onChange: pon('puesto') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Fecha de alta" }), _jsx("input", { type: "date", value: v.fecha_alta, onChange: pon('fecha_alta') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Fecha de baja" }), _jsx("input", { type: "date", value: v.fecha_baja, onChange: pon('fecha_baja') })] })] }), v.fecha_baja && _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Motivo de la baja" }), _jsxs("select", { value: v.motivo_baja, onChange: pon('motivo_baja'), children: [_jsx("option", { value: "", children: "\u2014" }), MOTIVOS_BAJA.map((m) => _jsx("option", { children: m }, m))] })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Idioma que mejor entiende" }), _jsx("input", { value: v.idioma, maxLength: 40, onChange: pon('idioma') })] }), _jsx("h3", { className: "subtitulo", children: "Contacto" }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Tel\u00E9fono" }), _jsx("input", { type: "tel", value: v.telefono, maxLength: 30, onChange: pon('telefono') })] }), _jsxs("div", { className: "dos", children: [_jsxs("label", { className: "campo", children: [_jsx("span", { children: "En caso de emergencia, avisar a" }), _jsx("input", { value: v.emerg_nombre, maxLength: 80, onChange: pon('emerg_nombre') })] }), _jsxs("label", { className: "campo", children: [_jsx("span", { children: "Su tel\u00E9fono" }), _jsx("input", { type: "tel", value: v.emerg_tel, maxLength: 30, onChange: pon('emerg_tel') })] })] }), _jsx("h3", { className: "subtitulo", children: "Tallas" }), prendas.length ? _jsx("div", { className: "dos", children: prendas.map((p) => _jsxs("label", { className: "campo", children: [_jsx("span", { children: p.nombre }), _jsx("input", { value: tallas[p.codigo] ?? '', maxLength: 10, onChange: (e) => setTallas((t) => ({ ...t, [p.codigo]: e.target.value })) })] }, p.codigo)) })
+                        : _jsx("p", { className: "nota", children: "No hay prendas dadas de alta (bot\u00F3n \u00ABPrendas con talla\u00BB)." }), error && _jsx("p", { className: "error", role: "alert", children: error })] }), puede('prevencion.firma.ver') && _jsx(DocumentosFirmados, { persona: persona })] }));
+}
+/** Todo lo que ha firmado el trabajador (para una auditoría): se queda en su ficha aunque se dé de baja. */
+function DocumentosFirmados({ persona }) {
+    const ajustes = useAjustes();
+    const [lista, setLista] = useState(null);
+    const [haciendo, setHaciendo] = useState(null);
+    useEffect(() => {
+        (async () => {
+            const a = ((await prev().from('asistencias').select('*').eq('persona_id', persona.id)).data ?? []);
+            const sids = [...new Set(a.map((x) => x.sesion_id))];
+            const ss = sids.length ? ((await prev().from('sesiones').select('*').in('id', sids)).data ?? []) : [];
+            const cids = [...new Set(ss.map((x) => x.charla_id))];
+            const cs = cids.length ? ((await prev().from('charlas').select('*').in('id', cids)).data ?? []) : [];
+            setLista(a.map((x) => { const s = ss.find((y) => y.id === x.sesion_id); const c = s && cs.find((y) => y.id === s.charla_id); return s && c ? { a: x, s, c } : null; })
+                .filter(Boolean).sort((x, y) => y.a.creado.localeCompare(x.a.creado)));
+        })();
+    }, [persona]);
+    async function pdf(x) {
+        setHaciendo(x.a.id);
+        try {
+            const r = await pdfCompleto(x.c, x.s, ajustes);
+            descargar(r.bytes, r.nombre);
+        }
+        catch (e) {
+            aviso('No se ha podido hacer el PDF: ' + e.message);
+        }
+        setHaciendo(null);
+    }
+    return (_jsxs("section", { className: "firmados", children: [_jsx("h3", { className: "subtitulo", children: "Documentos firmados" }), lista === null ? _jsx("p", { className: "nota", children: "Cargando\u2026" }) : !lista.length ? _jsx("p", { className: "nota", children: "Todav\u00EDa no ha firmado nada." }) : (_jsx("div", { className: "lista", children: lista.map((x) => (_jsxs("div", { className: 'fila fija centrada' + (x.a.anulada ? ' de-baja' : ''), children: [_jsxs("span", { className: "fila-txt", children: [_jsx("b", { children: x.s.denominacion ?? `Toolbox ${MESES[x.c.mes - 1]} ${x.c.anio}` }), _jsxs("small", { children: [x.a.anulada ? `Anulada el ${fechaCorta(x.a.anulada)}` : `Firmada el ${fechaCorta(x.a.creado)}`, x.c.tema ? ` · ${x.c.tema}` : ''] })] }), !x.a.anulada && _jsx("button", { type: "button", className: "boton sec peq", disabled: haciendo === x.a.id, onClick: () => pdf(x), children: haciendo === x.a.id ? 'Haciendo…' : 'PDF' })] }, x.a.id))) }))] }));
 }
 function Prendas({ prendas, alCerrar }) {
     const { empresa } = useSesion();

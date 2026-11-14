@@ -299,3 +299,24 @@ test('la trabajadora abre el documento del técnico antes de firmar', async ({ p
   await page.getByRole('button', { name: 'Firmar', exact: true }).click();
   await expect(page.getByText('Firmada', { exact: true }).first()).toBeVisible();
 });
+
+test('auditoría: en la ficha de la trabajadora están los documentos que ha firmado, con su PDF; la charla firmada ya no se cambia', async ({ page }) => {
+  const errores = vigilar(page);
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/prevencion/fichas');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  const firmados = page.locator('.firmados');
+  await expect(firmados).toContainText('Documentos firmados');
+  await expect(firmados.locator('.fila')).toContainText(`Firmada el 5/3/${ANIO}`);
+  const descarga = page.waitForEvent('download');
+  await firmados.getByRole('button', { name: 'PDF' }).click();
+  expect((await descarga).suggestedFilename()).toContain('Toolbox');
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.goto('./#/m/prevencion/charlas');
+  await page.locator('.fila', { hasText: 'Marzo' }).click();
+  await page.getByRole('button', { name: 'Contenido' }).click();
+  await expect(page.getByText('Ya la ha firmado alguien')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Cambiar el contenido' })).toHaveCount(0);
+  expect(errores).toEqual([]);
+});
