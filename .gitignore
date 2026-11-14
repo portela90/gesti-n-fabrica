@@ -4,3 +4,7 @@ dist/
 *.log
 test-results/
 playwright-report/
+# lo que genera tsc si alguna vez se ejecuta sin --noEmit
+src/**/*.js
+/vite.config.js
+*.tsbuildinfo

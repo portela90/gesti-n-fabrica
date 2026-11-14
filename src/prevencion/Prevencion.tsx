@@ -5,7 +5,7 @@ import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
 import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
 import { MESES, fechaCorta, prev, textoError, useAjustes, usePersonas, type Persona } from './comun';
-import { Entregas, MisEntregas, MisTallas, TallasPropuestas, descargarEntregas, type Documento } from './entregas';
+import { Documentos, MisDocumentos, MisTallas, TallasPropuestas, descargarDocumentos, tituloDoc, type Documento } from './documentos-firma';
 import { abrirDocumento, bajarDocumento, mesDelNombre, subirDocumento, unirPdfs } from './documentos';
 
 
@@ -23,7 +23,7 @@ interface Sesion {
 }
 interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre: string; puesto: string | null; firma_id: string | null; anulada: string | null; creado: string }
 
-type Pestana = 'mias' | 'charlas' | 'entregas' | 'fichas';
+type Pestana = 'mias' | 'charlas' | 'documentos' | 'fichas';
 
 /** Módulo Prevención: mis charlas (todos) y, según permisos, las charlas de cada mes y las fichas de los trabajadores. */
 export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
@@ -31,7 +31,7 @@ export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void
   const pestanas = ([
     ['mias', 'Mis charlas', true],
     ['charlas', 'Charlas', puede('prevencion.charla.ver')],
-    ['entregas', 'Entregas de EPI', puede('prevencion.documento.ver')],
+    ['documentos', 'Documentos', puede('prevencion.documento.ver')],
     ['fichas', 'Fichas', puede('prevencion.ficha.ver')],
   ] as [Pestana, string, boolean][]).filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
@@ -45,7 +45,7 @@ export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void
       )}
       {actual === 'mias' && <MisCharlas />}
       {actual === 'charlas' && <Charlas />}
-      {actual === 'entregas' && <Entregas />}
+      {actual === 'documentos' && <Documentos />}
       {actual === 'fichas' && <Fichas />}
     </main>
   );
@@ -171,7 +171,8 @@ function SubirDelAnio({ anio, archivos, charlas, sesiones, alCerrar, alSubir }: 
 /** Datos por defecto para las sesiones nuevas (en nucleo.ajustes, módulo prevención). */
 const CLAVES_AJUSTES = [['centro', 'Lugar donde se da'], ['duracion', 'Duración (minutos)'], ['formador', 'Formador'],
   ['correo_prl', 'Correo del técnico de prevención (para enviarle el mes)'], ['correo_prl_nombre', 'Nombre del técnico de prevención'],
-  ['empresa', 'Empresa (sale en el asunto del correo)']] as const;
+  ['empresa', 'Empresa (sale en el asunto del correo y en la entrega de información)'], ['direccion', 'Dirección de servicio (formación en el puesto)'],
+  ['enlace_info', 'Enlace a la información de prevención para el trabajador (entrega de información)']] as const;
 function Ajustes({ alCerrar }: { alCerrar: () => void }) {
   const { empresa } = useSesion();
   const actuales = useAjustes();
@@ -179,8 +180,9 @@ function Ajustes({ alCerrar }: { alCerrar: () => void }) {
   const [error, setError] = useState<string | null>(null);
   const valor = (k: string) => v[k] ?? actuales[k] ?? '';
   const [firmando, setFirmando] = useState(false);
+  const [firmandoResp, setFirmandoResp] = useState(false);
   async function guardar() {
-    for (const k of [...CLAVES_AJUSTES.map(([c]) => c), 'firma_formador', 'sello']) {
+    for (const k of [...CLAVES_AJUSTES.map(([c]) => c), 'firma_formador', 'firma_resp', 'sello']) {
       if (v[k] === undefined) continue;
       const { error } = await nucleo().from('ajustes').upsert({ empresa_id: empresa!.id, centro_id: null, modulo: 'prevencion', clave: k, valor: v[k].trim() },
         { onConflict: 'empresa_id,centro_id,modulo,clave' });
@@ -189,7 +191,7 @@ function Ajustes({ alCerrar }: { alCerrar: () => void }) {
     aviso('Guardado'); alCerrar();
   }
   return (
-    <Ventana titulo="Datos por defecto de las charlas" alCerrar={alCerrar}
+    <Ventana titulo="Datos por defecto de Prevención" alCerrar={alCerrar}
       pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={guardar}>Guardar</button></>}>
       <p className="nota" style={{ marginTop: 0 }}>Se ponen solos cada vez que preparas la sesión de un mes nuevo. Luego puedes cambiarlos en cada mes.</p>
       {CLAVES_AJUSTES.map(([k, n]) => <label key={k} className="campo"><span>{n}</span>
@@ -199,6 +201,11 @@ function Ajustes({ alCerrar }: { alCerrar: () => void }) {
         {firmando ? <Firma alCambiar={(png) => setV((x) => ({ ...x, firma_formador: png ?? '' }))} />
           : <>{valor('firma_formador') ? <img src={valor('firma_formador')} alt="Firma del formador" className="firma-guardada" /> : <p className="nota" style={{ margin: 0 }}>Todavía no hay firma.</p>}
             <button type="button" className="boton sec peq" style={{ alignSelf: 'flex-start' }} onClick={() => setFirmando(true)}>{valor('firma_formador') ? 'Cambiar la firma' : 'Firmar'}</button></>}
+      </div>
+      <div className="campo"><span>Firma del responsable de centro (sale en la formación en el puesto)</span>
+        {firmandoResp ? <Firma alCambiar={(png) => setV((x) => ({ ...x, firma_resp: png ?? '' }))} />
+          : <>{valor('firma_resp') ? <img src={valor('firma_resp')} alt="Firma del responsable de centro" className="firma-guardada" /> : <p className="nota" style={{ margin: 0 }}>Todavía no hay firma.</p>}
+            <button type="button" className="boton sec peq" style={{ alignSelf: 'flex-start' }} onClick={() => setFirmandoResp(true)}>{valor('firma_resp') ? 'Cambiar la firma' : 'Firmar'}</button></>}
       </div>
       <div className="campo"><span>Sello o firma de la empresa (sale en las entregas de EPI)</span>
         {valor('sello') ? <img src={valor('sello')} alt="Sello de la empresa" className="firma-guardada" /> : <p className="nota" style={{ margin: 0 }}>Todavía no hay sello.</p>}
@@ -717,7 +724,7 @@ function MisCharlas() {
   if (!datos) return <p className="nota">Cargando…</p>;
   return (
     <>
-      <MisEntregas persona={datos.persona.id} />
+      <MisDocumentos persona={datos.persona.id} />
       {datos.pendientes.length > 0
         ? <p className="aviso-linea">Tienes {datos.pendientes.length === 1 ? 'una charla' : `${datos.pendientes.length} charlas`} por leer y firmar.</p>
         : <div className="vacio" style={{ marginBottom: 12 }}><p>No tienes ninguna charla por firmar.</p></div>}
@@ -879,9 +886,9 @@ function DocumentosFirmados({ persona }: { persona: Persona }) {
           pdf: async () => { const r = await pdfCompleto(c, se, ajustes); descargar(r.bytes, r.nombre); } }];
       });
       const docs: Linea[] = ((rd.data ?? []) as Documento[]).map((d) => ({
-        id: d.id, titulo: `Entrega de EPI · ${fechaCorta(d.fecha)}`, cuando: d.firmado_en ?? d.creado, anulado: d.anulado,
+        id: d.id, titulo: tituloDoc(d), cuando: d.firmado_en ?? d.creado, anulado: d.anulado,
         sub: d.anulado ? `Anulada el ${fechaCorta(d.anulado)}` : `Firmada el ${fechaCorta(d.firmado_en)}`,
-        pdf: () => descargarEntregas([d], ajustes, `SH-CORP-SP-FO-014 Entrega de EPI ${d.nombre ?? ''} ${d.fecha}.pdf`),
+        pdf: () => descargarDocumentos([d], ajustes),
       }));
       setLista([...charlas, ...docs].sort((x, y) => y.cuando.localeCompare(x.cuando)));
     })();

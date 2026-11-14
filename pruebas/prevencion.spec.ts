@@ -8,6 +8,7 @@ const ANA = 'dddddddd-0000-0000-0000-0000000000f1';
 const BRUNO = 'dddddddd-0000-0000-0000-0000000000f2';
 const CARLA = 'dddddddd-0000-0000-0000-0000000000f3';
 const ANIO = new Date().getFullYear();
+const hoyLocal = () => new Date().toLocaleDateString('sv-SE');
 const PNG = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
 
 const JEFE = ['nucleo.persona.ver', 'nucleo.configuracion.editar', 'prevencion.charla.editar', 'prevencion.charla.ver', 'prevencion.ficha.editar',
@@ -160,7 +161,7 @@ test('datos por defecto: correo de prevención y firma del formador', async ({ p
   await page.getByRole('button', { name: 'Datos por defecto' }).click();
   await expect(page.getByLabel('Correo del técnico de prevención (para enviarle el mes)')).toHaveValue('tecnico@ejemplo.com');
   await page.getByLabel('Nombre del técnico de prevención').fill('Pedro');
-  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await page.getByRole('button', { name: 'Firmar', exact: true }).first().click();
   await firmarConElDedo(page);
   await page.getByRole('button', { name: 'Guardar' }).click();
   await expect(page.getByText('Guardado')).toBeVisible();
@@ -352,7 +353,7 @@ const entrega = (extra = {}) => ({
 test('el encargado hace una entrega de EPI a Ana y a Bruno y la envía a firmar', async ({ page }) => {
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion([...ENCARGADO, 'prevencion.documento.ver', 'prevencion.documento.editar'], 'Encargado Prueba'), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
-  await page.goto('./#/m/prevencion/entregas');
+  await page.goto('./#/m/prevencion/documentos');
   await page.getByRole('button', { name: '＋ Entrega de EPI' }).click();
   await page.getByRole('dialog').getByLabel('Ana Prueba').check();
   await page.getByRole('dialog').getByLabel('Bruno Prueba').check();
@@ -363,7 +364,7 @@ test('el encargado hace una entrega de EPI a Ana y a Bruno y la envía a firmar'
   await page.setViewportSize({ width: 320, height: 640 });
   expect(await desbordes(page)).toEqual([]);
   await page.getByRole('button', { name: 'Guardar y enviar' }).click();
-  await expect(page.getByText('Guardada y enviada a firmar')).toBeVisible();
+  await expect(page.getByText('Guardado y enviado a firmar')).toBeVisible();
   expect(sim.tablas.documentos).toHaveLength(2);
   expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'epi', empresa_id: UNIDAD, datos: { items: { bota: { u: '1', cat: ['Agua'], motivo: 'Primera entrega' } }, otros: [{ t: 'Pantalón de trabajo', u: '2' }] } });
   expect(sim.tablas.documentos.every((d) => d.enviado_en)).toBe(true);
@@ -374,14 +375,14 @@ test('entrega de EPI: el jefe recoge la firma en su móvil y saca el PDF oficial
   const errores = vigilar(page);
   const t = tablas();
   await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...t, documentos: [entrega()] }, rpc: rpcEntregas });
-  await page.goto('./#/m/prevencion/entregas');
+  await page.goto('./#/m/prevencion/documentos');
   await expect(page.locator('.fila', { hasText: 'Ana Prueba' })).toContainText('Sin firmar');
   await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
   await page.getByRole('button', { name: 'Firmar aquí' }).click();
   await page.getByRole('button', { name: 'He recibido los equipos, firmar' }).click();
   await firmarConElDedo(page);
   await page.getByRole('button', { name: 'Firmar', exact: true }).click();
-  await expect(page.getByText('Firmada', { exact: true })).toBeVisible();
+  await expect(page.getByText('Firmado', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('button', { name: 'Borrar' })).toHaveCount(0);
   const descarga = page.waitForEvent('download');
   await page.getByRole('button', { name: 'PDF oficial' }).click();
@@ -396,13 +397,13 @@ test('entrega de EPI: el jefe recoge la firma en su móvil y saca el PDF oficial
 test('la trabajadora firma su entrega de EPI y propone sus tallas; el jefe las acepta en su ficha', async ({ page }) => {
   const sim = await simular(page, { dentro: true, sesion: sesion(['prevencion.modulo.ver', 'prevencion.tarea.ver'], 'Ana Prueba'), tablas: { ...tablas(), asistencias: [], documentos: [entrega()] }, rpc: rpcEntregas });
   await page.goto('./#/m/prevencion');
-  await expect(page.getByText('Tienes una entrega de EPI por firmar.')).toBeVisible();
+  await expect(page.getByText('Tienes un documento de prevención por firmar.')).toBeVisible();
   await page.locator('.fila', { hasText: 'Entrega de EPI' }).click();
   await expect(page.getByText('Bota (EN ISO 20345) · 1 ud. · Agua · Primera entrega')).toBeVisible();
   await page.getByRole('button', { name: 'He recibido los equipos, firmar' }).click();
   await firmarConElDedo(page);
   await page.getByRole('button', { name: 'Firmar', exact: true }).click();
-  await expect(page.getByText('Tienes una entrega de EPI por firmar.')).toHaveCount(0);
+  await expect(page.getByText('Tienes un documento de prevención por firmar.')).toHaveCount(0);
   await page.locator('.fila', { hasText: 'Toca para cambiarlas' }).click();
   await page.getByLabel('Botas').fill('41');
   await page.getByRole('button', { name: 'Enviar' }).click();
@@ -426,4 +427,55 @@ test('ficha: tallas propuestas por la trabajadora y su entrega de EPI firmada en
   const descarga = page.waitForEvent('download');
   await page.locator('.firmados .fila', { hasText: 'Entrega de EPI' }).getByRole('button', { name: 'PDF' }).click();
   expect((await descarga).suggestedFilename()).toContain('SH-CORP-SP-FO-014');
+});
+
+test('formación en el puesto (F40R304): el jefe la hace a Bruno, Bruno la firma en su móvil y luego se evalúa', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/documentos');
+  await page.getByRole('button', { name: 'Formación', exact: true }).click();
+  await page.getByRole('button', { name: '＋ Formación en el puesto' }).click();
+  await page.getByRole('dialog').getByLabel('Bruno Prueba').check();
+  await page.getByLabel('Duración').fill('2 h');
+  await page.getByLabel('6. OTROS').check();
+  await page.getByRole('button', { name: 'Guardar y enviar' }).click();
+  await expect(page.getByRole('dialog').getByText('Escribe qué otra formación (punto 6).')).toBeVisible();
+  await page.getByLabel('¿Qué otra formación?').fill('Uso de la fregadora');
+  await page.getByRole('button', { name: 'Guardar y enviar' }).click();
+  await expect(page.getByText('Guardado y enviado a firmar')).toBeVisible();
+  expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'formacion', persona_id: BRUNO, datos: { items: [1, 2, 3, 4, 5, 6], duracion: '2 h', otros6: 'Uso de la fregadora', impartida: 'Jefa Prueba' } });
+  sim.tablas.documentos[0].nombre = 'Bruno Prueba'; // en la base de datos de verdad lo pone ella sola
+  await page.getByRole('button', { name: 'EPI', exact: true }).click();
+  await page.getByRole('button', { name: 'Formación', exact: true }).click();
+  await page.locator('.fila', { hasText: 'Bruno Prueba' }).click();
+  await expect(page.getByRole('dialog').getByText('Limpieza y conservación de maquinaria')).toBeVisible();
+  await page.getByRole('button', { name: 'Firmar aquí' }).click();
+  await page.getByRole('button', { name: 'Me lo han enseñado, firmar' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await page.getByRole('button', { name: 'No eficaz' }).click();
+  await page.getByLabel('Fecha de la nueva formación').fill(`${ANIO}-12-01`);
+  await page.getByRole('button', { name: 'Guardar la evaluación' }).click();
+  await expect(page.getByText('Evaluación guardada')).toBeVisible();
+  expect(sim.tablas.documentos[0].evaluacion).toMatchObject({ eficaz: false, nueva_fecha: `${ANIO}-12-01` });
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  expect((await descarga).suggestedFilename()).toBe(`F40R304 Formacion en el puesto Bruno Prueba ${hoyLocal()}.pdf`);
+  expect((await descarga).suggestedFilename()).toBe(`F40R304 Formacion en el puesto Bruno Prueba ${hoyLocal()}.pdf`);
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  expect(errores).toEqual([]);
+});
+
+test('entrega de información (FP-022): se hace a Ana, la lee en su móvil y la firma', async ({ page }) => {
+  const doc = { ...entrega(), id: 'do-9', tipo: 'info', datos: { empresa: 'Empresa inventada', lugar: 'Planta D', enlace: 'https://ejemplo.com/info' } };
+  await simular(page, { dentro: true, sesion: sesion(['prevencion.modulo.ver', 'prevencion.tarea.ver'], 'Ana Prueba'), tablas: { ...tablas(), asistencias: [], documentos: [doc] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion');
+  await page.locator('.fila', { hasText: 'Entrega de información' }).click();
+  await expect(page.getByText('Manual de Seguridad (Handbook).')).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Abrir la información' })).toHaveAttribute('href', 'https://ejemplo.com/info');
+  await page.getByRole('button', { name: 'La he recibido, firmar' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await expect(page.getByText('Tienes un documento de prevención por firmar.')).toHaveCount(0);
 });

@@ -173,6 +173,6 @@ export async function pdfToolbox(d: DatosToolbox): Promise<{ bytes: Uint8Array; 
 /** Descargar un PDF (o, en el móvil, abrirlo para guardarlo o compartirlo). */
 export function descargar(bytes: Uint8Array, nombre: string) {
   const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: 'application/pdf' }));
-  const a = document.createElement('a'); a.href = url; a.download = nombre; document.body.appendChild(a); a.click();
+const a = document.createElement('a'); a.href = url; a.download = nombre.normalize('NFD').replace(/[\u0300-\u036f]/g, ''); document.body.appendChild(a); a.click();
   setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 4000);
 }

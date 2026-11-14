@@ -113,6 +113,27 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1
 update prevencion.fichas set tallas = tallas || tallas_propuestas, tallas_propuestas = null, tallas_propuestas_en = null where persona_id = '55555555-0000-0000-0000-0000000000f1';
 select pruebas.ok((select tallas->>'bota' from prevencion.fichas) = '41', 'el jefe las acepta');
 
+-- ---------- formación en el puesto (F40R304) y entrega de información (FP-022) ----------
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+insert into prevencion.documentos (empresa_id, tipo, persona_id, fecha, datos) values
+  ('55555555-0000-0000-0000-000000000001', 'formacion', '55555555-0000-0000-0000-0000000000f2', '2031-04-01', '{"items":[1,2,3],"duracion":"2 h"}'),
+  ('55555555-0000-0000-0000-000000000001', 'info', '55555555-0000-0000-0000-0000000000f2', '2031-04-01', '{"empresa":"Empresa inventada"}');
+insert into ids select 'form', id from prevencion.documentos where tipo = 'formacion';
+select pruebas.falla($q$update prevencion.documentos set evaluacion = '{"eficaz":true}' where id = (select v from ids where k = 'ana')$q$, 'la evaluación es solo de la formación');
+select prevencion.firmar_documento(id, 'data:image/png;base64,CCCC') from prevencion.documentos where tipo in ('formacion', 'info');
+select pruebas.ok(pruebas.cuantas($q$select * from prevencion.documentos where tipo in ('formacion', 'info') and firma_id is not null$q$) = 2, 'el jefe recoge las firmas de la formación y de la información');
+update prevencion.documentos set evaluacion = '{"fecha":"2031-06-01","eficaz":false,"nueva_fecha":"2031-06-15"}' where id = (select v from ids where k = 'form');
+select pruebas.ok((select evaluacion->>'eficaz' from prevencion.documentos where id = (select v from ids where k = 'form')) = 'false', 'ya firmada, se apunta la evaluación de la eficacia');
+select pruebas.falla($q$update prevencion.documentos set datos = '{"items":[1]}' where id = (select v from ids where k = 'form')$q$, 'pero lo firmado no cambia');
+reset role;
+select pruebas.ok((select f.sha256_documento = prevencion.huella_documento(d.id) from prevencion.documentos d join nucleo.firmas f on f.id = d.firma_id
+  where d.id = (select v from ids where k = 'form')), 'la evaluación no cambia la huella de lo firmado');
+set role authenticated;
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005f2', true);
+update prevencion.documentos set evaluacion = '{"eficaz":true}';
+select pruebas.ok((select evaluacion->>'eficaz' from prevencion.documentos where tipo = 'formacion') = 'false', 'el trabajador no se pone la evaluación');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+
 -- ---------- historial ----------
 select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'prevencion' and tabla = 'documentos'$q$) >= 3, 'las entregas quedan en el historial');
 rollback;

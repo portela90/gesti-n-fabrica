@@ -133,7 +133,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
      incluye el sha256 del PDF. En pantalla: «Subir documentos del año» (varios PDF a la vez, reconoce el mes por el
      nombre y se puede corregir), y en cada mes «Subir el PDF del técnico». El trabajador lo abre antes de firmar.
      El PDF oficial y el envío a prevención llevan detrás el PDF del técnico (pdf-lib). Código en `src/prevencion/documentos.ts`.
-   - **Entrega de EPI (FO-014) + tallas** (14/11, paso 2): `0017_prevencion_entregas.sql` (**PENDIENTE de pegar**):
+   - **Entrega de EPI (FO-014) + tallas** (14/11, paso 2): `0017_prevencion_entregas.sql` (APLICADO 14/11, comprobado):
      tabla `prevencion.documentos` (genérica: tipo epi y luego epi_col, info, autoriz, botiquin), firmada no cambia ni
      se borra (solo se anula, con `firma.anular`), la firma solo con `firmar_documento` (el trabajador si se le ha
      enviado, o quien tenga `firma.recoger`), `enviar_documentos`, `anular_documento`; permisos
@@ -143,8 +143,17 @@ que cuadra antes de dejar la app vieja en solo consulta.
      las prendas de la unidad; enviar, firmar aquí, anular, PDF oficial y PDF de todas). El trabajador ve en «Mis
      charlas» lo que tiene por firmar y «Mis tallas». PDF: `src/prevencion/epi.ts` (mismas posiciones que la app
      vieja sobre la plantilla). En «Datos por defecto», el sello de la empresa (foto, sin fondo blanco).
+   - **Formación en el puesto (F40R304) y entrega de información (FP-022)** (14/11, paso 3):
+     `0018_prevencion_formacion.sql` (**PENDIENTE de pegar**): tipo `formacion` en `prevencion.documentos` y columna
+     `evaluacion` (evaluación de la eficacia, se apunta ya firmada; no entra en la huella). La pestaña «Entregas de
+     EPI» pasa a llamarse «Documentos», con EPI / Formación / Información arriba. Textos del reverso del F40R304
+     copiados de la app vieja (`src/prevencion/formacion.ts`), FP-022 en `src/prevencion/info.ts`. En «Datos por
+     defecto»: dirección de servicio, enlace a la información y firma del responsable de centro.
+   - **Arreglo 14/11**: `tsc -b` sin `noEmit` había dejado archivos .js compilados junto a los .tsx (y
+     vite.config.js), y se subieron en dos commits. Vite coge el .js antes que el .tsx, así que podían quedar
+     pantallas viejas. Borrados, `noEmit` en tsconfig y en .gitignore.
    - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
-     3) Formación en el puesto (F40R304) y entrega de información (FP-022); 4) EPI de altura (FO-072), botiquín (FO-018)
+     ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; 4) EPI de altura (FO-072), botiquín (FO-018)
      y autorización de maquinaria; 5) certificados de cursos y expediente PRL en PDF.
    - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a
      proyecto que pegando SQL).
