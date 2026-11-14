@@ -138,7 +138,11 @@ export async function pdfEpi(docs: DocEpi[], sello: string | null): Promise<Uint
       if (cur) lin.push(cur);
       lin.slice(0, 2).forEach((l, i) => txt((i ? '' : 'Motivo: ') + l, 86, 578 + i * 6.5, 6, font, 440));
     }
-    blanco(518, 507, 641.5, 524); txt(`En ${x.lugar ?? ''},`, 521, 514.5, 7, font, 118); txt(`a ${fechaLarga(d.fecha)}`, 521, 521.5, 7, font, 118);
+    blanco(518, 507, 641.5, 524);
+    // «En …, a …»: la letra se hace más pequeña hasta que el lugar quepa entero en la casilla (no se corta)
+    const enLugar = `En ${x.lugar ?? ''},`; let tam = 7;
+    while (tam > 4 && font.widthOfTextAtSize(enLugar, tam) > 118) tam -= 0.25;
+    txt(enLugar, 521, 514.5, tam, font, 118); txt(`a ${fechaLarga(d.fecha)}`, 521, 521.5, 7, font, 118);
     await img(d.firma, 522, 546, 638, 580);
     if (d.firmado_en) pg.drawText(`Firmado digitalmente ${fechaHora(d.firmado_en)}`, { x: 522, y: H - 580.5, size: 5, font, color: rgb(0.45, 0.45, 0.45) });
     await img(sello, 646, 518, 752, 579);
