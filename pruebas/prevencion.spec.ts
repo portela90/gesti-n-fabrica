@@ -545,7 +545,8 @@ test('revisión del botiquín: se apunta, firman quien revisa y quien supervisa,
   await expect(page.getByRole('dialog').getByText('Material con NO:')).toBeVisible();
   await page.getByRole('button', { name: 'Usar mi firma guardada' }).click();
   await expect(page.getByText('Firma puesta')).toBeVisible();
-  await page.getByRole('button', { name: 'Firmar aquí' }).click();
+  await expect(page.locator('.fila', { hasText: 'Revisa' }).getByRole('img')).toBeVisible();
+  await page.locator('.fila', { hasText: 'Supervisa' }).getByRole('button', { name: 'Firmar aquí' }).click();
   await firmarConElDedo(page);
   await page.getByRole('button', { name: 'Guardar la firma' }).click();
   await page.getByRole('button', { name: 'Cerrar la revisión' }).click();
@@ -553,5 +554,52 @@ test('revisión del botiquín: se apunta, firman quien revisa y quien supervisa,
   const descarga = page.waitForEvent('download');
   await page.getByRole('button', { name: 'PDF oficial' }).click();
   expect((await descarga).suggestedFilename()).toContain('SH-CORP-SP-FO-018');
+  expect(errores).toEqual([]);
+});
+
+// ---------------------------------------------------------------------------------------------
+// Cursos y certificados; expediente PRL
+// ---------------------------------------------------------------------------------------------
+test('cursos: el jefe apunta a Ana el curso de carretilla con su certificado; caducado sale en la lista', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), rpc: rpcEntregas,
+    tablas: { ...tablas(), documentos: [], cursos: [{ id: 'cu-0', empresa_id: UNIDAD, persona_id: BRUNO, tipo: 'Puente grúa', fecha: '2020-01-01', caduca: '2021-01-01', archivos: [] }] } });
+  await page.goto('./#/m/prevencion/fichas');
+  await expect(page.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('Curso caducado');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  await page.getByRole('button', { name: '＋ Curso o certificado' }).click();
+  await page.getByLabel('Entidad que lo imparte').fill('Academia inventada');
+  await page.getByLabel('Fecha del curso').fill(`${ANIO}-02-01`);
+  await page.getByRole('button', { name: '+5 años' }).click();
+  await expect(page.getByLabel('Caduca (renovar antes de)')).toHaveValue(`${ANIO + 5}-02-01`);
+  await page.locator('label', { hasText: 'Adjuntar foto o PDF' }).locator('input').setInputFiles({ name: 'diploma.pdf', mimeType: 'application/pdf', buffer: await pdfDelTecnico('Diploma') });
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.locator('.ventana:has(> .ventana-cab:has-text("Nuevo curso")) > .ventana-pie').getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByText('Curso guardado')).toBeVisible();
+  const c = sim.tablas.cursos.find((x) => x.persona_id === ANA)!;
+  expect(c).toMatchObject({ tipo: 'Carretilla elevadora', entidad: 'Academia inventada', fecha: `${ANIO}-02-01`, caduca: `${ANIO + 5}-02-01` });
+  const a = (c.archivos as { ruta: string; mime: string }[])[0];
+  expect(a.ruta).toMatch(new RegExp(`^${UNIDAD}/cursos/${c.id}/\\d+\\.pdf$`));
+  expect(sim.archivos.has(`prevencion/${a.ruta}`)).toBe(true);
+  expect(errores).toEqual([]);
+});
+
+test('expediente PRL: un solo PDF con la portada, sus documentos firmados y el certificado del curso', async ({ page }) => {
+  const errores = vigilar(page);
+  const ruta = `${UNIDAD}/cursos/cu-1/1.pdf`;
+  await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), rpc: rpcEntregas, archivos: [[`prevencion/${ruta}`, await pdfDelTecnico('Diploma 1', 'Diploma 2')]],
+    tablas: { ...tablas(), documentos: [entrega({ firma_id: 'fi1', firmado_en: `${ANIO}-03-03T10:00:00Z` })],
+      cursos: [{ id: 'cu-1', empresa_id: UNIDAD, persona_id: ANA, tipo: 'Carretilla elevadora', fecha: `${ANIO}-02-01`, caduca: null, archivos: [{ ruta, nombre: 'diploma.pdf', mime: 'application/pdf' }] }] } });
+  await page.goto('./#/m/prevencion/fichas');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  await expect(page.locator('.cursos')).toContainText('Carretilla elevadora');
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Expediente PRL (PDF)' }).click();
+  const d = await descarga;
+  expect(d.suggestedFilename()).toBe('Expediente PRL Ana Prueba.pdf');
+  const { PDFDocument } = await import('pdf-lib');
+  const pdf = await PDFDocument.load(await (await import('node:fs/promises')).readFile(await d.path()));
+  expect(pdf.getPageCount()).toBe(4); // portada + entrega de EPI (FO-014) + 2 páginas del certificado
   expect(errores).toEqual([]);
 });

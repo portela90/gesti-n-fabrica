@@ -159,9 +159,17 @@ que cuadra antes de dejar la app vieja en solo consulta.
      En «Documentos» ahora se elige el tipo en una lista. PDF: `epiAltura.ts` (hasta 4 entregas del mismo
      trabajador por hoja), `botiquin.ts`, `autorizacion.ts` (sin plantilla, como la app vieja). Próxima revisión
      del botiquín = 3 meses. En «Datos por defecto»: quién supervisa el botiquín.
+   - **Cursos y certificados + expediente PRL** (14/11, paso 5): `0020_prevencion_cursos.sql` (**PENDIENTE de
+     pegar**): tabla `prevencion.cursos` (tipo, entidad, fecha, horas, caduca, notas, archivos = fotos/PDF en el
+     almacén `<unidad>/cursos/<curso>/`). Son datos del trabajador: los ve quien ve fichas y el propio trabajador
+     los suyos (el encargado no); los apunta quien edita fichas. El almacén acepta ahora JPEG y PNG, y la carpeta
+     cursos tiene sus reglas (charlas igual que antes; fuera de las dos no se sube nada). En la ficha:
+     «Cursos y certificados» (caducado / caduca pronto a 60 días, también en la lista de fichas) y botón
+     «Expediente PRL (PDF)»: portada con datos, tablas de EPI, formación y cursos e historial, y detrás todos los
+     PDF oficiales firmados y los certificados (`src/prevencion/cursos.tsx`).
    - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
      ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; ~~4) EPI de altura (FO-072), botiquín (FO-018)
-     y autorización de maquinaria~~ hecho; 5) certificados de cursos y expediente PRL en PDF.
+     y autorización de maquinaria~~ hecho; ~~5) certificados de cursos y expediente PRL en PDF~~ hecho. **Prevención completa** (falta traer los datos el día del cambio).
    - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a
      proyecto que pegando SQL).
 5. **Decidido 13/11: los operarios cambian de app UNA sola vez**, cuando la app nueva tenga Personal, Prevención y

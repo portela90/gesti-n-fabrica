@@ -6,6 +6,7 @@ import { Firma } from '../componentes/Firma';
 import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
 import { MESES, fechaCorta, prev, textoError, useAjustes, usePersonas, type Persona } from './comun';
 import { Documentos, MisDocumentos, MisTallas, TallasPropuestas, descargarDocumentos, tituloDoc, type Documento } from './documentos-firma';
+import { BotonExpediente, Cursos, estadoCurso, type Curso } from './cursos';
 import { abrirDocumento, bajarDocumento, mesDelNombre, subirDocumento, unirPdfs } from './documentos';
 
 
@@ -769,16 +770,19 @@ function Fichas() {
   const { empresa, puede } = useSesion();
   const personas = usePersonas();
   const [fichas, setFichas] = useState<Ficha[] | null>(null);
+  const [cursos, setCursos] = useState<Pick<Curso, 'persona_id' | 'caduca'>[]>([]);
   const [prendas, setPrendas] = useState<Prenda[]>([]);
   const [abierta, setAbierta] = useState<Persona | null>(null);
   const [verBajas, setVerBajas] = useState(false);
   const [editarPrendas, setEditarPrendas] = useState(false);
 
   const cargar = useCallback(async () => {
-    const [f, p] = await Promise.all([
+    const [f, p, c] = await Promise.all([
       prev().from('fichas').select('*').eq('empresa_id', empresa!.id),
       prev().from('prendas').select('*').eq('empresa_id', empresa!.id).order('orden'),
+      prev().from('cursos').select('persona_id, caduca').eq('empresa_id', empresa!.id),
     ]);
+    setCursos((c.data ?? []) as Pick<Curso, 'persona_id' | 'caduca'>[]);
     setFichas((f.data ?? []) as Ficha[]); setPrendas(((p.data ?? []) as Prenda[]).filter((x) => !x.baja));
   }, [empresa]);
   useEffect(() => { cargar(); }, [cargar]);
@@ -797,6 +801,12 @@ function Fichas() {
             <button key={p.id} type="button" className={'fila' + (p.baja ? ' de-baja' : '')} onClick={() => setAbierta(p)}>
               <span className="fila-txt"><b>{p.nombre}</b>
                 <small>{p.baja ? 'Dado de baja · ' : ''}{f?.puesto ?? p.categoria ?? ''}{faltan.length ? `${f?.puesto || p.categoria ? ' · ' : ''}Falta: ${faltan.join(', ')}` : ''}</small></span>
+              {(() => {
+                const est = cursos.filter((x) => x.persona_id === p.id).map((x) => estadoCurso(x)[0]);
+                const n = est.filter((x) => x === 'Caducado').length, m = est.filter((x) => x === 'Caduca pronto').length;
+                return n ? <span className="chapa peligro">{n === 1 ? 'Curso caducado' : `${n} cursos caducados`}</span>
+                  : m ? <span className="chapa pendiente">{m === 1 ? 'Curso caduca pronto' : `${m} caducan pronto`}</span> : null;
+              })()}
               <span className="fila-flecha" aria-hidden="true">›</span>
             </button>
           );
@@ -857,7 +867,9 @@ function FormFicha({ persona, ficha, prendas, alCerrar, alGuardar }: { persona: 
           : <p className="nota">No hay prendas dadas de alta (botón «Prendas con talla»).</p>}
         {error && <p className="error" role="alert">{error}</p>}
       </fieldset>
+      <Cursos persona={persona} />
       {puede('prevencion.firma.ver') && <DocumentosFirmados persona={persona} />}
+      <div className="botonera"><BotonExpediente persona={persona} /></div>
     </Ventana>
   );
 }

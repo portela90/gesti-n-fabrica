@@ -155,6 +155,34 @@ select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005f1
 select pruebas.ok(pruebas.cuantas($q$select * from prevencion.documentos where tipo = 'botiquin'$q$) = 0, 'la trabajadora no ve los botiquines');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
 
+-- ---------- cursos y certificados (datos del trabajador: como la ficha) ----------
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+insert into storage.objects (bucket_id, name) values ('prevencion', '55555555-0000-0000-0000-000000000001/cursos/c1/1.jpg'),
+  ('prevencion', '55555555-0000-0000-0000-000000000001/cursos/c2/1.pdf');
+insert into prevencion.cursos (empresa_id, persona_id, tipo, fecha, caduca, archivos) values
+  ('55555555-0000-0000-0000-000000000001', '55555555-0000-0000-0000-0000000000f1', 'Carretilla elevadora', '2031-01-10', '2036-01-10',
+   '[{"ruta":"55555555-0000-0000-0000-000000000001/cursos/c1/1.jpg","nombre":"diploma.jpg","mime":"image/jpeg"}]'),
+  ('55555555-0000-0000-0000-000000000001', '55555555-0000-0000-0000-0000000000f2', 'PRL nivel básico (60 h)', '2031-01-10', null,
+   '[{"ruta":"55555555-0000-0000-0000-000000000001/cursos/c2/1.pdf","nombre":"prl.pdf","mime":"application/pdf"}]');
+select pruebas.ok(pruebas.cuantas('select * from prevencion.cursos') = 2, 'el jefe apunta los cursos con su certificado');
+select pruebas.falla($q$insert into prevencion.cursos (empresa_id, persona_id, tipo, archivos) values ('55555555-0000-0000-0000-000000000001', '55555555-0000-0000-0000-0000000000f1', 'Otro',
+  '[{"ruta":"66666666-0000-0000-0000-000000000001/cursos/x.pdf","mime":"application/pdf"}]')$q$, 'el certificado tiene que estar en la carpeta de su unidad');
+select pruebas.falla($q$insert into prevencion.cursos (empresa_id, persona_id, tipo, fecha, caduca) values ('55555555-0000-0000-0000-000000000001', '55555555-0000-0000-0000-0000000000f1', 'Otro', '2031-05-01', '2031-01-01')$q$,
+  'no caduca antes de hacerlo');
+select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '55555555-0000-0000-0000-000000000001/otra/x.pdf')$q$, 'fuera de charlas y cursos no se sube nada');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005e1', true);
+select pruebas.ok(pruebas.cuantas('select * from prevencion.cursos') = 0, 'el encargado no ve los cursos (datos del trabajador)');
+select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where name like '%/cursos/%'$q$) = 0, 'ni sus certificados');
+select pruebas.falla($q$insert into storage.objects (bucket_id, name) values ('prevencion', '55555555-0000-0000-0000-000000000001/cursos/x.pdf')$q$, 'ni los sube');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005f1', true);
+select pruebas.ok(pruebas.cuantas('select * from prevencion.cursos') = 1, 'Ana ve su curso y no el de Bruno');
+select pruebas.ok(pruebas.cuantas($q$select * from storage.objects where name like '%/cursos/%'$q$) = 1, 'y su certificado, no el de Bruno');
+update prevencion.cursos set caduca = '2040-01-01';
+select pruebas.ok((select caduca from prevencion.cursos) = '2036-01-10', 'pero no lo cambia');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000006a1', true);
+select pruebas.ok(pruebas.cuantas('select * from prevencion.cursos') + pruebas.cuantas($q$select * from storage.objects where name like '%/cursos/%'$q$) = 0, 'otra unidad no ve nada');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+
 -- ---------- historial ----------
 select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'prevencion' and tabla = 'documentos'$q$) >= 3, 'las entregas quedan en el historial');
 rollback;

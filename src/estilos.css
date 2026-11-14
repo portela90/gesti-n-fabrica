@@ -282,3 +282,5 @@ button.dia { cursor: pointer; }
 .si-no button[aria-pressed="true"]:last-child { background: #b91c1c; border-color: #b91c1c; color: #fff; }
 .linea-epi .texto-linea { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
 .linea-epi .serie { width: 120px; }
+.chapa.peligro { background: color-mix(in srgb, var(--mal) 14%, transparent); color: var(--mal); }
+.chapa.sin { background: var(--fondo); color: var(--tinta2); }
