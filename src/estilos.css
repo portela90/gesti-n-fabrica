@@ -284,3 +284,5 @@ button.dia { cursor: pointer; }
 .linea-epi .serie { width: 120px; }
 .chapa.peligro { background: color-mix(in srgb, var(--mal) 14%, transparent); color: var(--mal); }
 .chapa.sin { background: var(--fondo); color: var(--tinta2); }
+.aviso-texto { color: #92400e; }
+.botones-fila { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex: none; }

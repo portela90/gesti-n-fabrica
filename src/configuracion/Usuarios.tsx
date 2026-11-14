@@ -6,7 +6,7 @@ import { aviso, Icono, ICONOS, Ventana } from '../componentes/basicos';
 interface Asig { id: string; usuario_id: string; rol_id: string; centro_id: string | null }
 interface Rol { id: string; empresa_id: string | null; codigo: string; nombre: string; descripcion: string | null; baja: string | null }
 interface Ref { id: string; nombre: string; baja?: string | null }
-interface Usu { id: string; nombre: string; email: string | null; superadmin: boolean }
+interface Usu { id: string; nombre: string; email: string | null; superadmin: boolean; persona_id: string | null }
 
 const ERRORES: Record<string, string> = {
   CORREO: 'El correo no está bien escrito.',
@@ -28,6 +28,7 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
   const [naves, setNaves] = useState<Ref[]>([]);
   const [personas, setPersonas] = useState<Ref[]>([]);
   const [formulario, setFormulario] = useState<{ correo?: string; nombre?: string } | null>(null);
+  const [enlazando, setEnlazando] = useState<Usu | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
@@ -40,7 +41,7 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
     ]);
     if (a.error) { setError(a.error.message); return; }
     const ids = [...new Set((a.data as Asig[]).map((x) => x.usuario_id))];
-    const u = ids.length ? await nucleo().from('usuarios').select('id, nombre, email, superadmin').in('id', ids) : { data: [] };
+    const u = ids.length ? await nucleo().from('usuarios').select('id, nombre, email, superadmin, persona_id').in('id', ids) : { data: [] };
     setAsigs(a.data as Asig[]); setUsus((u.data ?? []) as Usu[]);
     setRoles(((r.data ?? []) as Rol[]).filter((x) => !x.baja && (!x.empresa_id || x.empresa_id === empresa.id)));
     setNaves(((c.data ?? []) as Ref[]).filter((x) => !x.baja)); setPersonas(((p.data ?? []) as Ref[]).filter((x) => !x.baja));
@@ -77,6 +78,9 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
               <span className="fila-txt">
                 <b>{u.nombre}{u.id === yo ? ' (tú)' : ''}</b>
                 <small>{u.email}</small>
+                {personas.length > 0 && (u.persona_id
+                  ? <small>Es el trabajador: <b>{personas.find((p) => p.id === u.persona_id)?.nombre ?? 'de otra unidad'}</b></small>
+                  : !u.superadmin && <small className="aviso-texto">Sin enlazar con su ficha de trabajador: no le saldrá nada para firmar</small>)}
                 {rs.map((a) => (
                   <span key={a.id} className="rol-linea">
                     <span>{nombreRol(a.rol_id)} · {nombreNave(a.centro_id)}</span>
@@ -84,17 +88,45 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
                   </span>
                 ))}
               </span>
-              {editable && u.id !== yo && (
-                <button type="button" className="boton sec peq" onClick={() => setFormulario({ correo: u.email ?? '', nombre: u.nombre })}>Otro rol</button>
+              {editable && (
+                <span className="botones-fila">
+                  {u.id !== yo && <button type="button" className="boton sec peq" onClick={() => setFormulario({ correo: u.email ?? '', nombre: u.nombre })}>Otro rol</button>}
+                  {personas.length > 0 && <button type="button" className="boton txt peq" onClick={() => setEnlazando(u)}>{u.persona_id ? 'Cambiar trabajador' : 'Enlazar con su ficha'}</button>}
+                </span>
               )}
             </div>
           ))}
           {!grupos.length && <div className="fila fija"><span className="fila-txt"><small>Todavía no hay nadie con acceso a esta unidad de trabajo.</small></span></div>}
         </div>
       )}
+      {enlazando && <Enlazar usuario={enlazando} personas={personas} ocupadas={usus.filter((x) => x.id !== enlazando.id).map((x) => x.persona_id).filter(Boolean) as string[]}
+        alCerrar={() => setEnlazando(null)} alGuardar={() => { setEnlazando(null); cargar(); }} />}
       {formulario && <DarAcceso inicial={formulario} roles={roles} naves={naves} personas={personas} empresaId={empresa.id}
         alCerrar={() => setFormulario(null)} alTerminar={() => cargar()} />}
     </main>
+  );
+}
+
+/** Enlazar un usuario con su ficha de trabajador (así le sale lo suyo para firmar: calendario, charlas, EPI…). */
+function Enlazar({ usuario, personas, ocupadas, alCerrar, alGuardar }: { usuario: Usu; personas: Ref[]; ocupadas: string[]; alCerrar: () => void; alGuardar: () => void }) {
+  const [persona, setPersona] = useState(usuario.persona_id ?? '');
+  const [error, setError] = useState<string | null>(null);
+  async function guardar() {
+    const { error } = await nucleo().from('usuarios').update({ persona_id: persona || null }).eq('id', usuario.id);
+    if (error) { setError('No se ha podido guardar: ' + error.message); return; }
+    aviso(persona ? 'Enlazado con su ficha' : 'Ya no está enlazado'); alGuardar();
+  }
+  return (
+    <Ventana titulo={`¿Qué trabajador es ${usuario.nombre}?`} alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button><button type="button" className="boton" onClick={guardar}>Guardar</button></>}>
+      <p className="nota" style={{ marginTop: 0 }}>Así, cuando entre con su correo, le saldrá lo suyo para firmar: su calendario, las charlas y los documentos de prevención.</p>
+      <label className="campo"><span>Es el trabajador</span>
+        <select value={persona} onChange={(e) => setPersona(e.target.value)}>
+          <option value="">— ninguno —</option>
+          {personas.map((p) => <option key={p.id} value={p.id} disabled={ocupadas.includes(p.id)}>{p.nombre}{ocupadas.includes(p.id) ? ' (ya tiene usuario)' : ''}</option>)}
+        </select></label>
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
   );
 }
 

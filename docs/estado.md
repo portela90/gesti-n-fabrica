@@ -159,14 +159,18 @@ que cuadra antes de dejar la app vieja en solo consulta.
      En «Documentos» ahora se elige el tipo en una lista. PDF: `epiAltura.ts` (hasta 4 entregas del mismo
      trabajador por hoja), `botiquin.ts`, `autorizacion.ts` (sin plantilla, como la app vieja). Próxima revisión
      del botiquín = 3 meses. En «Datos por defecto»: quién supervisa el botiquín.
-   - **Cursos y certificados + expediente PRL** (14/11, paso 5): `0020_prevencion_cursos.sql` (**PENDIENTE de
-     pegar**): tabla `prevencion.cursos` (tipo, entidad, fecha, horas, caduca, notas, archivos = fotos/PDF en el
+   - **Cursos y certificados + expediente PRL** (14/11, paso 5): `0020_prevencion_cursos.sql` (APLICADO 14/11,
+     comprobado): tabla `prevencion.cursos` (tipo, entidad, fecha, horas, caduca, notas, archivos = fotos/PDF en el
      almacén `<unidad>/cursos/<curso>/`). Son datos del trabajador: los ve quien ve fichas y el propio trabajador
      los suyos (el encargado no); los apunta quien edita fichas. El almacén acepta ahora JPEG y PNG, y la carpeta
      cursos tiene sus reglas (charlas igual que antes; fuera de las dos no se sube nada). En la ficha:
      «Cursos y certificados» (caducado / caduca pronto a 60 días, también en la lista de fichas) y botón
      «Expediente PRL (PDF)»: portada con datos, tablas de EPI, formación y cursos e historial, y detrás todos los
      PDF oficiales firmados y los certificados (`src/prevencion/cursos.tsx`).
+   - **Mejoras tras las pruebas de Cristian (14/11)**: en Personal → Calendario cada operario dice si su calendario
+     está «Cuadra · sin enviar», «Enviado, sin firmar» o «Firmado», y el que cuadra se envía desde la misma lista
+     (uno o varios marcados). En Configuración → Usuarios se ve con qué trabajador está enlazado cada usuario y se
+     puede enlazar o cambiar («Enlazar con su ficha»); sin enlace no le sale nada para firmar. Sin migración.
    - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
      ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; ~~4) EPI de altura (FO-072), botiquín (FO-018)
      y autorización de maquinaria~~ hecho; ~~5) certificados de cursos y expediente PRL en PDF~~ hecho. **Prevención completa** (falta traer los datos el día del cambio).

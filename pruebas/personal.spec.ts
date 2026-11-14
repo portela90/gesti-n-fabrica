@@ -291,3 +291,20 @@ test('Personal en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await expect(page.getByRole('group', { name: 'Al tocar un día se pone' })).toBeVisible();
   expect(await desbordes(page), 'editor').toEqual([]);
 });
+
+test('lista de operarios: se ve si está enviado o firmado, y el que cuadra se envía a firmar desde ahí', async ({ page }) => {
+  const errores = vigilar(page);
+  const t = tablas(); t.v_envios = [envio(BRUNO, 'pendiente')];
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: t, rpc });
+  await page.goto('./#/m/personal/calendario');
+  await expect(page.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('Enviado, sin firmar');
+  await expect(page.locator('.fila', { hasText: 'Carla Finde' })).toContainText('Sin hacer');
+  const ana = page.locator('.fila', { hasText: 'Ana Prueba' });
+  await expect(ana).toContainText('Cuadra · sin enviar');
+  await ana.getByRole('button', { name: 'Enviar a firmar' }).click();
+  await expect(page.getByText('Enviado a firmar a 1 trabajador')).toBeVisible();
+  expect(sim.find((l) => l.ruta.endsWith('/rpc/enviar_calendario'))?.cuerpo).toEqual({ p_calendario: SEMANA, p_personas: [ANA] });
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  expect(errores).toEqual([]);
+});

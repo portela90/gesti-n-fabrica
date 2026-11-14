@@ -35,15 +35,41 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
   const [horas, setHoras] = useState<Horas[]>([]);
   const [elegidos, setElegidos] = useState<Set<string>>(new Set());
   const [editando, setEditando] = useState<string[] | null>(null);
+  const [envios, setEnvios] = useState<{ persona_id: string; calendario_id: string; estado: string; enviado: string }[]>([]);
+  const [enviando, setEnviando] = useState(false);
   const editable = puede('personal.calendario.editar');
+  const puedeEnviar = puede('personal.firma.enviar');
 
   const cargar = useCallback(async () => {
     const { data } = await nucleo().from('personas').select('id, nombre, baja').eq('empresa_id', empresa!.id).is('baja', null).order('nombre');
     setPersonas((data ?? []) as Persona[]);
     const hs = await Promise.all(cals.map((c) => personal().rpc('horas_personas', { p_calendario: c.id })));
     setHoras(hs.flatMap((r) => (r.data ?? []) as Horas[]));
-  }, [empresa, cals]);
+    const ev = await personal().from('v_envios').select('persona_id, calendario_id, estado, enviado').eq('empresa_id', empresa!.id).eq('anio', anio).order('enviado', { ascending: false });
+    setEnvios((ev.data ?? []) as typeof envios);
+  }, [empresa, cals, anio]);
   useEffect(() => { cargar(); }, [cargar]);
+
+  /** El envío que cuenta: el más nuevo sin anular y del calendario que tiene ahora. */
+  const envioDe = (p: string, cal?: CalAnio) => envios.find((e) => e.persona_id === p && e.estado !== 'anulado' && e.calendario_id === cal?.id);
+  const cuadra = (p: string) => { const h = horas.find((x) => x.persona_id === p); return !!h && h.objetivo != null && Math.round((h.horas - h.objetivo) * 100) === 0; };
+  /** Enviar a firmar el calendario de estas personas (cada una con el suyo). */
+  async function enviar(ids: string[]) {
+    const porCal = new Map<string, string[]>();
+    for (const id of ids) { const c = cals.find((x) => x.personas.includes(id)); if (c && cuadra(id)) porCal.set(c.id, [...(porCal.get(c.id) ?? []), id]); }
+    const fuera = ids.length - [...porCal.values()].flat().length;
+    if (!porCal.size) { aviso('No se puede enviar: las horas no cuadran (o no tienen calendario).'); return; }
+    if (fuera && !confirm(`${fuera} no se ${fuera === 1 ? 'puede enviar porque sus horas no cuadran' : 'pueden enviar porque sus horas no cuadran'}. ¿Enviar a los demás?`)) return;
+    setEnviando(true);
+    let n = 0;
+    for (const [cal, personas] of porCal) {
+      const { data, error } = await personal().rpc('enviar_calendario', { p_calendario: cal, p_personas: personas });
+      if (error) { setEnviando(false); aviso(textoError(error.message)); cargar(); return; }
+      n += Number(data ?? 0);
+    }
+    setEnviando(false); setElegidos(new Set());
+    aviso(`Enviado a firmar a ${n} ${n === 1 ? 'trabajador' : 'trabajadores'}`); cargar();
+  }
 
   if (personas === null) return <p className="nota">Cargando…</p>;
   if (editando) {
@@ -66,8 +92,14 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
                 <b>{p.nombre}</b>
                 <small>{!cal ? `Sin calendario de ${anio}` : `${cal.nombre}${h ? ` · ${fmtH(h.horas)} h${h.objetivo != null ? ` de ${fmtH(h.objetivo)} h` : ''}` : ''}`}</small>
               </button>
-              <span className={'chapa ' + (!cal ? 'sin' : dif === 0 ? 'firmado' : 'sin-cuadrar')}>
-                {!cal ? 'Sin hacer' : dif === null ? 'Sin horas' : dif === 0 ? 'Cuadra' : dif < 0 ? `Faltan ${fmtH(-dif)} h` : `Sobran ${fmtH(dif)} h`}</span>
+              {(() => {
+                const e = envioDe(p.id, cal);
+                if (e) return <span className={'chapa ' + (e.estado === 'firmado' ? 'firmado' : 'pendiente')}>{e.estado === 'firmado' ? 'Firmado' : 'Enviado, sin firmar'}</span>;
+                return <span className={'chapa ' + (!cal ? 'sin' : dif === 0 ? 'firmado' : 'sin-cuadrar')}>
+                  {!cal ? 'Sin hacer' : dif === null ? 'Sin horas' : dif === 0 ? 'Cuadra · sin enviar' : dif < 0 ? `Faltan ${fmtH(-dif)} h` : `Sobran ${fmtH(dif)} h`}</span>;
+              })()}
+              {puedeEnviar && cal && dif === 0 && !envioDe(p.id, cal) && (
+                <button type="button" className="boton txt peq" disabled={enviando} onClick={() => enviar([p.id])}>Enviar a firmar</button>)}
             </div>
           );
         })}
@@ -76,6 +108,7 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
         <div className="barra-abajo no-imprimir">
           <span><b>{elegidos.size}</b> {elegidos.size === 1 ? 'operario' : 'operarios'}</span>
           <button type="button" className="boton txt" onClick={() => setElegidos(new Set())}>Quitar</button>
+          {puedeEnviar && [...elegidos].some(cuadra) && <button type="button" className="boton sec" disabled={enviando} onClick={() => enviar([...elegidos])}>Enviar a firmar</button>}
           <button type="button" className="boton" onClick={() => setEditando([...elegidos])}>Hacer su calendario</button>
         </div>
       )}
@@ -180,7 +213,7 @@ function Editor({ anio, cals, personas, alSalir }: { anio: number; cals: CalAnio
     });
     setOcupado(false);
     if (error) { setError(error.message.includes('duplicate') ? 'Ya hay otro calendario con ese nombre este año.' : textoError(error.message)); return; }
-    aviso('Calendario guardado'); alSalir(true);
+    aviso('Calendario guardado. Si las horas cuadran, envíalo a firmar desde la lista.'); alSalir(true);
   }
   function salir() { if (!cambiado || confirm('Hay cambios sin guardar. ¿Salir sin guardar?')) alSalir(false); }
   // borrar el calendario que tiene ahora (con todos sus días); su gente se queda sin calendario de ese año

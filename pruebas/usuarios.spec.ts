@@ -97,3 +97,19 @@ test('Usuarios en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.getByRole('button', { name: 'Dar acceso a alguien' }).click();
   expect(await desbordes(page), 'ventana').toEqual([]);
 });
+
+test('enlazar un usuario con su ficha de trabajador (para que le salga lo suyo para firmar)', async ({ page }) => {
+  const err = vigilar(page);
+  const t = tablas();
+  const sim = await simular(page, { dentro: true, sesion: admin, tablas: { ...t, personas: [{ id: 'pe-1', empresa_id: E, nombre: 'Trabajador Inventado', baja: null }] } });
+  await page.goto('./#/config/usuarios');
+  const fila = page.locator('.fila', { hasText: 'Persona Ejemplo' });
+  await expect(fila).toContainText('Sin enlazar con su ficha de trabajador');
+  await fila.getByRole('button', { name: 'Enlazar con su ficha' }).click();
+  await page.getByLabel('Es el trabajador').selectOption('pe-1');
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.getByText('Enlazado con su ficha')).toBeVisible();
+  expect(sim.tablas.usuarios.find((u) => u.id === 'u-bea')).toMatchObject({ persona_id: 'pe-1' });
+  await expect(fila).toContainText('Es el trabajador: Trabajador Inventado');
+  expect(err).toEqual([]);
+});
