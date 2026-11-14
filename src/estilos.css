@@ -300,3 +300,17 @@ fieldset.sin-borde { border: 0; margin: 0; padding: 0; min-width: 0; }
 .check.peq { font-size: 14px; }
 .botones-punto { display: inline-flex; gap: 4px; margin-left: auto; }
 .botones-punto .boton-icono { width: 36px; height: 36px; border-radius: 9px; }
+
+/* ---------- Personal: horas del día y del mes ---------- */
+.horas-dia { flex-direction: column; align-items: stretch; gap: 8px; }
+.horas-campos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(130px, 100%), 1fr)); gap: 8px; }
+.horas-campos .campo, .horas-dia .campo.motivo { margin: 0; }
+.horas-campos input, .horas-campos select { width: 100%; min-width: 0; }
+.horario { display: grid; gap: 6px; }
+.horario label { display: grid; grid-template-columns: 84px minmax(0, 1fr); align-items: center; gap: 8px; }
+.horario input { min-width: 0; }
+button.enlace { background: none; border: 0; padding: 0; color: var(--acento); font: inherit; text-decoration: underline; cursor: pointer; }
+.caja-aviso { padding: 12px; margin: 0 0 14px; background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); }
+.cifras > div { display: flex; flex-direction: column; gap: 2px; padding: 14px; background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); min-width: 0; }
+.cifras > div b { font-size: 22px; }
+.cifras > div small { color: var(--tinta2); }

@@ -212,6 +212,28 @@ también las pausas; sin modo sencillo; nadie con solo lectura por ahora.
 - Orden para aplicarlo: 1) pegar 0021; 2) añadir `limpieza` a Exposed schemas (con `public` el primero, en un solo
   guardado); 3) pegar la copia de datos; 4) subir la app.
 
+### 2.2 Horas del día y Mis horas (14/11) — SIN APLICAR
+Decidido por Cristian (14/11): de momento las horas del mes = calendario + faltas y extras, con las mismas reglas
+que «Horas del día» y el Excel mensual de la app vieja (35 h o las de contrato a la semana, bolsa, festivos). El
+fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornada, sus horas de contrato y su horario.
+- `0022_personal_horas_dia.sql`: `nucleo.personas.horas_semana`; el horario de la ficha (ya venía de la app vieja con
+  los días por su nombre: `{"lunes": [["08:00","13:00"],["14:00","16:00"]]}`) se comprueba (`nucleo.horario_valido`);
+  `nucleo.horas_horario`. Tabla `personal.horas_dia` (trabajadas, fuera de presupuesto, extra a mano, falta, motivo
+  obligatorio con fuera o extra). `personal.horas_dias(unidad, desde, hasta, persona)`: lo que le toca a cada uno cada
+  día (su horario; festivo, cierre y descanso 0 h; intensiva, especial y «trabaja» sus horas; vacaciones = falta) y lo
+  que vale. `personal.guardar_horas_dia`. Permiso `personal.horas.editar` (solo el administrador; a propósito no
+  acaba en .ver ni .apuntar para que encargado y operario no vean las de los demás).
+- Bolsa en la app (`src/personal/horas.ts`, copia de `horasMesExcel` de la vieja). Desde cuándo cuenta: ajuste
+  `bolsa_inicio` (Personal) = 5/10/2026. Supuesto mío: los días del calendario sin trabajar (festivo, cierre y
+  descanso) no restan de la bolsa, como el festivo en la vieja.
+- Pantallas: Personal → «Horas» (administrador: Horas del día y Horas del mes con Excel y detalle) y «Mis horas»
+  (cada trabajador). Configuración → Trabajadores: horas de contrato y horario («8-13, 14-16»).
+- Pruebas: `supabase/pruebas/42-personal-horas-dia.sql` (30) y `pruebas/horas.spec.ts` (11, 6 del cálculo).
+- Copia preparada en `/home/claude/sql/horas_datos.sql` (`gen_horas.py`): horas de contrato de 10 personas, 38 días
+  con algo distinto (3 con horas fuera sin motivo en la vieja → «(sin motivo en la app vieja)») y la bolsa desde
+  el 5/10/2026. Las 316 jornadas de vacaciones de `horas_dia` ya están todas en `personal.vacaciones`.
+- Falta: comparar el Excel de octubre y noviembre de las dos apps (criterio para dar el cambio por bueno).
+
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).
 - Fin de semana 2027: solo existe el **relevo B** (la columna A del Excel no es nadie). Del Excel:

@@ -3,7 +3,7 @@ import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { anotarError } from '../nucleo/errores';
 import { aviso, Icono, ICONOS, Ventana } from '../componentes/basicos';
-import { CATALOGOS, catalogoPorTabla, codigoDe, DIAS_SEMANA, estadosDeTexto, textoDeEstados, type Campo, type Catalogo, type Fila } from './catalogos';
+import { CATALOGOS, catalogoPorTabla, codigoDe, DIAS_HORARIO, DIAS_SEMANA, estadosDeTexto, horarioDeTexto, textoDeEstados, textoDeHorario, type Campo, type Catalogo, type Fila } from './catalogos';
 
 /** ¿Puede configurar algo en esta unidad de trabajo? (para enseñar «Configuración» en el menú) */
 export function useConfigurable() {
@@ -147,6 +147,7 @@ function valoresDe(cat: Catalogo, f: Fila | null): Valores {
     const x = f?.[c.clave];
     if (c.tipo === 'dias') v[c.clave] = ((x as number[]) ?? (f ? [] : [1, 2, 3, 4, 5])).map(String);
     else if (c.tipo === 'estados') v[c.clave] = textoDeEstados(x);
+    else if (c.tipo === 'horario') v[c.clave] = textoDeHorario(x);
     else if (c.tipo === 'hora') v[c.clave] = x ? String(x).slice(0, 5) : '';
     else if (c.tipo === 'lista' && x == null && !f && c.obligatorio && c.opciones) v[c.clave] = c.opciones[0][0];
     else v[c.clave] = x == null ? '' : String(x);
@@ -160,6 +161,7 @@ function aGuardar(cat: Catalogo, v: Valores) {
     const x = v[c.clave];
     if (c.tipo === 'dias') out[c.clave] = (x as string[]).map(Number).sort();
     else if (c.tipo === 'estados') out[c.clave] = estadosDeTexto(String(x));
+    else if (c.tipo === 'horario') out[c.clave] = horarioDeTexto(x as string[]);
     else if (c.tipo === 'numero') out[c.clave] = String(x).trim() === '' ? null : Number(String(x).replace(',', '.'));
     else out[c.clave] = String(x).trim() === '' ? null : String(x).trim();
   }
@@ -186,7 +188,8 @@ function FormFila({ cat, fila, inicial, refs, todas, editable, alCerrar, alGuard
     setError(null);
     const falta = cat.campos.find((c) => c.obligatorio && (Array.isArray(v[c.clave]) ? !(v[c.clave] as string[]).length : !String(v[c.clave]).trim()));
     if (falta) { setError(`Falta «${falta.etiqueta}».`); return; }
-    const datos = aGuardar(cat, v);
+    let datos: Record<string, unknown>;
+    try { datos = aGuardar(cat, v); } catch (e) { setError((e as Error).message); return; }
     if (Object.entries(datos).some(([k, x]) => typeof x === 'number' && Number.isNaN(x) && cat.campos.find((c) => c.clave === k))) { setError('Hay un número mal escrito.'); return; }
     setOcupado(true);
     let res;
@@ -259,6 +262,20 @@ function CampoForm({ campo: c, valor, pon, refs, filaId }: { campo: Campo; valor
               <button key={k} type="button" aria-pressed={sel.includes(k)} onClick={() => pon(sel.includes(k) ? sel.filter((x) => x !== k) : [...sel, k])}>{t}</button>
             ))}
           </div>
+        </div>);
+    }
+    case 'horario': {
+      const lineas = valor as string[];
+      return (
+        <div className="campo"><span>{c.etiqueta}</span>
+          <div className="horario">
+            {DIAS_HORARIO.map(([k, n], i) => (
+              <label key={k}><small>{n}</small>
+                <input aria-label={`Horario del ${n.toLowerCase()}`} value={lineas[i] ?? ''} placeholder="—"
+                  onChange={(e) => pon(lineas.map((x, j) => (j === i ? e.target.value : x)))} /></label>
+            ))}
+          </div>
+          {c.ayuda && <small className="nota">{c.ayuda}</small>}
         </div>);
     }
     case 'estados':

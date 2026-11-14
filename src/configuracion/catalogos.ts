@@ -3,7 +3,7 @@
  * la pantalla de Configuración monta sola la lista, el formulario y el guardado a partir de esto.
  * Añadir un catálogo nuevo = añadir una entrada aquí (y su tabla y permisos en una migración).
  */
-export type TipoCampo = 'texto' | 'numero' | 'lista' | 'referencia' | 'hora' | 'dias' | 'estados' | 'correo' | 'telefono';
+export type TipoCampo = 'texto' | 'numero' | 'lista' | 'referencia' | 'hora' | 'dias' | 'estados' | 'correo' | 'telefono' | 'horario';
 
 export interface Campo {
   clave: string;
@@ -143,6 +143,8 @@ export const CATALOGOS: Catalogo[] = [
       { clave: 'centro_id', etiqueta: 'Nave', tipo: 'referencia', ref: { tabla: 'centros', vacio: 'Sin nave' } },
       { clave: 'categoria', etiqueta: 'Categoría', tipo: 'texto' },
       { clave: 'jornada', etiqueta: 'Jornada', tipo: 'lista', opciones: [['', '—'], ['completa', 'Completa'], ['parcial', 'Parcial'], ['externo', 'De otra empresa (no cuenta horas)']] },
+      { clave: 'horas_semana', etiqueta: 'Horas de contrato a la semana', tipo: 'numero', ayuda: 'Jornada completa: con ellas se calcula la bolsa de horas. Vacío = 35.' },
+      { clave: 'horario', etiqueta: 'Horario de un día normal', tipo: 'horario', ayuda: 'Por ejemplo «8-13, 14-16». Vacío = ese día no trabaja. Los festivos, vacaciones y días especiales salen de su calendario.' },
       { clave: 'telefono', etiqueta: 'Teléfono', tipo: 'telefono' },
       { clave: 'email', etiqueta: 'Correo', tipo: 'correo' },
     ],
@@ -159,3 +161,28 @@ export const codigoDe = (nombre: string) =>
 /** Estados: «En planta\nEn reparación» ⇄ [{codigo:'en-planta', nombre:'En planta'}, …] */
 export const estadosDeTexto = (t: string) => t.split('\n').map((x) => x.trim()).filter(Boolean).map((nombre) => ({ codigo: codigoDe(nombre), nombre }));
 export const textoDeEstados = (e: unknown) => ((e as { nombre: string }[]) ?? []).map((x) => x.nombre).join('\n');
+
+/** Horario de la ficha: {"lunes": [["08:00","13:00"],["14:00","16:00"]], …} ⇄ una línea de texto por día («8-13, 14-16»). */
+export const DIAS_HORARIO: [string, string][] = [['lunes', 'Lunes'], ['martes', 'Martes'], ['miercoles', 'Miércoles'], ['jueves', 'Jueves'],
+  ['viernes', 'Viernes'], ['sabado', 'Sábado'], ['domingo', 'Domingo']];
+const hhmm = (h: string) => h.replace(/^(\d):/, '0$1:');
+export const textoDeHorario = (h: unknown): string[] => DIAS_HORARIO.map(([k]) => {
+  const t = ((h as Record<string, [string, string][]> | null)?.[k] ?? []);
+  return t.map(([a, b]) => `${a.replace(/^0(\d)/, '$1').replace(/:00$/, '')}-${b.replace(/^0(\d)/, '$1').replace(/:00$/, '')}`).join(', ');
+});
+/** Devuelve el horario, null si está todo vacío, o lanza un error con el día mal escrito. */
+export function horarioDeTexto(lineas: string[]): Record<string, [string, string][]> | null {
+  const out: Record<string, [string, string][]> = {};
+  DIAS_HORARIO.forEach(([k, nombre], i) => {
+    const l = (lineas[i] ?? '').trim();
+    if (!l) return;
+    out[k] = l.split(/[,;y]+/).map((x) => x.trim()).filter(Boolean).map((tramo) => {
+      const m = tramo.match(/^(\d{1,2})(?:[:.](\d{2}))?\s*(?:-|–|a)\s*(\d{1,2})(?:[:.](\d{2}))?$/);
+      if (!m) throw new Error(`El horario del ${nombre.toLowerCase()} está mal escrito («${tramo}»). Escríbelo así: 8-13, 14-16`);
+      const a = hhmm(`${m[1]}:${m[2] ?? '00'}`), b = hhmm(`${m[3]}:${m[4] ?? '00'}`);
+      if (a >= b || a > '23:59' || b > '24:00' || +(m[2] ?? 0) > 59 || +(m[4] ?? 0) > 59) throw new Error(`El horario del ${nombre.toLowerCase()} no cuadra («${tramo}»): la hora de empezar va antes que la de acabar.`);
+      return [a, b] as [string, string];
+    });
+  });
+  return Object.keys(out).length ? out : null;
+}

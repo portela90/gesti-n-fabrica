@@ -4,6 +4,7 @@ import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
 import { PorOperario } from './PorOperario';
+import { Horas, MisHoras } from './Horas';
 import {
   Anio, fechaCorta, Leyenda, ListaDias, periodo, personal, textoError,
   type Dia, type Vacacion,
@@ -22,7 +23,7 @@ interface Envio {
     horas_anuales?: number | null; horas?: number | null };
 }
 
-type Pestana = 'mio' | 'calendario' | 'vacaciones' | 'firmas';
+type Pestana = 'mio' | 'mis-horas' | 'calendario' | 'vacaciones' | 'firmas' | 'horas';
 const ANIO_ACTUAL = new Date().getFullYear();
 const DIAS_SEMANA: [number, string][] = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
 const leer = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
@@ -66,12 +67,14 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
   const { empresa, puede } = useSesion();
   const pestanas = ([
     ['mio', 'Mi calendario', true],
+    ['mis-horas', 'Mis horas', !puede('personal.horas.editar')],
     ['calendario', 'Calendario', puede('personal.calendario.ver')],
     ['vacaciones', 'Vacaciones', puede('personal.calendario.ver')],
     ['firmas', 'Firmas', puede('personal.firma.ver') || puede('personal.firma.enviar')],
+    ['horas', 'Horas', puede('personal.horas.editar')],
   ] as [Pestana, string, boolean][]).filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
-  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.length > 1 ? 'calendario' : 'mio');
+  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.some((p) => p[0] === 'calendario') ? 'calendario' : 'mio');
   const [anio, setAnio] = useState(ANIO_ACTUAL);
   const [cals, recargar] = useCalendarios(anio);
   const [calId, setCalId] = useState<string>('');
@@ -85,7 +88,7 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
 
   if (!empresa) return null;
   const cal = cals?.find((c) => c.id === calId) ?? null;
-  const elegir = actual !== 'mio' && (
+  const elegir = !['mio', 'mis-horas', 'horas'].includes(actual) && (
     <>
       <div className="filtros">
         <label className="campo"><span>Año</span>
@@ -115,11 +118,13 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
         </nav>
       )}
       {elegir}
-      {actual !== 'mio' && actual !== 'calendario' && cals?.length === 0 && (
+      {!['mio', 'mis-horas', 'horas', 'calendario'].includes(actual) && cals?.length === 0 && (
         <div className="vacio"><p><b>Todavía no hay calendarios de {anio}.</b></p>
           <p>Crea uno para cada grupo de gente que trabaja igual (por ejemplo «Semana {anio}» y «Fin de semana {anio}»).</p>
           {editable && <button type="button" className="boton" onClick={() => setEditando('nuevo')}>Crear calendario</button>}</div>)}
       {actual === 'mio' && <MiCalendario />}
+      {actual === 'mis-horas' && <MisHoras />}
+      {actual === 'horas' && <Horas />}
       {actual === 'calendario' && cals && <PorOperario key={anio} anio={anio} cals={cals} recargar={recargar} />}
       {actual === 'vacaciones' && cal && <Vacaciones key={cal.id} anio={anio} equipo={cal} />}
       {actual === 'firmas' && cal && <Firmas key={cal.id} anio={anio} equipo={cal} />}
