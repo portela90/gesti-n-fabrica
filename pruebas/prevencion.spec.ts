@@ -433,7 +433,7 @@ test('formación en el puesto (F40R304): el jefe la hace a Bruno, Bruno la firma
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
   await page.goto('./#/m/prevencion/documentos');
-  await page.getByRole('button', { name: 'Formación', exact: true }).click();
+  await page.getByLabel('Documento', { exact: true }).selectOption('formacion');
   await page.getByRole('button', { name: '＋ Formación en el puesto' }).click();
   await page.getByRole('dialog').getByLabel('Bruno Prueba').check();
   await page.getByLabel('Duración').fill('2 h');
@@ -445,8 +445,8 @@ test('formación en el puesto (F40R304): el jefe la hace a Bruno, Bruno la firma
   await expect(page.getByText('Guardado y enviado a firmar')).toBeVisible();
   expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'formacion', persona_id: BRUNO, datos: { items: [1, 2, 3, 4, 5, 6], duracion: '2 h', otros6: 'Uso de la fregadora', impartida: 'Jefa Prueba' } });
   sim.tablas.documentos[0].nombre = 'Bruno Prueba'; // en la base de datos de verdad lo pone ella sola
-  await page.getByRole('button', { name: 'EPI', exact: true }).click();
-  await page.getByRole('button', { name: 'Formación', exact: true }).click();
+  await page.getByLabel('Documento', { exact: true }).selectOption('epi');
+  await page.getByLabel('Documento', { exact: true }).selectOption('formacion');
   await page.locator('.fila', { hasText: 'Bruno Prueba' }).click();
   await expect(page.getByRole('dialog').getByText('Limpieza y conservación de maquinaria')).toBeVisible();
   await page.getByRole('button', { name: 'Firmar aquí' }).click();
@@ -478,4 +478,80 @@ test('entrega de información (FP-022): se hace a Ana, la lee en su móvil y la 
   await firmarConElDedo(page);
   await page.getByRole('button', { name: 'Firmar', exact: true }).click();
   await expect(page.getByText('Tienes un documento de prevención por firmar.')).toHaveCount(0);
+});
+
+test('EPI de altura (FO-072): entrega a Ana con número de serie; su PDF oficial', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/documentos');
+  await page.getByLabel('Documento', { exact: true }).selectOption('epi_col');
+  await page.getByRole('button', { name: '＋ EPI de altura' }).click();
+  await page.getByRole('dialog').getByLabel('Ana Prueba').check();
+  await page.getByLabel('Arnés de seguridad anticaída (EN 361; EN 354)').check();
+  await page.getByLabel('Nº de serie de Arnés de seguridad anticaída (EN 361; EN 354)').fill('AR-123');
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByText('Guardado', { exact: true })).toBeVisible();
+  expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'epi_col', persona_id: ANA, datos: { items: { arnes: { serie: 'AR-123' } } } });
+  sim.tablas.documentos[0].nombre = 'Ana Prueba';
+  Object.assign(sim.tablas.documentos[0], { firma_id: 'fi1', firmado_en: `${ANIO}-03-03T10:00:00Z` });
+  await page.getByLabel('Documento', { exact: true }).selectOption('epi');
+  await page.getByLabel('Documento', { exact: true }).selectOption('epi_col');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  expect((await descarga).suggestedFilename()).toContain('SH-CORP-SP-FO-072');
+  expect(errores).toEqual([]);
+});
+
+test('autorización de maquinaria: el jefe autoriza a Ana y ella la lee y firma', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/documentos');
+  await page.getByLabel('Documento', { exact: true }).selectOption('autoriz');
+  await page.getByRole('button', { name: '＋ Autorización de maquinaria' }).click();
+  await page.getByRole('dialog').getByLabel('Ana Prueba').check();
+  await page.getByLabel('Carretilla elevadora').check();
+  await page.getByLabel('Otros equipos (separados por comas)').fill('Barredora pequeña');
+  await page.getByRole('button', { name: 'Guardar y enviar' }).click();
+  await expect(page.getByText('Guardado y enviado a firmar')).toBeVisible();
+  expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'autoriz', datos: { maquinas: ['Carretilla elevadora', 'Barredora pequeña'], autoriza: 'Jefa Prueba · Responsable' } });
+});
+
+test('revisión del botiquín: se apunta, firman quien revisa y quien supervisa, se cierra y sale el PDF', async ({ page }) => {
+  const errores = vigilar(page);
+  page.on('dialog', (d) => d.accept());
+  const t = tablas();
+  t.ajustes.push({ id: 'aj8', empresa_id: UNIDAD, centro_id: null, modulo: 'prevencion', clave: 'firma_formador', valor: PNG });
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...t, documentos: [] }, rpc: { ...rpcEntregas,
+    cerrar_botiquin: (b: Record<string, unknown>, tb: Record<string, Record<string, unknown>[]>) => { tb.documentos.find((d) => d.id === b.p_documento)!.firmado_en = new Date().toISOString(); return null; } } });
+  await page.goto('./#/m/prevencion/documentos');
+  await page.getByLabel('Documento', { exact: true }).selectOption('botiquin');
+  await page.getByRole('button', { name: '＋ Revisión del botiquín' }).click();
+  await expect(page.getByRole('dialog').getByText('Trabajadores')).toHaveCount(0);
+  await page.getByLabel('Ubicación').fill('Vestuario');
+  await page.getByLabel('Cantidad de Vendas').fill('3');
+  await page.getByRole('group', { name: '¿Vendas en buen estado?' }).getByRole('button', { name: 'No' }).click();
+  await page.getByLabel('Supervisado por (gestor de servicios)').fill('Gestor Inventado');
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Guardar', exact: true }).click();
+  await expect(page.getByText('Guardado', { exact: true })).toBeVisible();
+  const bot = sim.tablas.documentos[0];
+  expect(bot).toMatchObject({ tipo: 'botiquin', datos: { ubicacion: 'Vestuario', supervisa: 'Gestor Inventado' } });
+  expect(bot.persona_id).toBeUndefined();
+  expect((bot.datos as { items: { a?: string; ok?: boolean }[] }).items[4]).toEqual({ a: '3', ok: false });
+  await page.locator('.fila', { hasText: 'Vestuario' }).click();
+  await expect(page.getByRole('dialog').getByText('Material con NO:')).toBeVisible();
+  await page.getByRole('button', { name: 'Usar mi firma guardada' }).click();
+  await expect(page.getByText('Firma puesta')).toBeVisible();
+  await page.getByRole('button', { name: 'Firmar aquí' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Guardar la firma' }).click();
+  await page.getByRole('button', { name: 'Cerrar la revisión' }).click();
+  await expect(page.getByText('Revisión cerrada')).toBeVisible();
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  expect((await descarga).suggestedFilename()).toContain('SH-CORP-SP-FO-018');
+  expect(errores).toEqual([]);
 });

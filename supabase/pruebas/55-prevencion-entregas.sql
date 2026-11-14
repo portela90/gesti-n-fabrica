@@ -134,6 +134,27 @@ update prevencion.documentos set evaluacion = '{"eficaz":true}';
 select pruebas.ok((select evaluacion->>'eficaz' from prevencion.documentos where tipo = 'formacion') = 'false', 'el trabajador no se pone la evaluación');
 select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
 
+-- ---------- botiquín: lo firman quien revisa y quien supervisa; cerrado no cambia ----------
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+insert into prevencion.documentos (empresa_id, tipo, fecha, datos) values ('55555555-0000-0000-0000-000000000001', 'botiquin', '2031-04-02',
+  jsonb_build_object('ubicacion', 'Vestuario', 'items', '[]'::jsonb, 'firma_realiza', 'data:image/png;base64,' || repeat('A', 30000)));
+insert into ids select 'bot', id from prevencion.documentos where tipo = 'botiquin';
+select pruebas.ok(pruebas.cuantas($q$select * from prevencion.documentos where tipo = 'botiquin'$q$) = 1, 'el botiquín no es de ningún trabajador y cabe una firma dibujada');
+select pruebas.falla($q$insert into prevencion.documentos (empresa_id, tipo, persona_id, datos) values ('55555555-0000-0000-0000-000000000001', 'epi', '55555555-0000-0000-0000-0000000000f1', jsonb_build_object('x', repeat('A', 30000)))$q$,
+  'pero una entrega de EPI no puede ser tan grande');
+select pruebas.falla($q$select prevencion.cerrar_botiquin((select v from ids where k = 'bot'))$q$, 'sin la firma de quien supervisa no se cierra');
+update prevencion.documentos set datos = datos || '{"firma_supervisa":"data:image/png;base64,BBBB"}' where id = (select v from ids where k = 'bot');
+select prevencion.cerrar_botiquin((select v from ids where k = 'bot'));
+select pruebas.ok((select firmado_en is not null from prevencion.documentos where id = (select v from ids where k = 'bot')), 'con las dos firmas se cierra');
+select pruebas.falla($q$update prevencion.documentos set datos = datos || '{"ubicacion":"Otro"}' where id = (select v from ids where k = 'bot')$q$, 'cerrado: no se cambia');
+select pruebas.falla($q$delete from prevencion.documentos where id = (select v from ids where k = 'bot')$q$, 'cerrado: no se borra');
+select prevencion.anular_documento((select v from ids where k = 'bot'));
+select pruebas.ok((select anulado is not null from prevencion.documentos where id = (select v from ids where k = 'bot')), 'cerrado: se puede anular');
+select pruebas.falla($q$select prevencion.firmar_documento((select v from ids where k = 'bot'), 'data:image/png;base64,AAAA')$q$, 'el botiquín no lo firma un trabajador');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005f1', true);
+select pruebas.ok(pruebas.cuantas($q$select * from prevencion.documentos where tipo = 'botiquin'$q$) = 0, 'la trabajadora no ve los botiquines');
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-0000000005a1', true);
+
 -- ---------- historial ----------
 select pruebas.ok(pruebas.cuantas($q$select * from nucleo.historial where modulo = 'prevencion' and tabla = 'documentos'$q$) >= 3, 'las entregas quedan en el historial');
 rollback;

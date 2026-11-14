@@ -152,9 +152,16 @@ que cuadra antes de dejar la app vieja en solo consulta.
    - **Arreglo 14/11**: `tsc -b` sin `noEmit` había dejado archivos .js compilados junto a los .tsx (y
      vite.config.js), y se subieron en dos commits. Vite coge el .js antes que el .tsx, así que podían quedar
      pantallas viejas. Borrados, `noEmit` en tsconfig y en .gitignore.
+   - **EPI de altura (FO-072), revisión del botiquín (FO-018) y autorización de maquinaria** (14/11, paso 4):
+     `0019_prevencion_botiquin.sql` (**PENDIENTE de pegar**). Van en `prevencion.documentos` (tipos epi_col,
+     botiquin, autoriz). El botiquín no es de ningún trabajador: las firmas de quien revisa y quien supervisa van
+     en `datos` (más sitio: 400 KB) y `cerrar_botiquin` lo cierra; cerrado = como firmado (no cambia, solo se anula).
+     En «Documentos» ahora se elige el tipo en una lista. PDF: `epiAltura.ts` (hasta 4 entregas del mismo
+     trabajador por hoja), `botiquin.ts`, `autorizacion.ts` (sin plantilla, como la app vieja). Próxima revisión
+     del botiquín = 3 meses. En «Datos por defecto»: quién supervisa el botiquín.
    - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
-     ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; 4) EPI de altura (FO-072), botiquín (FO-018)
-     y autorización de maquinaria; 5) certificados de cursos y expediente PRL en PDF.
+     ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; ~~4) EPI de altura (FO-072), botiquín (FO-018)
+     y autorización de maquinaria~~ hecho; 5) certificados de cursos y expediente PRL en PDF.
    - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a
      proyecto que pegando SQL).
 5. **Decidido 13/11: los operarios cambian de app UNA sola vez**, cuando la app nueva tenga Personal, Prevención y

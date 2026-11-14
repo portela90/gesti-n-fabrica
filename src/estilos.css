@@ -275,3 +275,10 @@ button.dia { cursor: pointer; }
 .linea-epi .cats { display: flex; flex-wrap: wrap; gap: 4px 12px; flex: 1 1 100%; padding-left: 28px; }
 .linea-epi input, .linea-epi select { min-height: 38px; padding: 6px 8px; border: 1px solid var(--linea); border-radius: 8px; font: inherit; background: var(--sup); }
 .propuesta { border: 2px solid #d97706; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
+
+.si-no { display: inline-flex; gap: 4px; flex: 0 0 auto; }
+.si-no button { min-width: 48px; min-height: 38px; border: 1px solid var(--linea); border-radius: 8px; background: var(--sup); font-weight: 600; cursor: pointer; }
+.si-no button[aria-pressed="true"]:first-child { background: #15803d; border-color: #15803d; color: #fff; }
+.si-no button[aria-pressed="true"]:last-child { background: #b91c1c; border-color: #b91c1c; color: #fff; }
+.linea-epi .texto-linea { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+.linea-epi .serie { width: 120px; }

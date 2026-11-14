@@ -172,7 +172,8 @@ function SubirDelAnio({ anio, archivos, charlas, sesiones, alCerrar, alSubir }: 
 const CLAVES_AJUSTES = [['centro', 'Lugar donde se da'], ['duracion', 'Duración (minutos)'], ['formador', 'Formador'],
   ['correo_prl', 'Correo del técnico de prevención (para enviarle el mes)'], ['correo_prl_nombre', 'Nombre del técnico de prevención'],
   ['empresa', 'Empresa (sale en el asunto del correo y en la entrega de información)'], ['direccion', 'Dirección de servicio (formación en el puesto)'],
-  ['enlace_info', 'Enlace a la información de prevención para el trabajador (entrega de información)']] as const;
+  ['enlace_info', 'Enlace a la información de prevención para el trabajador (entrega de información)'],
+  ['supervisa_botiquin', 'Quién supervisa la revisión del botiquín (gestor de servicios)']] as const;
 function Ajustes({ alCerrar }: { alCerrar: () => void }) {
   const { empresa } = useSesion();
   const actuales = useAjustes();
