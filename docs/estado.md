@@ -192,7 +192,7 @@ no hay más encargados que ese y Abdoul kader (fin de semana); el encargado crea
 «pedir quedarse» lo acepta siempre el administrador; el operario solo ve quién comparte su mismo trabajo; se fichan
 también las pausas; sin modo sencillo; nadie con solo lectura por ahora.
 
-### 2.1 Base: tareas y checklists (14/11) — SIN APLICAR
+### 2.1 Base: tareas y checklists (14/11) — APLICADO 14/11 (0021, `limpieza` expuesto con `public` el primero y copia de datos; comprobado)
 - `0021_limpieza_base.sql`: esquema `limpieza` con `tareas` (fijas: días, equipo, turno, quién / todo el equipo;
   habituales: grupo, solo para; las dos: máquina, zona, sitio, minutos, artículo y cantidad para la fase 3) y
   `plantillas` (checklists «del encargado» o «al terminar trabajos», con códigos de máquina tipo `F*`, palabras que
