@@ -3,6 +3,7 @@ import { MODULOS, moduloPorCodigo } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
 import { Personal } from '../personal/Personal';
 import { Prevencion } from '../prevencion/Prevencion';
+import { Limpieza } from '../limpieza/Limpieza';
 
 /** Elegir unidad de trabajo (en la base de datos, «empresa»): solo si tiene más de una y aún no ha elegido. */
 export function ElegirEmpresa() {
@@ -74,6 +75,7 @@ export function PantallaModulo({ codigo, ruta, ir }: { codigo: string; ruta: str
   }
   if (codigo === 'personal') return <Personal ruta={ruta} ir={ir} />;
   if (codigo === 'prevencion') return <Prevencion ruta={ruta} ir={ir} />;
+  if (codigo === 'limpieza') return <Limpieza ruta={ruta} ir={ir} />;
   return (
     <main className="contenido estrecho" style={{ ['--area' as string]: m.color }}>
       <h1 className="titulo con-icono"><span className="mosaico-icono"><Icono d={m.icono} /></span>{m.nombre}</h1>

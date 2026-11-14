@@ -185,6 +185,33 @@ que cuadra antes de dejar la app vieja en solo consulta.
    Limpieza. Hasta entonces siguen con las apps viejas; ese día se vuelven a traer y comparar los datos y se les da el
    código de alta a todos. Las apps viejas quedan en solo consulta.
 
+## Fase 2 (Limpieza): EN CURSO
+Plan por pantallas y roles acordado con Cristian el 14/11 (documento «Fase 2 · Limpieza: pantallas por rol» en Claude).
+Decidido: «Encargado hornos» es un encargado (una persona, sale con el puesto) que reparte a Juan José y Freddy;
+no hay más encargados que ese y Abdoul kader (fin de semana); el encargado crea trabajos sueltos y reparte;
+«pedir quedarse» lo acepta siempre el administrador; el operario solo ve quién comparte su mismo trabajo; se fichan
+también las pausas; sin modo sencillo; nadie con solo lectura por ahora.
+
+### 2.1 Base: tareas y checklists (14/11) — SIN APLICAR
+- `0021_limpieza_base.sql`: esquema `limpieza` con `tareas` (fijas: días, equipo, turno, quién / todo el equipo;
+  habituales: grupo, solo para; las dos: máquina, zona, sitio, minutos, artículo y cantidad para la fase 3) y
+  `plantillas` (checklists «del encargado» o «al terminar trabajos», con códigos de máquina tipo `F*`, palabras que
+  excluyen y tareas habituales; puntos bien/mal o número con mínimo y foto si está mal). No se borra: se da de baja.
+  Permisos `limpieza.plan.ver` (encargado y solo lectura, por `limpieza.*.ver`) y `limpieza.plan.editar` (administrador).
+  El operario no las ve: cada trabajo llevará su copia de la checklist.
+- Naves, zonas y máquinas son del núcleo (Configuración). Las inyectoras de la unidad Limpieza son una copia de las
+  de la fábrica (como hoy, que están en otro proyecto).
+- Pantalla `src/limpieza/Limpieza.tsx`: pestañas Tareas (Fijas / Habituales) y Checklists, con «Sale en: F4, F10…».
+- Pruebas: `supabase/pruebas/60-limpieza-base.sql` (24) y `pruebas/limpieza.spec.ts` (6).
+- Copia de la app vieja preparada en `/home/claude/sql/limpieza_base_datos.sql` (generada por `gen_limpieza.py`;
+  ensayada dos veces en una base de usar y tirar, la segunda no repite nada): 2 naves, 3 turnos (Partido, Refuerzo,
+  Tarde, sin horas), 72 máquinas (30 inyectoras, 33 hornos `H-Fxx`, M3–M11 como centros de mecanizado), 12 zonas,
+  16 fijas, 19 habituales y 9 checklists (5 de `enc_check_punto` y 4 de los puntos de cada horno o inyectora).
+  En la vieja, «F30» estaba como horno sin puntos: se trae como inyectora. Los artículos de almacén de las
+  habituales (`alm_art`) no se traen todavía (fase 3); los consumos siguen saliendo de la app vieja.
+- Orden para aplicarlo: 1) pegar 0021; 2) añadir `limpieza` a Exposed schemas (con `public` el primero, en un solo
+  guardado); 3) pegar la copia de datos; 4) subir la app.
+
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).
 - Fin de semana 2027: solo existe el **relevo B** (la columna A del Excel no es nadie). Del Excel:
