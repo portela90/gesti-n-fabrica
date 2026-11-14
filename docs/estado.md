@@ -133,7 +133,17 @@ que cuadra antes de dejar la app vieja en solo consulta.
      incluye el sha256 del PDF. En pantalla: «Subir documentos del año» (varios PDF a la vez, reconoce el mes por el
      nombre y se puede corregir), y en cada mes «Subir el PDF del técnico». El trabajador lo abre antes de firmar.
      El PDF oficial y el envío a prevención llevan detrás el PDF del técnico (pdf-lib). Código en `src/prevencion/documentos.ts`.
-   - Orden decidido por Cristian (14/11) para lo que falta: 2) Entrega de EPI (FO-014) unida a las tallas;
+   - **Entrega de EPI (FO-014) + tallas** (14/11, paso 2): `0017_prevencion_entregas.sql` (**PENDIENTE de pegar**):
+     tabla `prevencion.documentos` (genérica: tipo epi y luego epi_col, info, autoriz, botiquin), firmada no cambia ni
+     se borra (solo se anula, con `firma.anular`), la firma solo con `firmar_documento` (el trabajador si se le ha
+     enviado, o quien tenga `firma.recoger`), `enviar_documentos`, `anular_documento`; permisos
+     `prevencion.documento.ver/editar` (encargado: los dos; solo lectura: ver). Tallas: `fichas.tallas_propuestas` +
+     `proponer_tallas` (el trabajador propone; en su ficha se aceptan o rechazan). En pantalla: pestaña «Entregas de
+     EPI» (nueva entrega para varios a la vez, equipos de la hoja oficial con unidades, categorías y motivo, ropa con
+     las prendas de la unidad; enviar, firmar aquí, anular, PDF oficial y PDF de todas). El trabajador ve en «Mis
+     charlas» lo que tiene por firmar y «Mis tallas». PDF: `src/prevencion/epi.ts` (mismas posiciones que la app
+     vieja sobre la plantilla). En «Datos por defecto», el sello de la empresa (foto, sin fondo blanco).
+   - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
      3) Formación en el puesto (F40R304) y entrega de información (FP-022); 4) EPI de altura (FO-072), botiquín (FO-018)
      y autorización de maquinaria; 5) certificados de cursos y expediente PRL en PDF.
    - Datos de la app vieja (`prl_*`): se traen el día del cambio, con las firmas (son imágenes: mejor de proyecto a

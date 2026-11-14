@@ -320,3 +320,110 @@ test('auditoría: en la ficha de la trabajadora están los documentos que ha fir
   await expect(page.getByRole('button', { name: 'Cambiar el contenido' })).toHaveCount(0);
   expect(errores).toEqual([]);
 });
+
+// ---------------------------------------------------------------------------------------------
+// Entregas de EPI (FO-014) y tallas
+// ---------------------------------------------------------------------------------------------
+const rpcEntregas = {
+  ...rpc,
+  enviar_documentos: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    const ds = t.documentos.filter((d) => (b.p_ids as string[]).includes(String(d.id)));
+    ds.forEach((d) => { d.enviado_en ??= new Date().toISOString(); });
+    return ds.filter((d) => !d.firma_id).length;
+  },
+  firmar_documento: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    if (!String(b.p_imagen).startsWith('data:image/png;base64,')) throw new Error('FIRMA_MAL');
+    t.firmas.push({ id: 'fi-d', imagen: b.p_imagen, firmado_en: new Date().toISOString() });
+    Object.assign(t.documentos.find((d) => d.id === b.p_documento)!, { firma_id: 'fi-d', firmado_en: new Date().toISOString() });
+    return 'fi-d';
+  },
+  anular_documento: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    Object.assign(t.documentos.find((d) => d.id === b.p_documento)!, { anulado: new Date().toISOString() }); return null; },
+  proponer_tallas: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => {
+    Object.assign(t.fichas.find((f) => f.persona_id === ANA)!, { tallas_propuestas: b.p_tallas, tallas_propuestas_en: new Date().toISOString() }); return null; },
+};
+const JEFE_EPI = [...JEFE, 'prevencion.documento.ver', 'prevencion.documento.editar'];
+const entrega = (extra = {}) => ({
+  id: 'do-1', empresa_id: UNIDAD, tipo: 'epi', persona_id: ANA, nombre: 'Ana Prueba', fecha: `${ANIO}-03-02`,
+  datos: { items: { bota: { u: '1', cat: ['Agua'], motivo: 'Primera entrega' } }, otros: [{ t: 'Pantalón de trabajo', u: '2', motivo: 'Cambio de talla' }], lugar: 'Planta D' },
+  enviado_en: `${ANIO}-03-02T08:00:00Z`, firma_id: null, firmado_en: null, anulado: null, creado: `${ANIO}-03-02T08:00:00Z`, ...extra,
+});
+
+test('el encargado hace una entrega de EPI a Ana y a Bruno y la envía a firmar', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true, sesion: sesion([...ENCARGADO, 'prevencion.documento.ver', 'prevencion.documento.editar'], 'Encargado Prueba'), tablas: { ...tablas(), documentos: [] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/entregas');
+  await page.getByRole('button', { name: '＋ Entrega de EPI' }).click();
+  await page.getByRole('dialog').getByLabel('Ana Prueba').check();
+  await page.getByRole('dialog').getByLabel('Bruno Prueba').check();
+  await page.getByLabel('Bota (EN ISO 20345)').check();
+  await page.getByRole('dialog').locator('.linea-epi', { hasText: 'Bota (EN ISO 20345)' }).getByLabel('Agua').check();
+  await page.getByLabel('Prenda 1', { exact: true }).fill('Pantalón de trabajo');
+  await page.getByLabel('Unidades de la prenda 1').fill('2');
+  await page.setViewportSize({ width: 320, height: 640 });
+  expect(await desbordes(page)).toEqual([]);
+  await page.getByRole('button', { name: 'Guardar y enviar' }).click();
+  await expect(page.getByText('Guardada y enviada a firmar')).toBeVisible();
+  expect(sim.tablas.documentos).toHaveLength(2);
+  expect(sim.tablas.documentos[0]).toMatchObject({ tipo: 'epi', empresa_id: UNIDAD, datos: { items: { bota: { u: '1', cat: ['Agua'], motivo: 'Primera entrega' } }, otros: [{ t: 'Pantalón de trabajo', u: '2' }] } });
+  expect(sim.tablas.documentos.every((d) => d.enviado_en)).toBe(true);
+  expect(errores).toEqual([]);
+});
+
+test('entrega de EPI: el jefe recoge la firma en su móvil y saca el PDF oficial FO-014', async ({ page }) => {
+  const errores = vigilar(page);
+  const t = tablas();
+  await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...t, documentos: [entrega()] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/entregas');
+  await expect(page.locator('.fila', { hasText: 'Ana Prueba' })).toContainText('Sin firmar');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  await page.getByRole('button', { name: 'Firmar aquí' }).click();
+  await page.getByRole('button', { name: 'He recibido los equipos, firmar' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await expect(page.getByText('Firmada', { exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Borrar' })).toHaveCount(0);
+  const descarga = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF oficial' }).click();
+  const d = await descarga;
+  expect(d.suggestedFilename()).toBe(`SH-CORP-SP-FO-014 Entrega de EPI Ana Prueba ${ANIO}-03-02.pdf`);
+  const bytes = await (await import('node:fs/promises')).readFile(await d.path());
+  const { PDFDocument } = await import('pdf-lib');
+  expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
+  expect(errores).toEqual([]);
+});
+
+test('la trabajadora firma su entrega de EPI y propone sus tallas; el jefe las acepta en su ficha', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(['prevencion.modulo.ver', 'prevencion.tarea.ver'], 'Ana Prueba'), tablas: { ...tablas(), asistencias: [], documentos: [entrega()] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion');
+  await expect(page.getByText('Tienes una entrega de EPI por firmar.')).toBeVisible();
+  await page.locator('.fila', { hasText: 'Entrega de EPI' }).click();
+  await expect(page.getByText('Bota (EN ISO 20345) · 1 ud. · Agua · Primera entrega')).toBeVisible();
+  await page.getByRole('button', { name: 'He recibido los equipos, firmar' }).click();
+  await firmarConElDedo(page);
+  await page.getByRole('button', { name: 'Firmar', exact: true }).click();
+  await expect(page.getByText('Tienes una entrega de EPI por firmar.')).toHaveCount(0);
+  await page.locator('.fila', { hasText: 'Toca para cambiarlas' }).click();
+  await page.getByLabel('Botas').fill('41');
+  await page.getByRole('button', { name: 'Enviar' }).click();
+  await expect(page.getByText('Tallas enviadas')).toBeVisible();
+  expect(sim.tablas.fichas.find((f) => f.persona_id === ANA)).toMatchObject({ tallas: { pantalon: 'L' }, tallas_propuestas: { pantalon: 'L', bota: '41' } });
+});
+
+test('ficha: tallas propuestas por la trabajadora y su entrega de EPI firmada entre sus documentos', async ({ page }) => {
+  const t = tablas();
+  t.fichas[0] = { ...t.fichas[0], tallas_propuestas: { pantalon: 'L', bota: '41' } } as typeof t.fichas[0];
+  const sim = await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), rpc: rpcEntregas,
+    tablas: { ...t, documentos: [entrega({ firma_id: 'fi1', firmado_en: `${ANIO}-03-03T10:00:00Z` })] } });
+  await page.goto('./#/m/prevencion/fichas');
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  await expect(page.locator('.propuesta')).toContainText('Botas: — → 41');
+  await page.getByRole('button', { name: 'Aceptar' }).click();
+  await expect(page.getByText('Tallas aceptadas')).toBeVisible();
+  expect(sim.tablas.fichas.find((f) => f.persona_id === ANA)).toMatchObject({ tallas: { pantalon: 'L', bota: '41' }, tallas_propuestas: null });
+  await page.locator('.fila', { hasText: 'Ana Prueba' }).click();
+  await expect(page.locator('.firmados')).toContainText(`Entrega de EPI · 2/3/${ANIO}`);
+  const descarga = page.waitForEvent('download');
+  await page.locator('.firmados .fila', { hasText: 'Entrega de EPI' }).getByRole('button', { name: 'PDF' }).click();
+  expect((await descarga).suggestedFilename()).toContain('SH-CORP-SP-FO-014');
+});

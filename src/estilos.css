@@ -250,8 +250,26 @@ button.dia { cursor: pointer; }
 .pasos-envio ol { margin: 0 0 4px; padding-left: 20px; font-size: 14px; line-height: 1.5; }
 
 /* Documento del técnico de prevención */
-.documento-tecnico { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; margin: 0 0 12px; border: 1px solid var(--borde, #ddd); border-radius: 10px; }
+.documento-tecnico { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; padding: 12px; margin: 0 0 12px; border: 1px solid var(--linea); border-radius: 10px; }
 .documento-tecnico span { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
 .subir-doc { flex-wrap: wrap; }
 .subir-doc .fila-txt b { overflow-wrap: anywhere; }
 .subir-doc select { flex: 0 0 auto; }
+
+/* Entregas de EPI */
+.grupo-epi { border: 1px solid var(--linea); border-radius: 10px; padding: 8px 12px 10px; margin: 0 0 12px; min-width: 0; }
+.grupo-epi legend { font-weight: 700; padding: 0 4px; }
+.grupo-epi legend small { font-weight: 400; color: var(--tinta2); }
+.marca { display: flex; align-items: center; gap: 8px; min-height: 36px; cursor: pointer; overflow-wrap: anywhere; }
+.marca input { width: 20px; height: 20px; flex: 0 0 auto; }
+.marca.peq { min-height: 30px; font-size: .92em; }
+.linea-epi { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; padding: 4px 0; border-top: 1px solid var(--linea); }
+.linea-epi:first-of-type { border-top: 0; }
+.linea-epi > .marca { flex: 1 1 200px; min-width: 0; }
+.linea-epi .ud { width: 72px; flex: 0 0 auto; }
+.linea-epi .otro { flex: 1 1 160px; min-width: 0; }
+.linea-epi .motivo { display: flex; flex-wrap: wrap; gap: 6px; flex: 1 1 100%; padding-left: 28px; min-width: 0; }
+.linea-epi .motivo select, .linea-epi .motivo input { flex: 1 1 140px; min-width: 0; }
+.linea-epi .cats { display: flex; flex-wrap: wrap; gap: 4px 12px; flex: 1 1 100%; padding-left: 28px; }
+.linea-epi input, .linea-epi select { min-height: 38px; padding: 6px 8px; border: 1px solid var(--linea); border-radius: 8px; font: inherit; background: var(--sup); }
+.propuesta { border: 2px solid #d97706; border-radius: 10px; padding: 10px 12px; margin: 0 0 12px; }
