@@ -194,6 +194,8 @@ button.dia { cursor: pointer; }
 
 /* ---------- Prevención: charlas y fichas ---------- */
 .segmentos.tres { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.segmentos button { min-width: 0; padding: 0 4px; overflow-wrap: anywhere; }
+.segmentos.tres button { font-size: 14px; }
 .segmentos button:disabled { opacity: .45; cursor: default; }
 .charla img { display: block; width: 100%; max-height: 260px; object-fit: contain; border-radius: 12px; margin: 0 0 12px; background: var(--fondo); }
 .charla p { margin: 0 0 10px; }
