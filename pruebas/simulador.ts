@@ -137,7 +137,12 @@ export async function simular(page: Page, op: Opciones = {}) {
 export async function desbordes(page: Page) {
   return page.evaluate(() => {
     const W = document.documentElement.clientWidth, out: string[] = [];
-    if (document.documentElement.scrollWidth > W + 1) out.push('la página es más ancha que la pantalla');
+    if (document.documentElement.scrollWidth > W + 1) {
+      // qué la ensancha (también lo que no tiene offsetParent), para poder arreglarlo
+      const culpables = [...document.querySelectorAll('body *')].map((e) => [e, e.getBoundingClientRect()] as const)
+        .filter(([, r]) => r.width && r.right > W + 1).slice(-3).map(([e, r]) => `${e.tagName}.${(e as HTMLElement).className} ${Math.round(r.left)}→${Math.round(r.right)}`);
+      out.push(`la página es más ancha que la pantalla (${document.documentElement.scrollWidth} > ${W}: ${culpables.join(' | ') || '¿?'})`);
+    }
     document.querySelectorAll('body *').forEach((e) => {
       const el = e as HTMLElement;
       if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return;
