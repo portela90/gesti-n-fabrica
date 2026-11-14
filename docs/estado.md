@@ -117,6 +117,8 @@ que cuadra antes de dejar la app vieja en solo consulta.
      `sesiones.prev_enviado_en/prev_destino/prev_por`; se puede apuntar con la sesión cerrada). En «Datos por defecto»:
      correo y nombre del técnico, empresa y **firma del formador** (sale en el PDF). El envío **automático** (Gmail
      desde el servidor, como la app vieja) queda para cuando Cristian ponga la cuenta de envío como secreto en Supabase.
+   - **Charlas de 2026 traídas de la app vieja** (14/11, metidas por Claude con el «sí» de Cristian): 10 meses (sin junio
+     ni agosto) en `prevencion.charlas` de la unidad `cie`, con texto e imagen (md5 comprobado igual que el original).
    - **Documentos del técnico** (14/11, pedido por Cristian: «que solo suba yo los documentos a la app», cada año sin
      programar): `0015_prevencion_documentos.sql` (**PENDIENTE de pegar**): almacén de archivos (bucket privado
      `prevencion`, solo PDF, 20 MB; ruta `<unidad>/charlas/<año>-<mes>-<marca>.pdf`, cada subida es un archivo nuevo),
