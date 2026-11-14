@@ -153,7 +153,7 @@ que cuadra antes de dejar la app vieja en solo consulta.
      vite.config.js), y se subieron en dos commits. Vite coge el .js antes que el .tsx, así que podían quedar
      pantallas viejas. Borrados, `noEmit` en tsconfig y en .gitignore.
    - **EPI de altura (FO-072), revisión del botiquín (FO-018) y autorización de maquinaria** (14/11, paso 4):
-     `0019_prevencion_botiquin.sql` (**PENDIENTE de pegar**). Van en `prevencion.documentos` (tipos epi_col,
+     `0019_prevencion_botiquin.sql` (APLICADO 14/11, comprobado). Van en `prevencion.documentos` (tipos epi_col,
      botiquin, autoriz). El botiquín no es de ningún trabajador: las firmas de quien revisa y quien supervisa van
      en `datos` (más sitio: 400 KB) y `cerrar_botiquin` lo cierra; cerrado = como firmado (no cambia, solo se anula).
      En «Documentos» ahora se elige el tipo en una lista. PDF: `epiAltura.ts` (hasta 4 entregas del mismo
