@@ -155,6 +155,10 @@ function FormCalendario({ anio, cal, cals, alCerrar, alGuardar }: {
     if (!hd.some((h) => h > 0)) { setError('Pon las horas de los días que se trabaja.'); return; }
     const ha = anuales.trim() === '' ? null : num(anuales);
     if (ha !== null && (Number.isNaN(ha) || ha < 0 || ha > 4000)) { setError('Las horas al año no están bien escritas.'); return; }
+    // quien sale de este calendario se queda sin calendario del año: avisar con nombres antes de hacerlo
+    const salen = (cal?.personas ?? []).filter((id) => !quien.has(id)).map((id) => personas.find((p) => p.id === id)?.nombre ?? 'alguien');
+    if (salen.length && !confirm(`Vas a quitar de «${cal!.nombre}» a ${salen.length === 1 ? salen[0] : `${salen.length} personas (${salen.join(', ')})`}. `
+      + `${salen.length === 1 ? 'Se quedará' : 'Se quedarán'} sin calendario de ${anio}. ¿Seguir?`)) return;
     setOcupado(true); setError(null);
     const fila = { nombre: nombre.trim(), dias_semana: [0, 1, 2, 3, 4, 5, 6].filter((d) => hd[d] > 0), horas_dia: hd, horas_anuales: ha };
     const r = cal ? await personal().from('calendarios').update(fila).eq('id', cal.id).select('id').single()

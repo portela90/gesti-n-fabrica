@@ -171,6 +171,11 @@ que cuadra antes de dejar la app vieja en solo consulta.
      está «Cuadra · sin enviar», «Enviado, sin firmar» o «Firmado», y el que cuadra se envía desde la misma lista
      (uno o varios marcados). En Configuración → Usuarios se ve con qué trabajador está enlazado cada usuario y se
      puede enlazar o cambiar («Enlazar con su ficha»); sin enlace no le sale nada para firmar. Sin migración.
+   - **Incidente 14/11 (14:41)**: en «Para 7 personas · cambiar» de «Semana 2026» se dejó solo a «pruebas» y luego se
+     guardó su calendario encima: los 7 operarios de semana se quedaron sin calendario y sus 12 días especiales se
+     cambiaron. Arreglo de datos preparado en `/home/claude/sql/restaurar_semana_2026.sql` (ensayado con rollback:
+     Semana 2026 = 12 días y 7 personas; el de «pruebas» pasa a «pruebas 2026» con su firma). Pendiente del «sí».
+     En la app: quitar gente de un calendario ahora avisa con sus nombres.
    - Orden decidido por Cristian (14/11) para lo que falta: ~~2) Entrega de EPI (FO-014) unida a las tallas~~ hecho;
      ~~3) Formación en el puesto (F40R304) y entrega de información (FP-022)~~ hecho; ~~4) EPI de altura (FO-072), botiquín (FO-018)
      y autorización de maquinaria~~ hecho; ~~5) certificados de cursos y expediente PRL en PDF~~ hecho. **Prevención completa** (falta traer los datos el día del cambio).

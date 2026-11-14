@@ -308,3 +308,16 @@ test('lista de operarios: se ve si está enviado o firmado, y el que cuadra se e
   expect(await desbordes(page)).toEqual([]);
   expect(errores).toEqual([]);
 });
+
+test('quitar gente de un calendario avisa con sus nombres, y si se cancela no se quita a nadie', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
+  let mensaje = '';
+  page.on('dialog', (d) => { mensaje = d.message(); d.dismiss(); });
+  await page.goto('./#/m/personal/firmas');
+  await page.getByRole('button', { name: /Para 2 personas · cambiar/ }).click();
+  await page.getByRole('dialog').getByLabel('Bruno Prueba').uncheck();
+  await page.getByRole('button', { name: 'Guardar' }).click();
+  await expect.poll(() => mensaje).toContain('Bruno Prueba');
+  expect(mensaje).toContain('sin calendario');
+  expect(sim.some((l) => l.ruta.endsWith('/rpc/poner_personas'))).toBe(false);
+});
