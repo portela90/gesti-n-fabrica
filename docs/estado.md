@@ -256,7 +256,7 @@ mal» está mal); las fijas son de su día y lo creado a mano sigue hasta que se
   salen y, si nadie las hace, se quedan sin hacer.
 - Los operarios aún no pueden entrar (falta el PIN): se prueba con el usuario «pruebas».
 
-### 2.4 Hoy del equipo y repartir (15/11, primera pieza de la parte 4) — SIN APLICAR
+### 2.4 Hoy del equipo y repartir (15/11, primera pieza de la parte 4) — APLICADO 15/11 (0025, comprobado)
 Pedido por Cristian: cambiar a quién le toca un trabajo que ya ha salido hoy.
 - `0025_limpieza_repartir.sql`: permiso `limpieza.trabajo.repartir` (también al encargado de partida);
   `limpieza.repartir` (personas o todo un equipo; solo ese trabajo, no la tarea fija; lo hecho no se reparte);
