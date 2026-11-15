@@ -267,7 +267,7 @@ Pedido por Cristian: cambiar a quién le toca un trabajo que ya ha salido hoy.
 - De momento el encargado reparte entre todos (lo de «Encargado hornos solo su equipo», más adelante).
 - Falta de la parte 4: plan de la semana, limpieza de inyectoras por semana, faltas y sustituciones, reparto automático.
 
-### 2.5 Faltas, sustitutos, reparto automático y plan de la semana (15/11, resto de la parte 4) — SIN APLICAR
+### 2.5 Faltas, sustitutos, reparto automático y plan de la semana (15/11, resto de la parte 4) — APLICADO 15/11 (0026, 0027 y datos, comprobado)
 Decidido por Cristian: si falta y hay sustituto, se lo lleva el sustituto; si no, «Sin asignar». Reparto solo cada mañana.
 Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo» con máquina.
 - `0026_nucleo_ausencias.sql`: `nucleo.ausencias` (copia de personal.vacaciones y de las faltas de horas_dia, por disparadores),
