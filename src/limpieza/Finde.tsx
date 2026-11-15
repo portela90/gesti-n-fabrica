@@ -244,7 +244,7 @@ export function Instrucciones({ jefe }: { jefe: boolean }) {
       <h2 className="subtitulo">Instrucciones para el encargado</h2>
       {lista === null ? <p className="nota">Cargando…</p> : !lista.length ? <p className="nota">No hay instrucciones.</p> : (
         <div className="lista compacta">{lista.map((x) => (
-          <div key={x.id} className={'fila' + (!jefe && !x.leido_en ? ' sin-leer' : '')}>
+          <div key={x.id} className={'fila fila-finde' + (!jefe && !x.leido_en ? ' sin-leer' : '')}>
             <span className="fila-txt"><b>{x.titulo}</b><small>{rango(x)}</small>{x.texto && <span className="texto-largo">{x.texto}</span>}</span>
             {jefe ? <>
               <span className={'chapa ' + (x.leido_en ? 'firmado' : 'pendiente')}>{x.leido_en ? 'Leído' : 'Sin leer'}</span>

@@ -374,3 +374,4 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .punto-enc.mal { border-color: var(--mal); }
 .punto-enc input:not([type="file"]) { width: 100%; min-width: 0; }
 .aviso-instrucciones { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font: inherit; }
+.fila-finde > .fila-txt { flex: 1 1 180px; min-width: 0; }
