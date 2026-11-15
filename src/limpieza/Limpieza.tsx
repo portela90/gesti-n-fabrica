@@ -4,6 +4,7 @@ import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { MiDia } from './MiDia';
 import { Hoy } from './Hoy';
+import { PersonasReparto, Semana } from './Reparto';
 import { useListas, type Listas, type Maquina, type Opcion } from './listas';
 
 /** Tablas de Limpieza (esquema «limpieza»). */
@@ -58,14 +59,15 @@ export function encaja(texto: string, codigos: string | undefined) {
   });
 }
 
-type Pestana = 'hoy' | 'dia' | 'tareas' | 'checklists';
+type Pestana = 'hoy' | 'semana' | 'dia' | 'tareas' | 'checklists' | 'personas';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const ve = puede('limpieza.plan.ver') || puede('limpieza.plan.editar');
   const apunta = puede('limpieza.trabajo.apuntar');
-  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['dia', 'Mi día', apunta], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve]] as [Pestana, string, boolean][])
+  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')], ['dia', 'Mi día', apunta],
+    ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve]] as [Pestana, string, boolean][])
     .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? pestanas[0]?.[0];
@@ -84,6 +86,8 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
       {actual === 'dia' && <MiDia />}
       {actual === 'tareas' && <Tareas />}
       {actual === 'checklists' && <Checklists />}
+      {actual === 'semana' && <Semana />}
+      {actual === 'personas' && <PersonasReparto />}
     </main>
   );
 }

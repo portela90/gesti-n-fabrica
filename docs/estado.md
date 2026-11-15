@@ -267,6 +267,21 @@ Pedido por Cristian: cambiar a quién le toca un trabajo que ya ha salido hoy.
 - De momento el encargado reparte entre todos (lo de «Encargado hornos solo su equipo», más adelante).
 - Falta de la parte 4: plan de la semana, limpieza de inyectoras por semana, faltas y sustituciones, reparto automático.
 
+### 2.5 Faltas, sustitutos, reparto automático y plan de la semana (15/11, resto de la parte 4) — SIN APLICAR
+Decidido por Cristian: si falta y hay sustituto, se lo lleva el sustituto; si no, «Sin asignar». Reparto solo cada mañana.
+Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo» con máquina.
+- `0026_nucleo_ausencias.sql`: `nucleo.ausencias` (copia de personal.vacaciones y de las faltas de horas_dia, por disparadores),
+  `nucleo.ausencia(persona, fecha)`.
+- `0027_limpieza_reparto.sql`: `limpieza.personas` (en_reparto, grupos), `limpieza.sustituciones`, `limpieza.repartos`,
+  `trabajos.asignados_orig` y `aviso_reparto`; `generar_dia` quita a los que faltan (sustituto o sin asignar) y la primera vez
+  de hoy reparte lo que queda (con horario, sin faltar, por minutos; grupo → solo quien lo tenga); `repartir_lo_que_queda`;
+  `semana(p_empresa, p_lunes)`; `repartir` borra el aviso.
+- Datos de partida: `/home/claude/sql/reparto_datos.sql` (grupo «hornos» en las fijas de horno/escoria; 9 personas en el reparto, Juan José con hornos).
+- Pantallas: `src/limpieza/Reparto.tsx` (Sustitutos, PersonasReparto, Semana); pestañas «Semana» y «Personas»; en «Hoy del equipo»
+  «Repartir lo que queda» y «Faltas y sustitutos»; aviso del reparto en cada fila; máquina en «+ Trabajo».
+- Pruebas: `67-limpieza-reparto.sql` (26) y `pruebas/reparto.spec.ts` (6). El simulador distingue «esquema.tabla».
+- Pendiente: el encargado de hornos solo con su equipo; festivos (Limpieza no lee Personal: podría ir también a nucleo).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

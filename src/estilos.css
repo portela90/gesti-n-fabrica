@@ -337,3 +337,15 @@ button.enlace { background: none; border: 0; padding: 0; color: var(--acento); f
 .opciones-min button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #fff; }
 .punto > b { overflow-wrap: anywhere; }
 label.boton { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+
+/* Limpieza · reparto y semana */
+.aviso-reparto { color: #92400e; font-weight: 600; }
+.fila-reparto .fila-txt { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.fila-reparto .campo { margin: 0; }
+.semana-nav { align-items: flex-end; }
+.dia-semana { margin-bottom: 18px; }
+.dia-semana.es-hoy > .subtitulo { color: var(--marca, inherit); }
+.dia-semana > .subtitulo::first-letter { text-transform: uppercase; }
+.gente-dia { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
+.gente-dia .chapa { white-space: normal; }
+.dos-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }

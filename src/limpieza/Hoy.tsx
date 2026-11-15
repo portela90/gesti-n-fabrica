@@ -5,6 +5,7 @@ import { aviso, Ventana } from '../componentes/basicos';
 import { alVaciarse } from './cola';
 import { FilaTrabajo, hoy, limp, NuevoTrabajo, textoError, TrabajoAbierto, type Trabajo } from './MiDia';
 import { useListas, type Opcion } from './listas';
+import { Sustitutos } from './Reparto';
 
 export function Hoy() {
   const { empresa, puede } = useSesion();
@@ -15,6 +16,8 @@ export function Hoy() {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [repartiendo, setRepartiendo] = useState<Trabajo | null>(null);
   const [nuevo, setNuevo] = useState(false);
+  const [sustitutos, setSustitutos] = useState(false);
+  const [ocupado, setOcupado] = useState(false);
   const cargar = useCallback(async () => {
     const { data, error } = await limp().rpc('mi_dia', { p_empresa: empresa!.id, p_fecha: fecha });
     if (error) { aviso(textoError(error.message)); setLista((l) => l ?? []); return; }
@@ -37,6 +40,16 @@ export function Hoy() {
   }, [lista, listas]); // eslint-disable-line react-hooks/exhaustive-deps
   const t = (lista ?? []).find((x) => x.id === abierto) ?? null;
   const total = lista?.length ?? 0, hechos = (lista ?? []).filter((x) => x.estado === 'hecho').length;
+  const sinAsignar = (lista ?? []).filter((x) => x.estado !== 'hecho' && !x.todo_equipo && !x.asignados.length).length;
+  const manana = new Date(Date.now() + 864e5).toLocaleDateString('sv-SE');
+  async function repartirQueda() {
+    setOcupado(true);
+    const { data, error } = await limp().rpc('repartir_lo_que_queda', { p_empresa: empresa!.id, p_fecha: fecha });
+    setOcupado(false);
+    if (error) return aviso(textoError(error.message));
+    aviso(data ? `Repartidos ${data}` : 'No había nadie libre para repartir: mira quién entra en el reparto en «Personas».');
+    cargar();
+  }
 
   return (
     <>
@@ -44,6 +57,12 @@ export function Hoy() {
         <label className="campo"><span>Día</span><input type="date" value={fecha} onChange={(e) => e.target.value && setFecha(e.target.value)} /></label>
       </div>
       {lista && total > 0 && <p className="nota" style={{ marginTop: 0 }}>{hechos} de {total} hechos.</p>}
+      {reparte && (
+        <div className="acciones-cal" style={{ marginTop: 0, marginBottom: 12 }}>
+          {sinAsignar > 0 && (fecha === hoy() || fecha === manana) &&
+            <button type="button" className="boton" disabled={ocupado} onClick={repartirQueda}>Repartir lo que queda ({sinAsignar})</button>}
+          <button type="button" className="boton sec" onClick={() => setSustitutos(true)}>Faltas y sustitutos</button>
+        </div>)}
       {lista === null ? <p className="nota">Cargando…</p> : !total ? <div className="vacio"><p>No hay trabajos este día.</p></div>
         : grupos.map(([g, ts]) => (
           <section key={g} className="grupo-tareas">
@@ -55,6 +74,7 @@ export function Hoy() {
         alRepartir={reparte ? () => setRepartiendo(t) : undefined} />}
       {repartiendo && <Repartir t={repartiendo} personas={listas.personas} equipos={listas.equipos}
         alCerrar={() => setRepartiendo(null)} alGuardar={() => { setRepartiendo(null); cargar(); }} />}
+      {sustitutos && <Sustitutos personas={listas.personas} alCerrar={() => { setSustitutos(false); cargar(); }} />}
       {nuevo && <NuevoTrabajo personas={listas.personas} alCerrar={() => setNuevo(false)} alCrear={(id) => { setNuevo(false); cargar().then(() => setAbierto(id)); }} />}
     </>
   );

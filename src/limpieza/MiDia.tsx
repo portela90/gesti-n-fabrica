@@ -1,7 +1,7 @@
 // «Mi día» y «Trabajo abierto» del operario. Lo que hace se guarda en el móvil y se manda solo (ver cola.ts),
 // así que la pantalla cambia al momento aunque no haya red.
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { supabase } from '../nucleo/supabase';
+import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { alVaciarse, borrarErrores, encolar, useCola } from './cola';
@@ -11,7 +11,7 @@ export interface Trabajo {
   minutos_est: number | null; estado: 'pendiente' | 'en_curso' | 'pausado' | 'hecho'; inicio: string | null; pausa_desde: string | null; pausado_min: number;
   fin: string | null; minutos: number | null; nota: string | null; problema: string | null; fotos: { ruta: string; momento: string }[];
   atrasado: boolean; nombres: string[]; maquina: string | null; zona: string | null; turno: string | null; mio: boolean; puedo: boolean; hecho_por_nombre: string | null;
-  checklist: { texto: string; valor: unknown }[] | null; asignados: string[]; todo_equipo: boolean; equipo_id: string | null;
+  checklist: { texto: string; valor: unknown }[] | null; asignados: string[]; todo_equipo: boolean; equipo_id: string | null; aviso_reparto?: string | null;
 }
 interface Punto { texto: string; tipo: 'ok' | 'num'; minimo?: number | null; ayuda?: string | null; foto_si_mal?: boolean; plantilla: string }
 interface Habitual { id: string; titulo: string; descripcion: string | null; grupo: string | null; lugar: string | null; minutos_est: number | null; maquina: string | null }
@@ -24,7 +24,7 @@ export const durTxt = (m: number | null) => (m == null ? '' : m < 60 ? `${m} min
 const ERRORES: Record<string, string> = {
   NO_PERMISO: 'No tienes permiso para esto.', YA_HECHO: 'Este trabajo ya está terminado.', FOTO_FALTA: 'Falta la foto de un punto que está mal.',
   CHECKLIST_MAL: 'Falta contestar algún punto.', TIEMPO_MAL: 'Pon cuánto has tardado.', SIN_FICHA: 'Tu usuario no está enlazado con tu ficha de trabajador.',
-  TITULO_MAL: 'Escribe qué has hecho.', FALTA_QUIEN: 'Elige para quién es.', FALTA_EQUIPO: 'Elige el equipo.', PERSONA_DE_OTRA_UNIDAD: 'Hay una persona que no es de esta unidad de trabajo.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
+  TITULO_MAL: 'Escribe qué has hecho.', FALTA_QUIEN: 'Elige para quién es.', FALTA_EQUIPO: 'Elige el equipo.', PERSONA_DE_OTRA_UNIDAD: 'Hay una persona que no es de esta unidad de trabajo.', FECHA_MAL: 'Solo se puede para ayer, hoy o mañana.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
 };
 export const textoError = (m: string) => { const k = Object.keys(ERRORES).find((x) => m.includes(x)); return k ? ERRORES[k] : m; };
 
@@ -135,7 +135,8 @@ export function FilaTrabajo({ t, abrir, grande }: { t: Trabajo; abrir: () => voi
     <button type="button" className={'fila' + (grande ? ' fila-grande' : '') + (t.estado === 'hecho' ? ' de-baja' : '')} onClick={abrir}>
       <span className="fila-txt"><b>{t.titulo}</b>
         <small>{[donde, t.turno, t.estado === 'hecho' ? durTxt(t.minutos) : t.minutos_est ? `suele llevar ${durTxt(t.minutos_est)}` : ''].filter(Boolean).join(' · ')}</small>
-        {otros && <small>{otros}</small>}</span>
+        {otros && <small>{otros}</small>}
+        {t.aviso_reparto && t.estado !== 'hecho' && <small className="aviso-reparto">{t.aviso_reparto}</small>}</span>
       {chapa && <span className={'chapa ' + chapa[1]}>{chapa[0]}</span>}
     </button>
   );
@@ -323,6 +324,12 @@ export function NuevoTrabajo({ alCerrar, alCrear, personas }: { alCerrar: () => 
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const [para, setPara] = useState('');
+  const [maquina, setMaquina] = useState('');
+  const [maquinas, setMaquinas] = useState<{ id: string; codigo: string; nombre: string | null }[]>([]);
+  useEffect(() => {
+    nucleo().from('activos').select('id, codigo, nombre').eq('empresa_id', empresa!.id).is('baja', null).then(({ data }) =>
+      setMaquinas(((data ?? []) as { id: string; codigo: string; nombre: string | null }[]).sort((a, b) => a.codigo.localeCompare(b.codigo, 'es', { numeric: true }))));
+  }, [empresa]);
   useEffect(() => {
     limp().rpc('habituales_para_mi', { p_empresa: empresa!.id }).then(({ data, error: e }) => {
       if (e) { setError(textoError(e.message)); setLista([]); return; }
@@ -334,7 +341,7 @@ export function NuevoTrabajo({ alCerrar, alCrear, personas }: { alCerrar: () => 
     if (!tarea && !titulo.trim()) return setError('Escribe qué has hecho o elige uno de la lista.');
     setOcupado(true);
     const { data, error: e } = await limp().rpc('crear_trabajo', { p_empresa: empresa!.id, p_fecha: hoy(), p_tarea: tarea, p_titulo: tarea ? null : titulo.trim(),
-      ...(para ? { p_para: [para] } : {}) });
+      ...(maquina ? { p_activo: maquina } : {}), ...(para ? { p_para: [para] } : {}) });
     setOcupado(false);
     if (e) return setError(textoError(e.message));
     alCrear(data as string);
@@ -347,6 +354,12 @@ export function NuevoTrabajo({ alCerrar, alCrear, personas }: { alCerrar: () => 
           <select value={para} onChange={(e) => setPara(e.target.value)}>
             <option value="">Para mí</option>
             {personas.filter((p) => !p.baja).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select></label>)}
+      {maquinas.length > 0 && (
+        <label className="campo"><span>Máquina (si es en una)</span>
+          <select value={maquina} onChange={(e) => setMaquina(e.target.value)}>
+            <option value="">Ninguna</option>
+            {maquinas.map((m) => <option key={m.id} value={m.id}>{m.codigo}{m.nombre ? ` · ${m.nombre}` : ''}</option>)}
           </select></label>)}
       <label className="campo"><span>Buscar en la lista</span><input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="taladrina, derrame…" /></label>
       {lista === null ? <p className="nota">Cargando…</p> : (

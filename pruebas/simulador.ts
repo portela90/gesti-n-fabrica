@@ -83,7 +83,10 @@ export async function simular(page: Page, op: Opciones = {}) {
       return json({ usuario_id: usu.id, nuevo, clave: nuevo ? 'Temporal234' : null });
     }
     // tablas del núcleo en memoria (lo justo de PostgREST: filtros eq/is, contar, insertar y cambiar)
-    const tabla = u.pathname.replace('/rest/v1/', '');
+    // una tabla de otro esquema con el mismo nombre se da como «esquema.tabla» (p. ej. «limpieza.personas»)
+    const base = u.pathname.replace('/rest/v1/', '');
+    const esquema = r.headers()['content-profile'] ?? r.headers()['accept-profile'] ?? '';
+    const tabla = tablas[`${esquema}.${base}`] !== undefined ? `${esquema}.${base}` : base;
     if (tablas[tabla] !== undefined) {
       const filtros = [...u.searchParams.entries()].filter(([k]) => !['select', 'order', 'limit', 'columns'].includes(k));
       const cumple = (f: Record<string, unknown>) => filtros.every(([k, v]) =>
