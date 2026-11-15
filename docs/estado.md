@@ -238,7 +238,7 @@ fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornad
   Cristian Portela (decidido 15/11: sus horas sí cuentan; su ficha aún sin jornada ni horas de contrato), «pruebas»
   (se borra el día del cambio), y Abdelila y Hicham hasta su baja (en la vieja no salen por estar inactivos).
 
-### 2.3 Mi día y Trabajo abierto del operario (15/11) — SIN APLICAR
+### 2.3 Mi día y Trabajo abierto del operario (15/11) — APLICADO 15/11 (0024, comprobado)
 Decidido por Cristian (15/11): sin cobertura «a veces, en algún rincón» → se guarda lo básico en el móvil (empezar,
 pausar, seguir, terminar, checklist, fotos y aviso) y se manda solo; tiempo igual que la vieja (Empezar/Terminar, si
 no, «¿Cuánto has tardado?», nunca menos de lo previsto); fotos como ahora (obligatoria si un punto con «foto si está
