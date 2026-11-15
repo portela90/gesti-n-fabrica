@@ -238,6 +238,20 @@ fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornad
   Cristian Portela (decidido 15/11: sus horas sí cuentan; su ficha aún sin jornada ni horas de contrato), «pruebas»
   (se borra el día del cambio), y Abdelila y Hicham hasta su baja (en la vieja no salen por estar inactivos).
 
+### Stock de ropa y EPI (15/11, pedido por Cristian) — SIN APLICAR
+Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
+- `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde
+  sale la talla, tallas, mínimos por talla) y `prevencion.stock_mov` (solo se añaden: entrada, entrega, devolución,
+  ajuste). Vista `v_stock` (stock = suma de movimientos, con mínimo). Disparador en `prevencion.documentos` (tipo epi):
+  al crear la entrega descuenta; si se cambia antes de firmar corrige la diferencia; si se borra o se anula, vuelve.
+  Al firmar no mueve nada (así las entregas de antes no descuentan). Talla: la elegida en la entrega o la de la ficha.
+  `recontar_stock` (recuento: apunta la diferencia). Permiso `prevencion.stock.editar` (solo administrador); quien
+  hace entregas ve el stock.
+- Pantallas: Prevención → «Stock» (material, «He recibido un pedido», «Recuento», «Hoja del pedido (PDF)») y en la
+  entrega de EPI la talla y «quedan N» de lo que es material del almacén (`src/prevencion/stock.tsx`).
+- Pruebas: `supabase/pruebas/57-prevencion-stock.sql` (28) y `pruebas/stock.spec.ts` (5).
+- Sin datos que traer: Cristian da de alta su material y hace el primer recuento.
+
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).
 - Fin de semana 2027: solo existe el **relevo B** (la columna A del Excel no es nadie). Del Excel:

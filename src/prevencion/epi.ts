@@ -54,7 +54,7 @@ export const EPI_DECL = [
 export const EPI_INTRO = 'En cumplimiento del artículo 17.2 de la Ley de Prevención de Riesgos Laborales es obligatorio el uso de equipos de protección individual. La empresa pone a tu disposición los equipos indicados.';
 export const CODIGO_EPI = 'SH-CORP-SP-FO-014';
 
-export interface LineaEpi { u?: string; cat?: string[]; motivo?: string; mtxt?: string }
+export interface LineaEpi { u?: string; cat?: string[]; motivo?: string; mtxt?: string; talla?: string } // talla: solo para el stock (vacía = la de la ficha)
 export interface OtroEpi extends LineaEpi { t: string }
 export interface DatosEpi { items: Record<string, LineaEpi>; otros: OtroEpi[]; lugar?: string }
 

@@ -7,6 +7,7 @@ import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
 import { MESES, fechaCorta, prev, textoError, useAjustes, usePersonas, type Persona } from './comun';
 import { Documentos, MisDocumentos, MisTallas, TallasPropuestas, descargarDocumentos, tituloDoc, type Documento } from './documentos-firma';
 import { BotonExpediente, Cursos, estadoCurso, type Curso } from './cursos';
+import { Stock } from './stock';
 import { abrirDocumento, bajarDocumento, mesDelNombre, subirDocumento, unirPdfs } from './documentos';
 
 
@@ -24,7 +25,7 @@ interface Sesion {
 }
 interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre: string; puesto: string | null; firma_id: string | null; anulada: string | null; creado: string }
 
-type Pestana = 'mias' | 'charlas' | 'documentos' | 'fichas';
+type Pestana = 'mias' | 'charlas' | 'documentos' | 'fichas' | 'stock';
 
 /** Módulo Prevención: mis charlas (todos) y, según permisos, las charlas de cada mes y las fichas de los trabajadores. */
 export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
@@ -34,6 +35,7 @@ export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void
     ['charlas', 'Charlas', puede('prevencion.charla.ver')],
     ['documentos', 'Documentos', puede('prevencion.documento.ver')],
     ['fichas', 'Fichas', puede('prevencion.ficha.ver')],
+    ['stock', 'Stock', puede('prevencion.stock.editar')],
   ] as [Pestana, string, boolean][]).filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.length > 1 ? 'charlas' : 'mias');
@@ -48,6 +50,7 @@ export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void
       {actual === 'charlas' && <Charlas />}
       {actual === 'documentos' && <Documentos />}
       {actual === 'fichas' && <Fichas />}
+      {actual === 'stock' && <Stock />}
     </main>
   );
 }

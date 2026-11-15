@@ -240,7 +240,7 @@ test('la trabajadora ve su calendario pendiente y lo firma con el dedo', async (
   const sim = await simular(page, { dentro: true, sesion: sesion(['personal.tarea.ver'], 'Ana Prueba'), tablas: t, rpc });
   await page.goto('./#/');
   await page.locator('.mosaico', { hasText: 'Personal' }).click();
-  await expect(page.locator('.pestanas')).toHaveCount(0);
+  await expect(page.locator('.pestanas button')).toHaveText(['Mi calendario', 'Mis horas']); // solo lo suyo
   await expect(page.getByText('Tienes un calendario por revisar y firmar.')).toBeVisible();
   await page.locator('.fila', { hasText: `Calendario laboral ${ANIO}` }).click();
   await expect(page.locator('.documento')).toContainText('Ana Prueba · Semana');

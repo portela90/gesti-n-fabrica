@@ -314,3 +314,12 @@ button.enlace { background: none; border: 0; padding: 0; color: var(--acento); f
 .cifras > div { display: flex; flex-direction: column; gap: 2px; padding: 14px; background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); min-width: 0; }
 .cifras > div b { font-size: 22px; }
 .cifras > div small { color: var(--tinta2); }
+
+/* ---------- Prevención: stock de ropa y EPI ---------- */
+.tallas-stock { display: flex; flex-wrap: wrap; gap: 2px 10px; }
+.tallas-stock .falta { color: var(--mal); font-weight: 700; }
+.minimos { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(92px, 100%), 1fr)); gap: 8px; }
+.minimos label { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.minimos input { width: 100%; min-width: 0; }
+.talla-stock { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; max-width: 100%; }
+.talla-stock select { min-width: 0; max-width: 100%; }

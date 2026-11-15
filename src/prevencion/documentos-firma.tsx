@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
+import { TallaStock, useStock } from './stock';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
 import { descargar } from './pdfToolbox';
@@ -195,6 +196,9 @@ function Motivo({ v, alCambiar }: { v: LineaEpi; alCambiar: (x: LineaEpi) => voi
 
 function FormEpi({ v, alCambiar }: { v: DatosEpi; alCambiar: (x: DatosEpi) => void }) {
   const { empresa } = useSesion();
+  const { material, filas } = useStock();
+  const deEpi = (k: string) => (material ?? []).find((m) => !m.baja && m.epi === k);
+  const deNombre = (t: string) => (material ?? []).find((m) => !m.baja && m.nombre.trim().toLowerCase() === t.trim().toLowerCase());
   const [prendas, setPrendas] = useState<string[]>([]);
   useEffect(() => {
     prev().from('prendas').select('nombre').eq('empresa_id', empresa!.id).is('baja', null)
@@ -218,6 +222,7 @@ function FormEpi({ v, alCambiar }: { v: DatosEpi; alCambiar: (x: DatosEpi) => vo
                 {x && <>
                   <input className="ud" aria-label={`Unidades de ${it[1]}`} type="number" min={1} inputMode="numeric" value={x.u ?? ''} onChange={(e) => pon(k, { ...x, u: e.target.value })} />
                   <Motivo v={x} alCambiar={(y) => pon(k, y)} />
+                  {deEpi(k) && <TallaStock m={deEpi(k)!} filas={filas} talla={x.talla ?? ''} alCambiar={(t) => pon(k, { ...x, talla: t || undefined })} />}
                   {it[5] && <span className="cats">{it[5].map((c) => (
                     <label key={c} className="casilla peq"><input type="checkbox" checked={(x.cat ?? []).includes(c)}
                       onChange={(e) => pon(k, { ...x, cat: e.target.checked ? [...(x.cat ?? []), c] : (x.cat ?? []).filter((y) => y !== c) })} /> {c}</label>))}</span>}
@@ -229,12 +234,13 @@ function FormEpi({ v, alCambiar }: { v: DatosEpi; alCambiar: (x: DatosEpi) => vo
       ))}
       <fieldset className="grupo-epi">
         <legend>Ropa de trabajo y otros <small>(hasta 4)</small></legend>
-        <datalist id="ropa-epi">{[...new Set([...prendas, ...ROPA])].map((r) => <option key={r} value={r} />)}</datalist>
+        <datalist id="ropa-epi">{[...new Set([...(material ?? []).filter((m) => !m.baja && !m.epi).map((m) => m.nombre), ...prendas, ...ROPA])].map((r) => <option key={r} value={r} />)}</datalist>
         {otros.map((o, i) => (
           <div key={i} className="linea-epi">
             <input className="otro" list="ropa-epi" aria-label={`Prenda ${i + 1}`} placeholder="Prenda o elemento" maxLength={60} value={o.t} onChange={(e) => ponOtro(i, { ...o, t: e.target.value })} />
             <input className="ud" aria-label={`Unidades de la prenda ${i + 1}`} type="number" min={1} inputMode="numeric" placeholder="Ud." value={o.u ?? ''} onChange={(e) => ponOtro(i, { ...o, u: e.target.value })} />
             {o.t.trim() && <Motivo v={o} alCambiar={(y) => ponOtro(i, { ...o, ...y })} />}
+            {o.t.trim() && deNombre(o.t) && <TallaStock m={deNombre(o.t)!} filas={filas} talla={o.talla ?? ''} alCambiar={(t) => ponOtro(i, { ...o, talla: t || undefined })} />}
           </div>
         ))}
       </fieldset>
