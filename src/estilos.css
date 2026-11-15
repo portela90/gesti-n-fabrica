@@ -323,3 +323,17 @@ button.enlace { background: none; border: 0; padding: 0; color: var(--acento); f
 .minimos input { width: 100%; min-width: 0; }
 .talla-stock { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; max-width: 100%; }
 .talla-stock select { min-width: 0; max-width: 100%; }
+
+/* ---------- Limpieza: mi día y trabajo abierto ---------- */
+.fila-grande { min-height: 76px; }
+.fila-grande .fila-txt b { font-size: 18px; }
+.sin-red { background: #fef3c7; color: #92400e; padding: 8px 12px; border-radius: var(--radio); }
+.datos-trabajo { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; margin: 0 0 12px; }
+.datos-trabajo dt { color: var(--tinta2); }
+.datos-trabajo dd { margin: 0; overflow-wrap: anywhere; }
+.boton.grande { min-height: 56px; font-size: 18px; flex: 1; }
+.opciones-min { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; margin: 0 0 12px; }
+.opciones-min button { min-height: 44px; border: 1px solid var(--linea); border-radius: 10px; background: var(--sup); font-weight: 600; cursor: pointer; }
+.opciones-min button[aria-pressed="true"] { background: var(--acento); border-color: var(--acento); color: #fff; }
+.punto > b { overflow-wrap: anywhere; }
+label.boton { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }

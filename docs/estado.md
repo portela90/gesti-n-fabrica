@@ -238,6 +238,24 @@ fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornad
   Cristian Portela (decidido 15/11: sus horas sí cuentan; su ficha aún sin jornada ni horas de contrato), «pruebas»
   (se borra el día del cambio), y Abdelila y Hicham hasta su baja (en la vieja no salen por estar inactivos).
 
+### 2.3 Mi día y Trabajo abierto del operario (15/11) — SIN APLICAR
+Decidido por Cristian (15/11): sin cobertura «a veces, en algún rincón» → se guarda lo básico en el móvil (empezar,
+pausar, seguir, terminar, checklist, fotos y aviso) y se manda solo; tiempo igual que la vieja (Empezar/Terminar, si
+no, «¿Cuánto has tardado?», nunca menos de lo previsto); fotos como ahora (obligatoria si un punto con «foto si está
+mal» está mal); las fijas son de su día y lo creado a mano sigue hasta que se haga.
+- `0024_limpieza_trabajos.sql`: `limpieza.trabajos` (sin insert/update directos: todo por funciones). `generar_dia`
+  (saca las fijas del día una sola vez), `mi_dia`, `puntos` (checklist que toca), `empezar`/`pausar`/`seguir`/
+  `terminar` (con «cuándo» del móvil, de hasta 2 días atrás; repetido = sin efecto o YA_HECHO), `poner_foto`,
+  `avisar_problema` (queda en el trabajo; las incidencias, parte 6), `habituales_para_mi`, `crear_trabajo`.
+  `limpieza.encaja` = `_check_casa` de la vieja (por el nombre del trabajo y el código de su máquina); la vista previa
+  de Checklists usa ahora las mismas reglas. Permisos `limpieza.trabajo.ver/apuntar/corregir` (operario: los suyos =
+  está en él, es de todo su equipo o lo creó él). Cubo `limpieza` (fotos, `<unidad>/trabajos/<trabajo>/…`).
+- Pantalla: Limpieza → «Mi día» (`src/limpieza/MiDia.tsx`) y cola sin red en IndexedDB (`src/limpieza/cola.ts`).
+- Pruebas: `supabase/pruebas/65-limpieza-trabajos.sql` (45) y `pruebas/midia.spec.ts` (6, una sin red).
+- Sin datos que traer. Los festivos no paran las fijas (Limpieza no puede leer el calendario de Personal): ese día
+  salen y, si nadie las hace, se quedan sin hacer.
+- Los operarios aún no pueden entrar (falta el PIN): se prueba con el usuario «pruebas».
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

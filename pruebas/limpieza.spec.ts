@@ -107,8 +107,8 @@ test('checklists: se ve en qué máquinas sale y se crea una con puntos', async 
 
   await page.getByRole('button', { name: '+ Nueva checklist' }).click();
   const v = page.getByRole('dialog', { name: 'Nueva checklist' });
-  await v.getByLabel('Nombre').fill('Centros de mecanizado');
-  await v.getByLabel(/^Máquinas/).fill('m3, F9*');
+  await v.getByLabel('Nombre', { exact: true }).fill('Centros de mecanizado');
+  await v.getByLabel(/^Máquinas/).fill('m3, F*');
   await expect(v.getByText('Sale en 3: F90, F91, M3')).toBeVisible();
   await v.getByLabel(/^Máquinas/).fill('M3');
   await expect(v.getByText('Sale en 1: M3')).toBeVisible();
@@ -148,7 +148,7 @@ test('el encargado ve tareas y checklists pero no puede cambiarlas', async ({ pa
 test('quien no tiene estos permisos no ve las listas', async ({ page }) => {
   await simular(page, { dentro: true, sesion: sesion(['limpieza.modulo.ver']), tablas: tablas() });
   await page.goto('./#/m/limpieza/tareas');
-  await expect(page.getByText('Tus trabajos de limpieza llegan pronto.')).toBeVisible();
+  await expect(page.getByText('No tienes nada de Limpieza.')).toBeVisible();
   await expect(page.locator('.fila')).toHaveCount(0);
 });
 

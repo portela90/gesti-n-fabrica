@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
+import { MiDia } from './MiDia';
 
 /** Tablas de Limpieza (esquema «limpieza»). */
 export const limp = () => supabase.schema('limpieza');
@@ -40,13 +41,21 @@ const textoDias = (d: number[] | null) => {
 };
 
 /**
- * ¿Encaja el código de una máquina con lo escrito en «Máquinas»? Se separan por comas;
- * el asterisco vale por cualquier cosa («F*» = todas las que empiezan por F). Sin distinguir mayúsculas.
+ * ¿Sale esta checklist en una máquina? Las mismas reglas que la base de datos (limpieza.encaja, copiadas de la
+ * app vieja), separadas por comas: «F*» = una F con número · «M3-M11» = de la 3 a la 11 · «F28» = esa ·
+ * cualquier otra palabra = el nombre la contiene. Sin distinguir mayúsculas.
  */
-export function encaja(codigo: string, patrones: string | undefined) {
-  return (patrones ?? '').split(',').map((p) => p.trim()).filter(Boolean).some((p) => {
-    const re = new RegExp('^' + p.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*') + '$', 'i');
-    return re.test(codigo.trim());
+export function encaja(texto: string, codigos: string | undefined) {
+  const t = texto.toLowerCase();
+  const numeros = (letras: string) => [...t.matchAll(new RegExp(`(?:^|[^a-z0-9ñ])${letras}-?(\\d+)(?=[^0-9]|$)`, 'g'))].map((m) => Number(m[1]));
+  return (codigos ?? '').split(/\s*,\s*/).map((x) => x.trim().toLowerCase()).filter(Boolean).some((tok) => {
+    let m = tok.match(/^([a-zñ]+)-?\*$/);
+    if (m) return new RegExp(`(^|[^a-z0-9ñ])${m[1]}-?\\d+([^0-9]|$)`).test(t);
+    m = tok.match(/^([a-zñ]+)-?(\d+)\s*-\s*(?:[a-zñ]+)?-?(\d+)$/);
+    if (m) { const lo = Math.min(+m[2], +m[3]), hi = Math.max(+m[2], +m[3]); return numeros(m[1]).some((n) => n >= lo && n <= hi); }
+    m = tok.match(/^([a-zñ]+)-?(\d+)$/);
+    if (m) return numeros(m[1]).includes(+m[2]);
+    return t.includes(tok);
   });
 }
 
@@ -71,15 +80,17 @@ function useListas() {
   return l;
 }
 
-type Pestana = 'tareas' | 'checklists';
+type Pestana = 'dia' | 'tareas' | 'checklists';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const ve = puede('limpieza.plan.ver') || puede('limpieza.plan.editar');
-  const pestanas = ([['tareas', 'Tareas'], ['checklists', 'Checklists']] as [Pestana, string][]).filter(() => ve);
+  const apunta = puede('limpieza.trabajo.apuntar');
+  const pestanas = ([['dia', 'Mi día', apunta], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve]] as [Pestana, string, boolean][])
+    .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
-  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? 'tareas';
+  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (ve ? 'tareas' : pestanas[0]?.[0]);
   if (!empresa) return null;
   return (
     <main className="contenido" style={{ ['--area' as string]: '#0f766e' }}>
@@ -88,11 +99,12 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
           {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/limpieza/${c}`)}>{n}</button>)}
         </nav>
       )}
-      {!ve && (
-        <div className="vacio"><p><b>Tus trabajos de limpieza llegan pronto.</b></p>
-          <p>Mientras tanto se sigue usando la app de ahora.</p></div>)}
-      {ve && actual === 'tareas' && <Tareas />}
-      {ve && actual === 'checklists' && <Checklists />}
+      {!pestanas.length && (
+        <div className="vacio"><p><b>No tienes nada de Limpieza.</b></p>
+          <p>Si crees que deberías, díselo a tu administrador.</p></div>)}
+      {actual === 'dia' && <MiDia />}
+      {actual === 'tareas' && <Tareas />}
+      {actual === 'checklists' && <Checklists />}
     </main>
   );
 }
@@ -423,7 +435,7 @@ function EditarPlantilla({ plantilla, maquinas, habituales, editable, alCerrar, 
         </div>
         {cuando === 'trabajos' && (
           <>
-            <label className="campo"><span>Máquinas (códigos separados por comas; * = cualquier cosa)</span>
+            <label className="campo"><span>Máquinas o palabras del nombre del trabajo (separadas por comas: F* = una F con número · M3-M11 = de la 3 a la 11 · F28 = esa · otra palabra = el nombre la contiene)</span>
               <input value={codigos} maxLength={2000} onChange={(e) => setCodigos(e.target.value)} placeholder="F*, M3, M4" /></label>
             <p className="nota" style={{ marginTop: -6 }}>{codigos.trim()
               ? salen.length ? `Sale en ${salen.length}: ${salen.slice(0, 12).map((m) => m.codigo).join(', ')}${salen.length > 12 ? '…' : ''}` : 'Ninguna máquina encaja con eso.'
