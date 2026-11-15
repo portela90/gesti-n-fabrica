@@ -256,6 +256,17 @@ mal» está mal); las fijas son de su día y lo creado a mano sigue hasta que se
   salen y, si nadie las hace, se quedan sin hacer.
 - Los operarios aún no pueden entrar (falta el PIN): se prueba con el usuario «pruebas».
 
+### 2.4 Hoy del equipo y repartir (15/11, primera pieza de la parte 4) — SIN APLICAR
+Pedido por Cristian: cambiar a quién le toca un trabajo que ya ha salido hoy.
+- `0025_limpieza_repartir.sql`: permiso `limpieza.trabajo.repartir` (también al encargado de partida);
+  `limpieza.repartir` (personas o todo un equipo; solo ese trabajo, no la tarea fija; lo hecho no se reparte);
+  `crear_trabajo` con `p_para` (para otros hace falta repartir; sin ficha, tampoco).
+- Pantalla: Limpieza → «Hoy del equipo» (`src/limpieza/Hoy.tsx`): trabajos del día por persona (sin asignar primero),
+  «Cambiar a quién le toca», «+ Trabajo» con «Para quién». Listas comunes en `src/limpieza/listas.ts`.
+- Pruebas: `supabase/pruebas/66-limpieza-repartir.sql` (12) y `pruebas/hoy.spec.ts` (4).
+- De momento el encargado reparte entre todos (lo de «Encargado hornos solo su equipo», más adelante).
+- Falta de la parte 4: plan de la semana, limpieza de inyectoras por semana, faltas y sustituciones, reparto automático.
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

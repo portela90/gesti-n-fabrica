@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { nucleo, supabase } from '../nucleo/supabase';
+import { supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { MiDia } from './MiDia';
+import { Hoy } from './Hoy';
+import { useListas, type Listas, type Maquina, type Opcion } from './listas';
 
 /** Tablas de Limpieza (esquema «limpieza»). */
 export const limp = () => supabase.schema('limpieza');
@@ -19,9 +21,6 @@ export interface Plantilla {
   id: string; nombre: string; cuando: 'trabajos' | 'encargado'; orden: number; baja: string | null;
   aplica: { codigos?: string; excluir?: string; tareas?: string[] }; puntos: Punto[];
 }
-interface Opcion { id: string; nombre: string; baja?: string | null }
-interface Maquina { id: string; codigo: string; nombre: string | null; baja: string | null }
-interface Listas { equipos: Opcion[]; turnos: Opcion[]; personas: Opcion[]; zonas: Opcion[]; maquinas: Maquina[] }
 
 const DIAS: [number, string][] = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
 const ERRORES: Record<string, string> = {
@@ -59,38 +58,17 @@ export function encaja(texto: string, codigos: string | undefined) {
   });
 }
 
-/** Equipos, turnos, personas, zonas y máquinas de la unidad (para elegir en los formularios). */
-function useListas() {
-  const { empresa, puede } = useSesion();
-  const [l, setL] = useState<Listas>({ equipos: [], turnos: [], personas: [], zonas: [], maquinas: [] });
-  useEffect(() => {
-    const e = empresa!.id;
-    Promise.all([
-      nucleo().from('equipos').select('id, nombre, baja').eq('empresa_id', e).order('nombre'),
-      nucleo().from('turnos').select('id, nombre, baja').eq('empresa_id', e).order('orden').order('nombre'),
-      puede('nucleo.persona.ver') ? nucleo().from('personas').select('id, nombre, baja').eq('empresa_id', e).order('nombre') : Promise.resolve({ data: [] }),
-      nucleo().from('ubicaciones').select('id, nombre, baja').eq('empresa_id', e).order('nombre'),
-      nucleo().from('activos').select('id, codigo, nombre, baja').eq('empresa_id', e).order('codigo'),
-    ]).then(([q, t, p, z, a]) => setL({
-      equipos: (q.data ?? []) as Opcion[], turnos: (t.data ?? []) as Opcion[], personas: (p.data ?? []) as Opcion[],
-      zonas: (z.data ?? []) as Opcion[],
-      maquinas: ((a.data ?? []) as Maquina[]).sort((x, y) => x.codigo.localeCompare(y.codigo, 'es', { numeric: true })),
-    }));
-  }, [empresa, puede]);
-  return l;
-}
-
-type Pestana = 'dia' | 'tareas' | 'checklists';
+type Pestana = 'hoy' | 'dia' | 'tareas' | 'checklists';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const ve = puede('limpieza.plan.ver') || puede('limpieza.plan.editar');
   const apunta = puede('limpieza.trabajo.apuntar');
-  const pestanas = ([['dia', 'Mi día', apunta], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve]] as [Pestana, string, boolean][])
+  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['dia', 'Mi día', apunta], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve]] as [Pestana, string, boolean][])
     .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
-  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (ve ? 'tareas' : pestanas[0]?.[0]);
+  const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? pestanas[0]?.[0];
   if (!empresa) return null;
   return (
     <main className="contenido" style={{ ['--area' as string]: '#0f766e' }}>
@@ -102,6 +80,7 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
       {!pestanas.length && (
         <div className="vacio"><p><b>No tienes nada de Limpieza.</b></p>
           <p>Si crees que deberías, díselo a tu administrador.</p></div>)}
+      {actual === 'hoy' && <Hoy />}
       {actual === 'dia' && <MiDia />}
       {actual === 'tareas' && <Tareas />}
       {actual === 'checklists' && <Checklists />}

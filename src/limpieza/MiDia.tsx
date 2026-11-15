@@ -11,22 +11,22 @@ export interface Trabajo {
   minutos_est: number | null; estado: 'pendiente' | 'en_curso' | 'pausado' | 'hecho'; inicio: string | null; pausa_desde: string | null; pausado_min: number;
   fin: string | null; minutos: number | null; nota: string | null; problema: string | null; fotos: { ruta: string; momento: string }[];
   atrasado: boolean; nombres: string[]; maquina: string | null; zona: string | null; turno: string | null; mio: boolean; puedo: boolean; hecho_por_nombre: string | null;
-  checklist: { texto: string; valor: unknown }[] | null;
+  checklist: { texto: string; valor: unknown }[] | null; asignados: string[]; todo_equipo: boolean; equipo_id: string | null;
 }
 interface Punto { texto: string; tipo: 'ok' | 'num'; minimo?: number | null; ayuda?: string | null; foto_si_mal?: boolean; plantilla: string }
 interface Habitual { id: string; titulo: string; descripcion: string | null; grupo: string | null; lugar: string | null; minutos_est: number | null; maquina: string | null }
 
-const limp = () => supabase.schema('limpieza');
-const hoy = () => new Date().toLocaleDateString('sv-SE');
+export const limp = () => supabase.schema('limpieza');
+export const hoy = () => new Date().toLocaleDateString('sv-SE');
 const leer = (k: string) => { try { return JSON.parse(localStorage.getItem(k) ?? 'null'); } catch { return null; } };
 const guardar = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* lleno o sin almacenamiento */ } };
 export const durTxt = (m: number | null) => (m == null ? '' : m < 60 ? `${m} min` : `${Math.floor(m / 60)} h${m % 60 ? ` ${m % 60} min` : ''}`);
 const ERRORES: Record<string, string> = {
   NO_PERMISO: 'No tienes permiso para esto.', YA_HECHO: 'Este trabajo ya está terminado.', FOTO_FALTA: 'Falta la foto de un punto que está mal.',
   CHECKLIST_MAL: 'Falta contestar algún punto.', TIEMPO_MAL: 'Pon cuánto has tardado.', SIN_FICHA: 'Tu usuario no está enlazado con tu ficha de trabajador.',
-  TITULO_MAL: 'Escribe qué has hecho.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
+  TITULO_MAL: 'Escribe qué has hecho.', FALTA_QUIEN: 'Elige para quién es.', FALTA_EQUIPO: 'Elige el equipo.', PERSONA_DE_OTRA_UNIDAD: 'Hay una persona que no es de esta unidad de trabajo.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
 };
-const textoError = (m: string) => { const k = Object.keys(ERRORES).find((x) => m.includes(x)); return k ? ERRORES[k] : m; };
+export const textoError = (m: string) => { const k = Object.keys(ERRORES).find((x) => m.includes(x)); return k ? ERRORES[k] : m; };
 
 /** Minutos trabajados hasta ahora (sin las pausas). */
 export function minutosHastaAhora(t: Pick<Trabajo, 'inicio' | 'pausado_min' | 'pausa_desde' | 'estado'>, ahora = Date.now()) {
@@ -127,7 +127,7 @@ export function MiDia() {
   );
 }
 
-function FilaTrabajo({ t, abrir, grande }: { t: Trabajo; abrir: () => void; grande?: boolean }) {
+export function FilaTrabajo({ t, abrir, grande }: { t: Trabajo; abrir: () => void; grande?: boolean }) {
   const donde = [t.maquina, t.zona, t.lugar].filter(Boolean).join(' · ');
   const otros = t.nombres.length > 1 ? `Con ${t.nombres.join(', ')}` : '';
   const chapa = t.estado === 'hecho' ? ['Hecho', 'firmado'] : t.estado === 'en_curso' ? ['En curso', 'pendiente'] : t.estado === 'pausado' ? ['En pausa', 'pendiente'] : t.atrasado ? ['Atrasado', 'sin-cuadrar'] : null;
@@ -144,7 +144,7 @@ function FilaTrabajo({ t, abrir, grande }: { t: Trabajo; abrir: () => void; gran
 // =====================================================================================
 // Trabajo abierto
 // =====================================================================================
-function TrabajoAbierto({ t, cambiar, alCerrar }: { t: Trabajo; cambiar: (c: Partial<Trabajo>) => void; alCerrar: () => void }) {
+export function TrabajoAbierto({ t, cambiar, alCerrar, alRepartir }: { t: Trabajo; cambiar: (c: Partial<Trabajo>) => void; alCerrar: () => void; alRepartir?: () => void }) {
   const [paso, setPaso] = useState<'ver' | 'terminar' | 'problema'>('ver');
   const [problema, setProblema] = useState('');
   const ahora = () => new Date().toISOString();
@@ -197,6 +197,7 @@ function TrabajoAbierto({ t, cambiar, alCerrar }: { t: Trabajo; cambiar: (c: Par
         <label className="boton sec peq">Añadir foto<input type="file" accept="image/*" capture="environment" hidden onChange={(e) => { void ponerFoto(e.target.files?.[0]); e.target.value = ''; }} /></label>
         {paso === 'ver' && <button type="button" className="boton sec peq" onClick={() => setPaso('problema')}>Hay un problema</button>}
       </div>}
+      {alRepartir && !hecho && <div className="acciones-cal"><button type="button" className="boton sec peq" onClick={alRepartir}>Cambiar a quién le toca</button></div>}
       {paso === 'problema' && (
         <div className="caja-aviso">
           <label className="campo"><span>¿Qué pasa?</span><textarea rows={3} maxLength={1000} value={problema} onChange={(e) => setProblema(e.target.value)} placeholder="No queda taladrina, la máquina gotea…" /></label>
@@ -314,13 +315,14 @@ function Terminar({ t, alVolver, alTerminar }: { t: Trabajo; alVolver: () => voi
 }
 
 // ---------- crear un trabajo: de la lista o a mano ----------
-function NuevoTrabajo({ alCerrar, alCrear }: { alCerrar: () => void; alCrear: (id: string) => void }) {
+export function NuevoTrabajo({ alCerrar, alCrear, personas }: { alCerrar: () => void; alCrear: (id: string) => void; personas?: { id: string; nombre: string; baja?: string | null }[] }) {
   const { empresa } = useSesion();
   const [lista, setLista] = useState<Habitual[] | null>(null);
   const [buscar, setBuscar] = useState('');
   const [titulo, setTitulo] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
+  const [para, setPara] = useState('');
   useEffect(() => {
     limp().rpc('habituales_para_mi', { p_empresa: empresa!.id }).then(({ data, error: e }) => {
       if (e) { setError(textoError(e.message)); setLista([]); return; }
@@ -331,7 +333,8 @@ function NuevoTrabajo({ alCerrar, alCrear }: { alCerrar: () => void; alCrear: (i
     setError(null);
     if (!tarea && !titulo.trim()) return setError('Escribe qué has hecho o elige uno de la lista.');
     setOcupado(true);
-    const { data, error: e } = await limp().rpc('crear_trabajo', { p_empresa: empresa!.id, p_fecha: hoy(), p_tarea: tarea, p_titulo: tarea ? null : titulo.trim() });
+    const { data, error: e } = await limp().rpc('crear_trabajo', { p_empresa: empresa!.id, p_fecha: hoy(), p_tarea: tarea, p_titulo: tarea ? null : titulo.trim(),
+      ...(para ? { p_para: [para] } : {}) });
     setOcupado(false);
     if (e) return setError(textoError(e.message));
     alCrear(data as string);
@@ -339,6 +342,12 @@ function NuevoTrabajo({ alCerrar, alCrear }: { alCerrar: () => void; alCrear: (i
   const vistas = (lista ?? []).filter((h) => !buscar.trim() || h.titulo.toLowerCase().includes(buscar.trim().toLowerCase()));
   return (
     <Ventana titulo="Nuevo trabajo" alCerrar={alCerrar}>
+      {personas && (
+        <label className="campo"><span>Para quién</span>
+          <select value={para} onChange={(e) => setPara(e.target.value)}>
+            <option value="">Para mí</option>
+            {personas.filter((p) => !p.baja).map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+          </select></label>)}
       <label className="campo"><span>Buscar en la lista</span><input value={buscar} onChange={(e) => setBuscar(e.target.value)} placeholder="taladrina, derrame…" /></label>
       {lista === null ? <p className="nota">Cargando…</p> : (
         <div className="lista compacta">
