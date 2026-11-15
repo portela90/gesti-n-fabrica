@@ -238,7 +238,7 @@ fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornad
   Cristian Portela (decidido 15/11: sus horas sí cuentan; su ficha aún sin jornada ni horas de contrato), «pruebas»
   (se borra el día del cambio), y Abdelila y Hicham hasta su baja (en la vieja no salen por estar inactivos).
 
-### Stock de ropa y EPI (15/11, pedido por Cristian) — SIN APLICAR
+### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde
   sale la talla, tallas, mínimos por talla) y `prevencion.stock_mov` (solo se añaden: entrada, entrega, devolución,
