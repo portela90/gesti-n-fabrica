@@ -282,7 +282,7 @@ Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo»
 - Pruebas: `67-limpieza-reparto.sql` (26) y `pruebas/reparto.spec.ts` (6). El simulador distingue «esquema.tabla».
 - Pendiente: el encargado de hornos solo con su equipo; festivos (Limpieza no lee Personal: podría ir también a nucleo).
 
-### 2.6 Festivos y responsables con su equipo (15/11, cierre de la parte 4) — SIN APLICAR
+### 2.6 Festivos y responsables con su equipo (15/11, cierre de la parte 4) — APLICADO 15/11 (0028 y datos, comprobado)
 - `0028_limpieza_festivos_responsables.sql`: motivo «festivo» en `nucleo.ausencias` (Personal copia festivo/cierre/descanso de cada
   calendario a su gente, con disparadores en personal.dias y calendario_personas); `limpieza._fija_sale` (una fija no sale si toda su
   gente tiene festivo); `limpieza.responsables` + `mi_equipo` + `_de_mi_equipo` (el responsable solo ve/reparte lo de su equipo y los
