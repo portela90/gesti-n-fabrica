@@ -282,6 +282,15 @@ Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo»
 - Pruebas: `67-limpieza-reparto.sql` (26) y `pruebas/reparto.spec.ts` (6). El simulador distingue «esquema.tabla».
 - Pendiente: el encargado de hornos solo con su equipo; festivos (Limpieza no lee Personal: podría ir también a nucleo).
 
+### 2.6 Festivos y responsables con su equipo (15/11, cierre de la parte 4) — SIN APLICAR
+- `0028_limpieza_festivos_responsables.sql`: motivo «festivo» en `nucleo.ausencias` (Personal copia festivo/cierre/descanso de cada
+  calendario a su gente, con disparadores en personal.dias y calendario_personas); `limpieza._fija_sale` (una fija no sale si toda su
+  gente tiene festivo); `limpieza.responsables` + `mi_equipo` + `_de_mi_equipo` (el responsable solo ve/reparte lo de su equipo y los
+  sin asignar de sus grupos; puede soltar; no reparte lo que queda ni ve sustitutos); `repartir` permite dejar sin asignar.
+- Datos: `/home/claude/sql/responsables_datos.sql` (Encargado hornos → Juan José y Freddy).
+- Pantallas: «Dejar sin asignar», Hoy limitado al equipo, Personas → «Es responsable de un equipo», «Festivo» en la Semana.
+- Pruebas: `68-limpieza-festivos-responsables.sql` (23) y 2 más en `pruebas/reparto.spec.ts`.
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

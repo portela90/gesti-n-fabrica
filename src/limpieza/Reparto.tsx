@@ -9,7 +9,7 @@ import { useListas, type Opcion } from './listas';
 const fechaCorta = (f: string) => new Date(f + 'T12:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'numeric' });
 const sumar = (f: string, dias: number) => { const d = new Date(f + 'T12:00'); d.setDate(d.getDate() + dias); return d.toLocaleDateString('sv-SE'); };
 const lunesDe = (f: string) => { const d = new Date(f + 'T12:00'); return sumar(f, -((d.getDay() + 6) % 7)); };
-const MOTIVO: Record<string, string> = { vacaciones: 'Vacaciones', baja: 'Baja', permiso: 'Permiso', otro: 'Falta' };
+const MOTIVO: Record<string, string> = { vacaciones: 'Vacaciones', baja: 'Baja', permiso: 'Permiso', otro: 'Falta', festivo: 'Festivo' };
 
 // =====================================================================================
 // Faltas y sustitutos
@@ -28,7 +28,7 @@ export function Sustitutos({ personas, alCerrar }: { personas: Opcion[]; alCerra
   const cargar = useCallback(async () => {
     const [s, a] = await Promise.all([
       limp().from('sustituciones').select('id, ausente, sustituto, desde, hasta, nota').eq('empresa_id', empresa!.id).gte('hasta', hoy()).order('desde'),
-      nucleo().from('ausencias').select('persona_id, desde, hasta, motivo').eq('empresa_id', empresa!.id).gte('hasta', hoy()).lte('desde', sumar(hoy(), 14)).order('desde'),
+      nucleo().from('ausencias').select('persona_id, desde, hasta, motivo').eq('empresa_id', empresa!.id).neq('motivo', 'festivo').gte('hasta', hoy()).lte('desde', sumar(hoy(), 14)).order('desde'),
     ]);
     setLista((s.data ?? []) as Sustitucion[]);
     setFaltan((a.data ?? []) as Ausencia[]);
@@ -94,7 +94,11 @@ export function PersonasReparto() {
   const { personas } = useListas();
   const [filas, setFilas] = useState<Record<string, EnReparto> | null>(null);
   const [gruposTareas, setGruposTareas] = useState<string[]>([]);
+  const [resp, setResp] = useState<Record<string, string[]>>({});
+  const [eligiendo, setEligiendo] = useState<string | null>(null);
   useEffect(() => {
+    limp().from('responsables').select('persona_id, operarios').eq('empresa_id', empresa!.id).then(({ data }) =>
+      setResp(Object.fromEntries(((data ?? []) as { persona_id: string; operarios: string[] }[]).map((r) => [r.persona_id, r.operarios]))));
     limp().from('personas').select('persona_id, en_reparto, grupos').eq('empresa_id', empresa!.id).then(({ data }) =>
       setFilas(Object.fromEntries(((data ?? []) as EnReparto[]).map((r) => [r.persona_id, r]))));
     limp().from('tareas').select('grupo').eq('empresa_id', empresa!.id).is('baja', null).not('grupo', 'is', null).then(({ data }) =>
@@ -108,6 +112,15 @@ export function PersonasReparto() {
     if (error) { aviso(textoError(error.message)); setFilas((f) => ({ ...f, [id]: antes ?? { persona_id: id, en_reparto: false, grupos: [] } })); }
   }
   const vivas = personas.filter((p) => !p.baja);
+  const nombre = (id: string) => personas.find((p) => p.id === id)?.nombre ?? '—';
+  async function guardarResp(id: string, ops: string[]) {
+    const { error } = ops.length
+      ? await limp().from('responsables').upsert({ persona_id: id, empresa_id: empresa!.id, operarios: ops }, { onConflict: 'persona_id' })
+      : await limp().from('responsables').delete().eq('persona_id', id);
+    if (error) return aviso(textoError(error.message));
+    setResp((r) => { const n = { ...r }; if (ops.length) n[id] = ops; else delete n[id]; return n; });
+    setEligiendo(null); aviso('Guardado');
+  }
   return (
     <>
       <p className="nota" style={{ marginTop: 0 }}>
@@ -127,11 +140,28 @@ export function PersonasReparto() {
                       const g = [...new Set(e.target.value.split(',').map((x) => x.trim()).filter(Boolean))];
                       if (g.join(',') !== (r?.grupos ?? []).join(',')) guardar(p.id, { grupos: g });
                     }} /></label>
+                <small>{resp[p.id] ? `Reparte solo a: ${resp[p.id].map(nombre).join(', ')}` : ''}</small>
+                {edita && <button type="button" className="boton sec peq" onClick={() => setEligiendo(p.id)}>{resp[p.id] ? 'Cambiar a quién reparte' : 'Es responsable de un equipo'}</button>}
               </span>
             </div>);
         })}</div>)}
+      {eligiendo && <ElegirEquipo nombre={nombre(eligiendo)} personas={vivas.filter((p) => p.id !== eligiendo)} elegidos={resp[eligiendo] ?? []}
+        alCerrar={() => setEligiendo(null)} alGuardar={(ops) => guardarResp(eligiendo, ops)} />}
       <datalist id="grupos-limpieza">{gruposTareas.map((g) => <option key={g} value={g} />)}</datalist>
     </>
+  );
+}
+
+function ElegirEquipo({ nombre, personas, elegidos, alCerrar, alGuardar }: { nombre: string; personas: Opcion[]; elegidos: string[]; alCerrar: () => void; alGuardar: (ops: string[]) => void }) {
+  const [sel, setSel] = useState(elegidos);
+  return (
+    <Ventana titulo={`Equipo de ${nombre}`} alCerrar={alCerrar} pie={<button type="button" className="boton" onClick={() => alGuardar(sel)}>Guardar</button>}>
+      <p className="nota" style={{ marginTop: 0 }}>Solo verá y repartirá los trabajos de estas personas (y los sin asignar de los grupos que saben hacer). Sin nadie marcado, deja de ser responsable de un equipo.</p>
+      <div className="lista compacta">{personas.map((p) => (
+        <label key={p.id} className="fila check">
+          <input type="checkbox" checked={sel.includes(p.id)} onChange={(e) => setSel((s) => (e.target.checked ? [...s, p.id] : s.filter((x) => x !== p.id)))} />
+          <span className="fila-txt">{p.nombre}</span></label>))}</div>
+    </Ventana>
   );
 }
 

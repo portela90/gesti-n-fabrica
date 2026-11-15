@@ -11,6 +11,11 @@ export function Hoy() {
   const { empresa, puede } = useSesion();
   const reparte = puede('limpieza.trabajo.repartir');
   const listas = useListas();
+  // si soy responsable de un equipo (Encargado hornos), solo reparto a mi gente
+  const [miEquipo, setMiEquipo] = useState<string[] | null | undefined>(undefined);
+  useEffect(() => { limp().rpc('mi_equipo', { p_empresa: empresa!.id }).then(({ data }) => setMiEquipo((data as string[] | null) ?? null)); }, [empresa]);
+  const conEquipo = !!miEquipo;
+  const gente = conEquipo ? listas.personas.filter((p) => miEquipo!.includes(p.id)) : listas.personas;
   const [fecha, setFecha] = useState(hoy());
   const [lista, setLista] = useState<Trabajo[] | null>(null);
   const [abierto, setAbierto] = useState<string | null>(null);
@@ -57,7 +62,7 @@ export function Hoy() {
         <label className="campo"><span>Día</span><input type="date" value={fecha} onChange={(e) => e.target.value && setFecha(e.target.value)} /></label>
       </div>
       {lista && total > 0 && <p className="nota" style={{ marginTop: 0 }}>{hechos} de {total} hechos.</p>}
-      {reparte && (
+      {reparte && !conEquipo && miEquipo !== undefined && (
         <div className="acciones-cal" style={{ marginTop: 0, marginBottom: 12 }}>
           {sinAsignar > 0 && (fecha === hoy() || fecha === manana) &&
             <button type="button" className="boton" disabled={ocupado} onClick={repartirQueda}>Repartir lo que queda ({sinAsignar})</button>}
@@ -72,34 +77,37 @@ export function Hoy() {
       {reparte && fecha === hoy() && <div className="acciones-cal" style={{ marginTop: 14 }}><button type="button" className="boton" onClick={() => setNuevo(true)}>+ Trabajo</button></div>}
       {t && !repartiendo && <TrabajoAbierto t={t} cambiar={(c) => cambiar(t.id, c)} alCerrar={() => setAbierto(null)}
         alRepartir={reparte ? () => setRepartiendo(t) : undefined} />}
-      {repartiendo && <Repartir t={repartiendo} personas={listas.personas} equipos={listas.equipos}
+      {repartiendo && <Repartir t={repartiendo} personas={gente} equipos={listas.equipos} sinEquipo={conEquipo}
         alCerrar={() => setRepartiendo(null)} alGuardar={() => { setRepartiendo(null); cargar(); }} />}
       {sustitutos && <Sustitutos personas={listas.personas} alCerrar={() => { setSustitutos(false); cargar(); }} />}
-      {nuevo && <NuevoTrabajo personas={listas.personas} alCerrar={() => setNuevo(false)} alCrear={(id) => { setNuevo(false); cargar().then(() => setAbierto(id)); }} />}
+      {nuevo && <NuevoTrabajo personas={gente} alCerrar={() => setNuevo(false)} alCrear={(id) => { setNuevo(false); cargar().then(() => setAbierto(id)); }} />}
     </>
   );
 }
 
-function Repartir({ t, personas, equipos, alCerrar, alGuardar }: { t: Trabajo; personas: Opcion[]; equipos: Opcion[]; alCerrar: () => void; alGuardar: () => void }) {
+function Repartir({ t, personas, equipos, sinEquipo, alCerrar, alGuardar }: { t: Trabajo; personas: Opcion[]; equipos: Opcion[]; sinEquipo?: boolean; alCerrar: () => void; alGuardar: () => void }) {
   const [quien, setQuien] = useState<string[]>(t.todo_equipo ? [] : t.asignados);
   const [todo, setTodo] = useState(t.todo_equipo);
   const [equipo, setEquipo] = useState(t.equipo_id ?? equipos.find((e) => !e.baja)?.id ?? '');
   const [error, setError] = useState<string | null>(null);
   const [ocupado, setOcupado] = useState(false);
-  async function guardar() {
+  async function guardar(soltar = false) {
     setError(null);
-    if (!todo && !quien.length) return setError('Elige al menos a una persona, o «todo el equipo».');
+    if (!soltar && !todo && !quien.length) return setError('Elige al menos a una persona, o «todo el equipo».');
     setOcupado(true);
-    const { error: e } = await limp().rpc('repartir', { p_trabajo: t.id, p_personas: todo ? [] : quien, p_todo_equipo: todo, p_equipo: todo ? equipo || null : null });
+    const { error: e } = await limp().rpc('repartir', soltar ? { p_trabajo: t.id, p_personas: [], p_todo_equipo: false, p_equipo: null }
+      : { p_trabajo: t.id, p_personas: todo ? [] : quien, p_todo_equipo: todo, p_equipo: todo ? equipo || null : null });
     setOcupado(false);
     if (e) return setError(textoError(e.message));
-    aviso('Repartido'); alGuardar();
+    aviso(soltar ? 'Queda sin asignar' : 'Repartido'); alGuardar();
   }
   const vivas = personas.filter((p) => !p.baja || quien.includes(p.id));
   return (
-    <Ventana titulo={`¿A quién le toca? · ${t.titulo}`} alCerrar={alCerrar} pie={<button type="button" className="boton" disabled={ocupado} onClick={guardar}>Guardar</button>}>
+    <Ventana titulo={`¿A quién le toca? · ${t.titulo}`} alCerrar={alCerrar} pie={<>
+      {(t.asignados.length > 0 || t.todo_equipo) && <button type="button" className="boton sec" disabled={ocupado} onClick={() => guardar(true)}>Dejar sin asignar</button>}
+      <button type="button" className="boton" disabled={ocupado} onClick={() => guardar()}>Guardar</button></>}>
       <p className="nota" style={{ marginTop: 0 }}>Solo cambia este trabajo de este día; la tarea fija se queda como estaba.</p>
-      <label className="check"><input type="checkbox" checked={todo} onChange={(e) => setTodo(e.target.checked)} />Todo el equipo</label>
+      {!sinEquipo && <label className="check"><input type="checkbox" checked={todo} onChange={(e) => setTodo(e.target.checked)} />Todo el equipo</label>}
       {todo ? (
         <label className="campo"><span>Equipo</span>
           <select value={equipo} onChange={(e) => setEquipo(e.target.value)}>{equipos.filter((e) => !e.baja || e.id === equipo).map((e) => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></label>

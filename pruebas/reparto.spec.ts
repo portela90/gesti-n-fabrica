@@ -125,3 +125,33 @@ test('reparto en el móvil más estrecho: nada se aplasta ni se sale', async ({ 
   await expect(page.getByRole('dialog', { name: 'Faltas y sustitutos' })).toBeVisible();
   expect(await desbordes(page), 'sustitutos').toEqual([]);
 });
+
+test('responsable de un equipo: solo reparte a su gente, sin «todo el equipo» ni botones de toda la unidad', async ({ page }) => {
+  const d = [trabajo('t1', 'Basuras', { asignados: [LEO], nombres: ['Leo Prueba'] })];
+  const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: { ...rpc(d), mi_equipo: () => [LEO],
+    repartir: (b: Record<string, unknown>) => { Object.assign(d[0], { asignados: b.p_personas, nombres: [] }); return null; } } });
+  await page.goto('./#/m/limpieza/hoy');
+  await expect(page.locator('.fila', { hasText: 'Basuras' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Faltas y sustitutos' })).toHaveCount(0);
+  await page.locator('.fila', { hasText: 'Basuras' }).click();
+  await page.getByRole('button', { name: 'Cambiar a quién le toca' }).click();
+  const v = page.getByRole('dialog', { name: '¿A quién le toca? · Basuras' });
+  await expect(v.getByLabel('Todo el equipo')).toHaveCount(0);
+  await expect(v.locator('.fila')).toHaveText(['Leo Prueba']);
+  await v.getByRole('button', { name: 'Dejar sin asignar' }).click();
+  await expect(page.getByText('Queda sin asignar')).toBeVisible();
+  expect(sim.find((l) => l.ruta.includes('/rpc/repartir'))!.cuerpo).toEqual({ p_trabajo: 't1', p_personas: [], p_todo_equipo: false, p_equipo: null });
+  await expect(page.locator('.subtitulo', { hasText: 'Sin asignar' })).toBeVisible();
+});
+
+test('personas: hacer a alguien responsable de un equipo', async ({ page }) => {
+  const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: { ...tablas(), responsables: [] }, rpc: rpc() });
+  await page.goto('./#/m/limpieza/personas');
+  await page.locator('.fila', { hasText: 'Marta Prueba' }).getByRole('button', { name: 'Es responsable de un equipo' }).click();
+  const v = page.getByRole('dialog', { name: 'Equipo de Marta Prueba' });
+  await expect(v.locator('.fila')).toHaveText(['Leo Prueba']);
+  await v.getByLabel('Leo Prueba').check();
+  await v.getByRole('button', { name: 'Guardar' }).click();
+  await expect(page.locator('.fila', { hasText: 'Marta Prueba' })).toContainText('Reparte solo a: Leo Prueba');
+  expect(sim.find((l) => l.metodo === 'POST' && l.ruta.includes('/rest/v1/responsables'))!.cuerpo).toMatchObject({ persona_id: MARTA, operarios: [LEO] });
+});

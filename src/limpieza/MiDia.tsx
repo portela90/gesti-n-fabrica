@@ -24,7 +24,7 @@ export const durTxt = (m: number | null) => (m == null ? '' : m < 60 ? `${m} min
 const ERRORES: Record<string, string> = {
   NO_PERMISO: 'No tienes permiso para esto.', YA_HECHO: 'Este trabajo ya está terminado.', FOTO_FALTA: 'Falta la foto de un punto que está mal.',
   CHECKLIST_MAL: 'Falta contestar algún punto.', TIEMPO_MAL: 'Pon cuánto has tardado.', SIN_FICHA: 'Tu usuario no está enlazado con tu ficha de trabajador.',
-  TITULO_MAL: 'Escribe qué has hecho.', FALTA_QUIEN: 'Elige para quién es.', FALTA_EQUIPO: 'Elige el equipo.', PERSONA_DE_OTRA_UNIDAD: 'Hay una persona que no es de esta unidad de trabajo.', FECHA_MAL: 'Solo se puede para ayer, hoy o mañana.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
+  TITULO_MAL: 'Escribe qué has hecho.', FALTA_QUIEN: 'Elige para quién es.', FALTA_EQUIPO: 'Elige el equipo.', PERSONA_DE_OTRA_UNIDAD: 'Hay una persona que no es de esta unidad de trabajo.', FUERA_DE_TU_EQUIPO: 'Solo puedes repartir a la gente de tu equipo.', FECHA_MAL: 'Solo se puede para ayer, hoy o mañana.', 'Failed to fetch': 'Sin conexión: inténtalo cuando tengas red.',
 };
 export const textoError = (m: string) => { const k = Object.keys(ERRORES).find((x) => m.includes(x)); return k ? ERRORES[k] : m; };
 
