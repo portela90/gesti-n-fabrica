@@ -212,7 +212,7 @@ también las pausas; sin modo sencillo; nadie con solo lectura por ahora.
 - Orden para aplicarlo: 1) pegar 0021; 2) añadir `limpieza` a Exposed schemas (con `public` el primero, en un solo
   guardado); 3) pegar la copia de datos; 4) subir la app.
 
-### 2.2 Horas del día y Mis horas (14/11) — SIN APLICAR
+### 2.2 Horas del día y Mis horas (14/11) — APLICADO 15/11 (0022 y copia de horas; comprobado)
 Decidido por Cristian (14/11): de momento las horas del mes = calendario + faltas y extras, con las mismas reglas
 que «Horas del día» y el Excel mensual de la app vieja (35 h o las de contrato a la semana, bolsa, festivos). El
 fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornada, sus horas de contrato y su horario.
@@ -232,7 +232,11 @@ fichaje con pausas, más adelante. Y cada trabajador lleva en su ficha su jornad
 - Copia preparada en `/home/claude/sql/horas_datos.sql` (`gen_horas.py`): horas de contrato de 10 personas, 38 días
   con algo distinto (3 con horas fuera sin motivo en la vieja → «(sin motivo en la app vieja)») y la bolsa desde
   el 5/10/2026. Las 316 jornadas de vacaciones de `horas_dia` ya están todas en `personal.vacaciones`.
-- Falta: comparar el Excel de octubre y noviembre de las dos apps (criterio para dar el cambio por bueno).
+- **Comparado 15/11** (del 1/10 al 14/11, día a día y persona a persona: horas, extra, fuera y falta): los 9 trabajadores
+  de las dos apps salen idénticos (misma huella md5) tras añadir el festivo del 12/10 (Fiesta Nacional), que no se
+  había traído, a «Semana 2026» y «Fin de semana 2026» (con el «sí» de Cristian). En la nueva salen además
+  Cristian Portela (decidido 15/11: sus horas sí cuentan; su ficha aún sin jornada ni horas de contrato), «pruebas»
+  (se borra el día del cambio), y Abdelila y Hicham hasta su baja (en la vieja no salen por estar inactivos).
 
 ### Calendario 2027 (pendiente, viene de la app vieja)
 - Semana 2027 ya cargado en la app vieja de Calendario (225 días, como el Excel de la fábrica).
