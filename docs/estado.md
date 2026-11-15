@@ -291,7 +291,7 @@ Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo»
 - Pantallas: «Dejar sin asignar», Hoy limitado al equipo, Personas → «Es responsable de un equipo», «Festivo» en la Semana.
 - Pruebas: `68-limpieza-festivos-responsables.sql` (23) y 2 más en `pruebas/reparto.spec.ts`.
 
-### 2.7 Fin de semana (15/11, parte 5) — SIN APLICAR
+### 2.7 Fin de semana (15/11, parte 5) — APLICADO 15/11 (0029, comprobado)
 Decidido por Cristian: al subir el Excel elige qué hacer con los sin persona (reparto automático, para el encargado, todo el equipo);
 solo él sube el Excel; instrucciones («traspasos») y checklist del encargado igual que la vieja.
 - `0029_limpieza_finde.sql`: permiso `limpieza.excel.editar`; trabajos `no_repartir`, `urgente`, `grupo`; disparador `soltar`
