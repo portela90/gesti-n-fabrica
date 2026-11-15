@@ -291,6 +291,19 @@ Grupos por persona (hornos). Plan de la semana igual que la vieja. «+ Trabajo»
 - Pantallas: «Dejar sin asignar», Hoy limitado al equipo, Personas → «Es responsable de un equipo», «Festivo» en la Semana.
 - Pruebas: `68-limpieza-festivos-responsables.sql` (23) y 2 más en `pruebas/reparto.spec.ts`.
 
+### 2.7 Fin de semana (15/11, parte 5) — SIN APLICAR
+Decidido por Cristian: al subir el Excel elige qué hacer con los sin persona (reparto automático, para el encargado, todo el equipo);
+solo él sube el Excel; instrucciones («traspasos») y checklist del encargado igual que la vieja.
+- `0029_limpieza_finde.sql`: permiso `limpieza.excel.editar`; trabajos `no_repartir`, `urgente`, `grupo`; disparador `soltar`
+  (soltar a mano → no_repartir); el reparto de la mañana no toca los no_repartir, el botón sí; `importar` (sin repetidos, días de hoy a +14,
+  creado_por vacío), `cambiar_dia`; `instrucciones` (+ `instruccion_leida`; al cambiarlas vuelven a sin leer); `revisiones`
+  (+ `puntos_encargado`, `guardar_revision`; enviada = no se cambia salvo plan.editar); fotos en `<empresa>/revisiones/<fecha>/`.
+  `es_mio`: crear para otro ya no lo hace tuyo.
+- Pantallas: pestaña «Fin de semana» (`src/limpieza/Finde.tsx`), lectura del Excel en `src/limpieza/excel.ts` (librería `read-excel-file`, solo .xlsx);
+  aviso «Tienes instrucciones nuevas» para el encargado.
+- Pruebas: `69-limpieza-finde.sql` (31) y `pruebas/finde.spec.ts` (6, con `pruebas/datos/finde-inventado.xlsx`).
+- Pendiente: el responsable de un equipo (Encargado hornos) ve la pestaña pero no la checklist ni las instrucciones; avisos al móvil (parte 6).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

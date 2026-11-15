@@ -349,3 +349,28 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .gente-dia { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 8px; }
 .gente-dia .chapa { white-space: normal; }
 .dos-col { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 10px; }
+
+/* Limpieza · fin de semana */
+.chips, .dias-finde, .bien-mal { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { min-height: 40px; padding: 6px 14px; border-radius: 999px; border: 1px solid var(--linea); background: var(--sup); color: var(--tinta); font: inherit; font-weight: 600; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--area, var(--acento)); border-color: var(--area, var(--acento)); color: #fff; }
+.chip.mal[aria-pressed="true"] { background: var(--mal); border-color: var(--mal); }
+.chip:disabled { opacity: .45; cursor: default; }
+.fila-finde, .fila-excel { flex-wrap: wrap; align-items: center; gap: 8px; }
+.fila-excel { align-items: flex-start; }
+.fila-excel > input[type="checkbox"] { width: 22px; height: 22px; margin-top: 2px; flex: none; }
+.fila-excel .fila-txt { flex: 1; min-width: 0; }
+.excel-elegir { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; align-items: center; margin-top: 6px; }
+.excel-elegir select { min-width: 0; width: 100%; }
+.ajustes-excel { margin-top: 14px; }
+.ajustes-excel > summary { cursor: pointer; font-weight: 600; color: var(--tinta2); padding: 6px 0; }
+.sin-borde { border: 0; padding: 0; margin: 12px 0; }
+.sin-borde legend { font-weight: 600; margin-bottom: 4px; }
+.ok-grande { font-size: 18px; font-weight: 700; color: var(--bien); margin: 0 0 6px; }
+.instrucciones { margin-bottom: 14px; }
+.fila.sin-leer { border-left: 4px solid #d97706; }
+.texto-largo { display: block; white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 4px; }
+.punto-enc { display: grid; gap: 8px; padding: 12px; margin-bottom: 8px; background: var(--sup); border: 1px solid var(--linea); border-radius: 12px; }
+.punto-enc.mal { border-color: var(--mal); }
+.punto-enc input:not([type="file"]) { width: 100%; min-width: 0; }
+.aviso-instrucciones { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font: inherit; }

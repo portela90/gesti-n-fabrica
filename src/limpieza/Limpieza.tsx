@@ -4,6 +4,7 @@ import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { MiDia } from './MiDia';
 import { Hoy } from './Hoy';
+import { Finde } from './Finde';
 import { PersonasReparto, Semana } from './Reparto';
 import { useListas, type Listas, type Maquina, type Opcion } from './listas';
 
@@ -59,14 +60,15 @@ export function encaja(texto: string, codigos: string | undefined) {
   });
 }
 
-type Pestana = 'hoy' | 'semana' | 'dia' | 'tareas' | 'checklists' | 'personas';
+type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'tareas' | 'checklists' | 'personas';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const ve = puede('limpieza.plan.ver') || puede('limpieza.plan.editar');
   const apunta = puede('limpieza.trabajo.apuntar');
-  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')], ['dia', 'Mi día', apunta],
+  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')],
+    ['finde', 'Fin de semana', puede('limpieza.trabajo.repartir') || puede('limpieza.excel.editar')], ['dia', 'Mi día', apunta],
     ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve]] as [Pestana, string, boolean][])
     .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
@@ -74,6 +76,7 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
   if (!empresa) return null;
   return (
     <main className="contenido" style={{ ['--area' as string]: '#0f766e' }}>
+      {puede('limpieza.trabajo.repartir') && !puede('limpieza.excel.editar') && actual !== 'finde' && <AvisoInstrucciones ir={() => ir('/m/limpieza/finde')} />}
       {pestanas.length > 1 && (
         <nav className="pestanas no-imprimir" aria-label="Limpieza">
           {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/limpieza/${c}`)}>{n}</button>)}
@@ -88,8 +91,21 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
       {actual === 'checklists' && <Checklists />}
       {actual === 'semana' && <Semana />}
       {actual === 'personas' && <PersonasReparto />}
+      {actual === 'finde' && <Finde />}
     </main>
   );
+}
+
+/** Al encargado: «Tienes instrucciones nuevas» (las que no ha leído y aún valen). */
+function AvisoInstrucciones({ ir }: { ir: () => void }) {
+  const { empresa } = useSesion();
+  const [n, setN] = useState(0);
+  useEffect(() => {
+    supabase.schema('limpieza').from('instrucciones').select('id').eq('empresa_id', empresa!.id).is('leido_en', null).is('anulado', null)
+      .gte('hasta', new Date().toLocaleDateString('sv-SE')).then(({ data }) => setN((data ?? []).length));
+  }, [empresa]);
+  if (!n) return null;
+  return <button type="button" className="aviso-linea aviso-instrucciones" onClick={ir}>{n === 1 ? 'Tienes instrucciones nuevas' : `Tienes ${n} instrucciones nuevas`}: tócalas para leerlas.</button>;
 }
 
 // =====================================================================================
