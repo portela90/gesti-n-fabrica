@@ -316,7 +316,7 @@ problemas repetidos igual que la vieja; al móvil: incidencias a él, trabajos a
 - Pruebas: `70-incidencias-avisos.sql` (36) y `pruebas/incidencias.spec.ts` (6).
 - Falta: mandar la bandeja al móvil (función de Supabase + claves; con el «sí» de Cristian).
 
-### 2.9 Avisos al móvil (16/11, parte 6) — SIN APLICAR
+### 2.9 Avisos al móvil (16/11, parte 6) — APLICADO 16/11 (0031, función «avisos» v1 instalada sin JWT, claves creadas, respuesta 200)
 Con el «sí» de Cristian (instalar la función «avisos» en colada-mapri cuando pegue la migración).
 - `0031_avisos_movil.sql`: `nucleo.suscripciones` (+ `guardar_suscripcion`, `quitar_suscripcion`), claves en Vault (`push_secreto` y `push_url`
   los crea la migración; `push_publica`/`push_privada` los crea la función la primera vez), `clave_push` (si no hay, pide a la función que las cree),
