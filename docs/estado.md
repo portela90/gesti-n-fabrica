@@ -304,7 +304,7 @@ solo él sube el Excel; instrucciones («traspasos») y checklist del encargado 
 - Pruebas: `69-limpieza-finde.sql` (31) y `pruebas/finde.spec.ts` (6, con `pruebas/datos/finde-inventado.xlsx`).
 - Pendiente: el responsable de un equipo (Encargado hornos) ve la pestaña pero no la checklist ni las instrucciones; avisos al móvil (parte 6).
 
-### 2.8 Incidencias, problemas repetidos, tablón y bandeja de notificaciones (16/11, parte 6) — SIN APLICAR
+### 2.8 Incidencias, problemas repetidos, tablón y bandeja de notificaciones (16/11, parte 6) — APLICADO 16/11 (0030 y datos, comprobado)
 Decidido por Cristian: incidencias automáticas (Hay un problema, puntos Mal de checklists de trabajos y del encargado); solo él las gestiona;
 problemas repetidos igual que la vieja; al móvil: incidencias a él, trabajos al operario, instrucciones/checklist del encargado, tablón a todos.
 - `0030_incidencias_avisos.sql`: núcleo `usuarios_con_permiso`, `usuarios_de_personas`, `notificaciones` + `notificar` + `marcar_leidas`,
