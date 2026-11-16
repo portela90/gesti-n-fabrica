@@ -217,7 +217,11 @@ function Terminar({ t, alVolver, alTerminar }: { t: Trabajo; alVolver: () => voi
   const [resp, setResp] = useState<{ valor?: string; foto?: string }[]>([]);
   const [nota, setNota] = useState('');
   const medido = minutosHastaAhora(t);
-  const preguntar = medido == null || medido < 2;        // no pulsó Empezar, o Empezar y Terminar casi a la vez
+  // se pregunta si no pulsó Empezar, si pulsó Empezar y Terminar casi a la vez, si lleva más de 12 h (se quedó sin terminar)
+  // o si dice que el tiempo medido no es el bueno
+  const demasiado = medido != null && medido > 720;
+  const [corregir, setCorregir] = useState(false);
+  const preguntar = medido == null || medido < 2 || demasiado || corregir;
   const [siPrevisto, setSiPrevisto] = useState<boolean | null>(null);
   const [minutos, setMinutos] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -255,7 +259,7 @@ function Terminar({ t, alVolver, alTerminar }: { t: Trabajo; alVolver: () => voi
       if (p.tipo === 'num' && (r.valor == null || r.valor.trim() === '' || Number.isNaN(Number(r.valor.replace(',', '.'))))) return setError(`Pon el número de «${p.texto}».`);
       if (p.tipo === 'ok' && r.valor === 'mal' && p.foto_si_mal && !r.foto) return setError(`«${p.texto}» está mal: haz una foto.`);
     }
-    if (!minutosFinal || minutosFinal < 1 || minutosFinal > 720) return setError('Di cuánto has tardado.');
+    if (!minutosFinal || minutosFinal < 1 || minutosFinal > 720) return setError(minutosFinal && minutosFinal > 720 ? 'Como mucho 12 horas: di cuánto has tardado de verdad.' : 'Di cuánto has tardado.');
     const checklist = puntos.map((p, i) => ({ valor: p.tipo === 'num' ? Number((resp[i].valor ?? '').replace(',', '.')) : resp[i].valor, ...(resp[i].foto ? { foto: resp[i].foto } : {}) }));
     const cuando = new Date().toISOString();
     void encolar({ tipo: 'rpc', fn: 'terminar', args: { p_trabajo: t.id, p_minutos: minutosFinal, p_checklist: checklist, p_nota: nota.trim() || null, p_cuando: cuando },
@@ -295,9 +299,12 @@ function Terminar({ t, alVolver, alTerminar }: { t: Trabajo; alVolver: () => voi
         </ol>
       </>}
       <h3 className="subtitulo">Tiempo</h3>
-      {!preguntar ? <p style={{ marginTop: 0 }}>Has tardado <b>{durTxt(medido)}</b>{t.minutos_est && medido! < t.minutos_est ? ` (se apunta lo previsto: ${durTxt(t.minutos_est)})` : ''}.</p> : (
+      {!preguntar ? <>
+        <p style={{ marginTop: 0 }}>Has tardado <b>{durTxt(medido)}</b>{t.minutos_est && medido! < t.minutos_est ? ` (se apunta lo previsto: ${durTxt(t.minutos_est)})` : ''}.</p>
+        <button type="button" className="boton sec peq" onClick={() => setCorregir(true)}>No, he tardado otra cosa</button></> : (
         <>
-          <p className="nota" style={{ marginTop: 0 }}>{medido == null ? 'No pulsaste «Empezar».' : 'Has pulsado «Empezar» y «Terminar» casi a la vez.'} ¿Cuánto has tardado?</p>
+          <p className="nota" style={{ marginTop: 0 }}>{medido == null ? 'No pulsaste «Empezar».' : demasiado ? `Lleva ${durTxt(medido)} en marcha: seguramente se quedó sin terminar.`
+            : corregir ? '' : 'Has pulsado «Empezar» y «Terminar» casi a la vez.'} ¿Cuánto has tardado?</p>
           {t.minutos_est ? (
             <div className="si-no" role="group" aria-label={`¿Has tardado ${durTxt(t.minutos_est)}?`}>
               <button type="button" aria-pressed={siPrevisto === true} onClick={() => setSiPrevisto(true)}>Sí, {durTxt(t.minutos_est)}</button>
@@ -307,6 +314,10 @@ function Terminar({ t, alVolver, alTerminar }: { t: Trabajo; alVolver: () => voi
             <div className="opciones-min" role="group" aria-label="Minutos">
               {OPCIONES_MIN.map((m) => <button key={m} type="button" aria-pressed={minutos === String(m)} onClick={() => setMinutos(String(m))}>{durTxt(m)}</button>)}
             </div>)}
+          {(!t.minutos_est || siPrevisto === false) && (
+            <label className="campo"><span>U otro (minutos)</span>
+              <input type="number" inputMode="numeric" min={1} max={720} value={OPCIONES_MIN.includes(Number(minutos)) ? '' : minutos}
+                onChange={(e) => setMinutos(e.target.value)} placeholder="por ejemplo, 25" /></label>)}
         </>
       )}
       <label className="campo"><span>Nota (opcional)</span><input maxLength={1000} value={nota} onChange={(e) => setNota(e.target.value)} /></label>

@@ -188,9 +188,10 @@ export function Semana() {
   return (
     <>
       <div className="filtros semana-nav">
-        <button type="button" className="boton sec peq" aria-label="Semana anterior" onClick={() => setLunes(sumar(lunes, -7))}>‹</button>
+        <button type="button" className="boton sec boton-flecha" aria-label="Semana anterior" onClick={() => setLunes(sumar(lunes, -7))}>‹</button>
         <label className="campo"><span>Semana del</span><input type="date" value={lunes} onChange={(e) => e.target.value && setLunes(lunesDe(e.target.value))} /></label>
-        <button type="button" className="boton sec peq" aria-label="Semana siguiente" onClick={() => setLunes(sumar(lunes, 7))}>›</button>
+        <button type="button" className="boton sec boton-flecha" aria-label="Semana siguiente" onClick={() => setLunes(sumar(lunes, 7))}>›</button>
+        {lunes !== lunesDe(hoy()) && <button type="button" className="boton sec boton-volver" onClick={() => setLunes(lunesDe(hoy()))}>Esta semana</button>}
       </div>
       <p className="nota" style={{ marginTop: 0 }}>Los días que aún no han llegado salen con lo previsto por las tareas fijas. Junto a cada persona: minutos de trabajo frente a los de su horario.</p>
       {dias === null ? <p className="nota">Cargando…</p> : dias.map((d) => {

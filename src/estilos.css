@@ -375,3 +375,8 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .punto-enc input:not([type="file"]) { width: 100%; min-width: 0; }
 .aviso-instrucciones { display: block; width: 100%; text-align: left; border: 0; cursor: pointer; font: inherit; }
 .fila-finde > .fila-txt { flex: 1 1 180px; min-width: 0; }
+/* navegar por semanas / fines de semana: ‹ fecha › en una línea */
+.semana-nav { display: flex; align-items: flex-end; gap: 8px; max-width: 560px; flex-wrap: wrap; }
+.semana-nav > .campo { flex: 1 1 160px; margin: 0; min-width: 0; }
+.semana-nav > .boton-flecha { flex: none; width: 48px; height: 48px; padding: 0; font-size: 26px; line-height: 1; }
+.semana-nav > .boton-volver { flex: none; height: 48px; }

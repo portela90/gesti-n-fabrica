@@ -140,6 +140,35 @@ test('terminar sin haber pulsado Empezar y sin tiempo previsto: elige cuánto', 
   await expect.poll(() => (sim.find((l) => l.ruta.includes('/rpc/terminar'))?.cuerpo as Record<string, unknown>)?.p_minutos).toBe(45);
 });
 
+test('un trabajo que se quedó en marcha 19 h: pregunta cuánto se tardó de verdad', async ({ page }) => {
+  const inicio = new Date(Date.now() - 19 * 3600e3).toISOString();
+  const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(),
+    rpc: rpc([trabajo('t7', 'Derrame de aceite', { estado: 'en_curso', inicio, minutos_est: 30 })]) });
+  await page.goto('./#/m/limpieza');
+  await page.locator('.fila-grande').click();
+  await page.getByRole('button', { name: 'Terminar' }).click();
+  const tv = page.getByRole('dialog', { name: 'Terminar: Derrame de aceite' });
+  await expect(tv).toContainText('Lleva 19 h en marcha: seguramente se quedó sin terminar.');
+  await tv.getByRole('button', { name: 'No, otro' }).click();
+  await tv.getByLabel('U otro (minutos)').fill('25');
+  await tv.getByRole('button', { name: 'Terminar' }).click();
+  await expect.poll(() => (sim.find((l) => l.ruta.includes('/rpc/terminar'))?.cuerpo as Record<string, unknown>)?.p_minutos).toBe(25);
+});
+
+test('el tiempo medido se puede corregir', async ({ page }) => {
+  const inicio = new Date(Date.now() - 50 * 60e3).toISOString();
+  const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: rpc([trabajo('t8', 'Fregar', { estado: 'en_curso', inicio })]) });
+  await page.goto('./#/m/limpieza');
+  await page.locator('.fila-grande').click();
+  await page.getByRole('button', { name: 'Terminar' }).click();
+  const tv = page.getByRole('dialog', { name: 'Terminar: Fregar' });
+  await expect(tv).toContainText('Has tardado 50 min.');
+  await tv.getByRole('button', { name: 'No, he tardado otra cosa' }).click();
+  await tv.getByRole('group', { name: 'Minutos' }).getByRole('button', { name: '30 min', exact: true }).click();
+  await tv.getByRole('button', { name: 'Terminar' }).click();
+  await expect.poll(() => (sim.find((l) => l.ruta.includes('/rpc/terminar'))?.cuerpo as Record<string, unknown>)?.p_minutos).toBe(30);
+});
+
 test('Mi día en el móvil más estrecho: nada se aplasta ni se sale', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: rpc() });

@@ -42,11 +42,13 @@ export function Finde() {
   return (
     <>
       <div className="filtros semana-nav">
-        <button type="button" className="boton sec peq" aria-label="Fin de semana anterior" onClick={() => setSab(sumarDias(sab, -7))}>‹</button>
+        <button type="button" className="boton sec boton-flecha" aria-label="Fin de semana anterior" onClick={() => setSab(sumarDias(sab, -7))}>‹</button>
         <label className="campo"><span>Fin de semana del sábado</span>
           <input type="date" value={sab} onChange={(e) => e.target.value && setSab(sumarDias(e.target.value, -((diaSemana(e.target.value) + 1) % 7)))} /></label>
-        <button type="button" className="boton sec peq" aria-label="Fin de semana siguiente" onClick={() => setSab(sumarDias(sab, 7))}>›</button>
+        <button type="button" className="boton sec boton-flecha" aria-label="Fin de semana siguiente" onClick={() => setSab(sumarDias(sab, 7))}>›</button>
+        {sab !== sabadoDeAhora() && <button type="button" className="boton sec boton-volver" onClick={() => setSab(sabadoDeAhora())}>Este fin de semana</button>}
       </div>
+      <p className="nota" style={{ marginTop: 6 }}>Sábado {fechaCorta(sab).split(' ').pop()} y domingo {fechaCorta(dom).split(' ').pop()}. Con ‹ y › vas a otros fines de semana.</p>
       <div className="acciones-cal" style={{ marginTop: 0, marginBottom: 12 }}>
         {jefe && <button type="button" className="boton" onClick={() => setSubir(true)}>Subir el Excel del fin de semana</button>}
         <button type="button" className="boton sec" onClick={() => setRevision(hoyEsFinde ? hoy() : sab <= hoy() ? sab : hoy())}>Checklist del encargado</button>
