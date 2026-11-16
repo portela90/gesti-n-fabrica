@@ -23,10 +23,12 @@ export function AvisosMovil() {
   useEffect(() => {
     if (!soporta()) { setEstado(esIphone() ? 'iphone' : 'no-se-puede'); return; }
     if (Notification.permission === 'denied') { setEstado('bloqueado'); return; }
+    const espera = setTimeout(() => setEstado((e) => (e === 'mirando' ? 'sin-apuntar' : e)), 3000);   // por si el navegador no contesta
     navigator.serviceWorker.getRegistration().then(async (reg) => {
       const s = await reg?.pushManager.getSubscription();
       if (s) { await guardar(s).catch(() => undefined); setEstado('apuntado'); } else setEstado('sin-apuntar');   // por si en este navegador entra otra persona
-    }).catch(() => setEstado('sin-apuntar'));
+    }).catch(() => setEstado('sin-apuntar')).finally(() => clearTimeout(espera));
+    return () => clearTimeout(espera);
   }, []);
 
   async function apuntar() {

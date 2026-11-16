@@ -124,6 +124,7 @@ test('incidencias en el móvil más estrecho: nada se aplasta ni se sale', async
 });
 
 test('inicio: «Recibir avisos en este móvil», o qué hacer si el navegador no puede', async ({ page }) => {
+  await page.context().grantPermissions(['notifications']);
   await simular(page, { dentro: true, sesion: sesion(OPERARIO), tablas: tablas(), rpc: rpc() });
   await page.goto('./');
   await expect(page.getByRole('button', { name: 'Recibir avisos en este móvil' })).toBeVisible();
