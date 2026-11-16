@@ -40,7 +40,7 @@ test('hoy del equipo: los trabajos por persona, sin asignar primero, y repartir 
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: rpc() });
   await page.goto('./#/m/limpieza');
-  await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Hoy del equipo', 'Semana', 'Fin de semana', 'Mi día', 'Tareas', 'Checklists', 'Personas']);
+  await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Hoy del equipo', 'Semana', 'Fin de semana', 'Mi día', 'Incidencias', 'Tareas', 'Checklists', 'Personas']);
   await expect(page.getByText('1 de 4 hechos.')).toBeVisible();
   await expect(page.locator('.subtitulo')).toHaveText(['Sin asignar · 0/1', 'Leo Prueba · 1/2', 'Marta Prueba · 1/1', 'Todo el equipo Semana · 0/1']);
   await page.locator('.grupo-tareas', { hasText: 'Sin asignar' }).locator('.fila', { hasText: 'Derrame' }).click();

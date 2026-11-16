@@ -51,7 +51,7 @@ test('mi día: lo siguiente, lo de después, lo atrasado y lo hecho; solo lo mí
   await expect(page.locator('.fila', { hasText: 'Barrer pasillo' })).toBeVisible();
   await expect(page.locator('.fila', { hasText: 'Vaciar basuras' }).locator('.chapa')).toHaveText('Hecho');
   await expect(page.locator('.fila', { hasText: 'De otra persona' })).toHaveCount(0);
-  await expect(page.getByRole('navigation', { name: 'Limpieza' })).toHaveCount(0); // el operario no ve Tareas ni Checklists
+  await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Mi día', 'Incidencias']); // el operario no ve Tareas ni Checklists
   expect(errores).toEqual([]);
 });
 

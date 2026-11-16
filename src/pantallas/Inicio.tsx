@@ -4,6 +4,7 @@ import { Icono, ICONOS } from '../componentes/basicos';
 import { Personal } from '../personal/Personal';
 import { Prevencion } from '../prevencion/Prevencion';
 import { Limpieza } from '../limpieza/Limpieza';
+import { MisNotificaciones, Tablon } from '../nucleo/Tablon';
 
 /** Elegir unidad de trabajo (en la base de datos, «empresa»): solo si tiene más de una y aún no ha elegido. */
 export function ElegirEmpresa() {
@@ -34,6 +35,8 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
   return (
     <main className="contenido">
       <h1 className="titulo">Hola, {nombre}</h1>
+      <Tablon />
+      <MisNotificaciones ir={ir} />
       {mios.length === 0 && !configurable ? (
         <div className="vacio">
           <p><b>Todavía no tienes ningún módulo en {empresa.nombre}.</b></p>

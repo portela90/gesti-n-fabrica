@@ -304,6 +304,18 @@ solo él sube el Excel; instrucciones («traspasos») y checklist del encargado 
 - Pruebas: `69-limpieza-finde.sql` (31) y `pruebas/finde.spec.ts` (6, con `pruebas/datos/finde-inventado.xlsx`).
 - Pendiente: el responsable de un equipo (Encargado hornos) ve la pestaña pero no la checklist ni las instrucciones; avisos al móvil (parte 6).
 
+### 2.8 Incidencias, problemas repetidos, tablón y bandeja de notificaciones (16/11, parte 6) — SIN APLICAR
+Decidido por Cristian: incidencias automáticas (Hay un problema, puntos Mal de checklists de trabajos y del encargado); solo él las gestiona;
+problemas repetidos igual que la vieja; al móvil: incidencias a él, trabajos al operario, instrucciones/checklist del encargado, tablón a todos.
+- `0030_incidencias_avisos.sql`: núcleo `usuarios_con_permiso`, `usuarios_de_personas`, `notificaciones` + `notificar` + `marcar_leidas`,
+  `avisos` (tablón, permiso `nucleo.aviso.editar`); Limpieza `temas` (+ `_tema`, `_clave_lugar`), `incidencias` + `incidencia_notas`
+  (+ `crear_incidencia`, `incidencia_estado`, `incidencia_nota`, permiso `limpieza.incidencia.editar`), `problemas` + `casos` + `problema_notas`
+  (+ `problema_estado`, `problema_quitar`, `problemas_lista`); disparadores que crean incidencias, casos y notificaciones; fotos en `<empresa>/incidencias/<id>/`.
+- Datos: `/home/claude/sql/incidencias_datos.sql` (5 temas de la vieja y la incidencia abierta de la Karcher).
+- Pantallas: pestaña «Incidencias» (`src/limpieza/Incidencias.tsx`), tablón y «Te ha llegado» en Inicio (`src/nucleo/Tablon.tsx`), tablón arriba de Limpieza.
+- Pruebas: `70-incidencias-avisos.sql` (36) y `pruebas/incidencias.spec.ts` (6).
+- Falta: mandar la bandeja al móvil (función de Supabase + claves; con el «sí» de Cristian).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

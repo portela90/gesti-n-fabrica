@@ -5,6 +5,8 @@ import { aviso, Ventana } from '../componentes/basicos';
 import { MiDia } from './MiDia';
 import { Hoy } from './Hoy';
 import { Finde } from './Finde';
+import { Incidencias } from './Incidencias';
+import { Tablon } from '../nucleo/Tablon';
 import { PersonasReparto, Semana } from './Reparto';
 import { useListas, type Listas, type Maquina, type Opcion } from './listas';
 
@@ -60,7 +62,7 @@ export function encaja(texto: string, codigos: string | undefined) {
   });
 }
 
-type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'tareas' | 'checklists' | 'personas';
+type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'incidencias' | 'tareas' | 'checklists' | 'personas';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
@@ -69,13 +71,14 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
   const apunta = puede('limpieza.trabajo.apuntar');
   const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')],
     ['finde', 'Fin de semana', puede('limpieza.trabajo.repartir') || puede('limpieza.excel.editar')], ['dia', 'Mi día', apunta],
-    ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve]] as [Pestana, string, boolean][])
+    ['incidencias', 'Incidencias', apunta || puede('limpieza.incidencia.editar')], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve]] as [Pestana, string, boolean][])
     .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? pestanas[0]?.[0];
   if (!empresa) return null;
   return (
     <main className="contenido" style={{ ['--area' as string]: '#0f766e' }}>
+      <Tablon compacto />
       {puede('limpieza.trabajo.repartir') && !puede('limpieza.excel.editar') && actual !== 'finde' && <AvisoInstrucciones ir={() => ir('/m/limpieza/finde')} />}
       {pestanas.length > 1 && (
         <nav className="pestanas no-imprimir" aria-label="Limpieza">
@@ -92,6 +95,7 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
       {actual === 'semana' && <Semana />}
       {actual === 'personas' && <PersonasReparto />}
       {actual === 'finde' && <Finde />}
+      {actual === 'incidencias' && <Incidencias />}
     </main>
   );
 }
