@@ -67,7 +67,7 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
     elegirEmpresa: (id) => { guardar(CLAVE_EMPRESA, id); setEmpresaId(id); },
     puede: (p) => !!empresa && tienePermiso(empresa.permisos, p),
     recargar: async () => { const { data } = await supabase.auth.getSession(); await cargar(data.session); },
-    salir: async () => { await supabase.auth.signOut(); setEstado({ fase: 'fuera' }); },
+    salir: async () => { await supabase.auth.signOut({ scope: 'local' }); setEstado({ fase: 'fuera' }); },   // solo en este dispositivo
   };
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }

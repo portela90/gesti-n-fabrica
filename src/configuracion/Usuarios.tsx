@@ -15,7 +15,7 @@ const ERRORES: Record<string, string> = {
   A_TI_MISMO: 'No puedes darte roles a ti mismo.',
   ROL: 'Ese rol no vale para esta unidad de trabajo.',
   PERSONA: 'Ese trabajador no es de esta unidad de trabajo.',
-  SESION: 'Tu sesión ha caducado. Sal y vuelve a entrar.',
+  SESION: 'Tu sesión se ha cerrado (por ejemplo, al salir en otro dispositivo o en otra app con tu misma cuenta). Sal de la app y vuelve a entrar.',
 };
 
 /** Configuración → Usuarios: quién entra en esta unidad de trabajo, con qué rol y en qué nave. */
@@ -150,12 +150,21 @@ function DarAcceso({ inicial, roles, naves, personas, empresaId, alCerrar, alTer
     if (!nombre.trim()) { setError('Escribe su nombre.'); return; }
     if (!rol) { setError('Elige un rol.'); return; }
     setOcupado(true);
-    const { data, error } = await supabase.functions.invoke('invitar', {
-      body: { correo, nombre, empresa_id: empresaId, rol_id: rol, centro_id: nave || null, persona_id: persona || null },
-    });
+    const llamar = async () => {
+      const { data, error } = await supabase.functions.invoke('invitar', {
+        body: { correo, nombre, empresa_id: empresaId, rol_id: rol, centro_id: nave || null, persona_id: persona || null },
+      });
+      let codigo: string | undefined = (data as { error?: string } | null)?.error;
+      if (error && !codigo) { try { codigo = (await (error as { context?: Response }).context?.json())?.error; } catch { /* sin cuerpo */ } }
+      return { data, error, codigo };
+    };
+    let { data, error, codigo } = await llamar();
+    // la sesión puede estar caducada o cerrada desde otro sitio: se intenta renovar y se prueba otra vez
+    if (codigo === 'SESION') {
+      const { error: eRenovar } = await supabase.auth.refreshSession();
+      if (!eRenovar) ({ data, error, codigo } = await llamar());
+    }
     setOcupado(false);
-    let codigo: string | undefined = (data as { error?: string } | null)?.error;
-    if (error && !codigo) { try { codigo = (await (error as { context?: Response }).context?.json())?.error; } catch { /* sin cuerpo */ } }
     if (error || codigo) { setError(ERRORES[codigo ?? ''] ?? 'No se ha podido dar el acceso' + (codigo ? ` (${codigo}).` : '. Revisa la conexión.')); return; }
     setHecho(data as { nuevo: boolean; clave: string | null });
     alTerminar();
