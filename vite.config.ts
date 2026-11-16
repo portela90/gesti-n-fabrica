@@ -28,7 +28,7 @@ export default defineConfig({
         scope: '/gesti-n-fabrica/',
         icons: [{ src: 'icono.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any maskable' }],
       },
-      workbox: { navigateFallback: 'index.html', globPatterns: ['**/*.{js,css,html,svg}'] },
+      workbox: { navigateFallback: 'index.html', globPatterns: ['**/*.{js,css,html,svg}'], importScripts: ['sw-avisos.js'] },
     }),
   ],
 });

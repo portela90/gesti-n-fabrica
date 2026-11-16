@@ -5,6 +5,7 @@ import { Personal } from '../personal/Personal';
 import { Prevencion } from '../prevencion/Prevencion';
 import { Limpieza } from '../limpieza/Limpieza';
 import { MisNotificaciones, Tablon } from '../nucleo/Tablon';
+import { AvisosMovil } from '../nucleo/AvisosMovil';
 
 /** Elegir unidad de trabajo (en la base de datos, «empresa»): solo si tiene más de una y aún no ha elegido. */
 export function ElegirEmpresa() {
@@ -60,6 +61,7 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
           )}
         </div>
       )}
+      <AvisosMovil />
     </main>
   );
 }

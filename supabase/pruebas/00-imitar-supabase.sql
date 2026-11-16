@@ -45,3 +45,23 @@ grant usage on schema storage to anon, authenticated, service_role;
 grant select, insert, update, delete on storage.objects to authenticated;
 grant select on storage.buckets to authenticated;
 grant execute on function storage.foldername(text) to authenticated;
+
+-- Caja fuerte (Vault), lo justo: guardar un secreto con nombre y leerlo.
+create schema if not exists vault;
+create table if not exists vault.secrets (id uuid primary key default gen_random_uuid(), name text unique, secret text, description text);
+create or replace function vault.create_secret(new_secret text, new_name text default null, new_description text default '') returns uuid
+language sql as $$ insert into vault.secrets (secret, name, description) values (new_secret, new_name, new_description) returning id $$;
+create or replace view vault.decrypted_secrets as select id, name, secret as decrypted_secret, description from vault.secrets;
+
+-- Llamadas web (pg_net): aquí solo se apuntan, para poder comprobar que se hacen.
+create schema if not exists net;
+create table if not exists net.llamadas (id bigserial primary key, url text, body jsonb, headers jsonb);
+create or replace function net.http_post(url text, body jsonb default '{}', params jsonb default '{}', headers jsonb default '{}', timeout_milliseconds int default 5000)
+returns bigint language sql as $$ insert into net.llamadas (url, body, headers) values (url, body, headers) returning id $$;
+
+-- Tareas programadas (pg_cron): aquí solo se apuntan.
+create schema if not exists cron;
+create table if not exists cron.job (jobid bigserial primary key, jobname text unique, schedule text, command text);
+create or replace function cron.schedule(job_name text, schedule text, command text) returns bigint
+language sql as $$ insert into cron.job (jobname, schedule, command) values (job_name, schedule, command)
+  on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command returning jobid $$;

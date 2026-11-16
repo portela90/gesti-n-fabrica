@@ -394,3 +394,4 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .seguimiento li { padding: 8px 10px; border-left: 3px solid var(--linea); }
 .seguimiento small { color: var(--suave); }
 @media (prefers-color-scheme: dark) { .aviso-tablon { background: #3a2a07; color: #fde68a; border-color: #5b4210; } }
+.avisos-movil { margin-top: 22px; display: grid; gap: 6px; justify-items: start; }

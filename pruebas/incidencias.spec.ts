@@ -122,3 +122,19 @@ test('incidencias en el móvil más estrecho: nada se aplasta ni se sale', async
   await expect(page.locator('.aviso-tablon')).toBeVisible();
   expect(await desbordes(page), 'inicio').toEqual([]);
 });
+
+test('inicio: «Recibir avisos en este móvil», o qué hacer si el navegador no puede', async ({ page }) => {
+  await simular(page, { dentro: true, sesion: sesion(OPERARIO), tablas: tablas(), rpc: rpc() });
+  await page.goto('./');
+  await expect(page.getByRole('button', { name: 'Recibir avisos en este móvil' })).toBeVisible();
+});
+
+test('inicio: en un iPhone sin añadir a la pantalla de inicio, explica cómo', async ({ browser }) => {
+  const ctx = await browser.newContext({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148' });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => { delete (window as unknown as Record<string, unknown>).PushManager; });
+  await simular(page, { dentro: true, sesion: sesion(OPERARIO), tablas: tablas(), rpc: rpc() });
+  await page.goto('./');
+  await expect(page.locator('.avisos-movil')).toContainText('añade la app a la pantalla de inicio');
+  await ctx.close();
+});
