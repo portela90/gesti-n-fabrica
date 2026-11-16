@@ -129,7 +129,8 @@ test('inicio: «Recibir avisos en este móvil», o qué hacer si el navegador no
   await page.goto('./');
   // el navegador de las pruebas puede traer o no los avisos «push»: si los trae, sale el botón; si no, lo explica
   const puede = await page.evaluate(() => 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window);
-  if (puede) await expect(page.getByRole('button', { name: 'Recibir avisos en este móvil' })).toBeVisible();
+  // (algunos navegadores de pruebas tienen los avisos bloqueados de serie: entonces lo explica)
+  if (puede) await expect(page.locator('.avisos-movil')).toContainText(/Recibir avisos en este móvil|tiene bloqueados los avisos/);
   else await expect(page.locator('.avisos-movil')).toContainText('Este navegador no puede recibir avisos');
 });
 
