@@ -10,7 +10,8 @@ import webpush from 'npm:web-push@3.6.7';
 
 const URL = Deno.env.get('SUPABASE_URL')!;
 const SERVIDOR = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-const CONTACTO = 'mailto:avisos@gestion-fabrica.invalid';   // obligatorio en el protocolo; no se usa para nada
+// contacto de quien manda los avisos (obligatorio). Apple rechaza (403) los inventados: va la dirección de la app.
+const CONTACTO = 'https://portela90.github.io/gesti-n-fabrica/';
 
 interface Movil { endpoint: string; p256dh: string; auth: string }
 interface Pendiente { id: number; titulo: string; texto: string | null; ruta: string | null; etiqueta: string | null; urgente: boolean; moviles: Movil[] }

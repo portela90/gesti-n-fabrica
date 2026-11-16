@@ -316,7 +316,7 @@ problemas repetidos igual que la vieja; al móvil: incidencias a él, trabajos a
 - Pruebas: `70-incidencias-avisos.sql` (36) y `pruebas/incidencias.spec.ts` (6).
 - Falta: mandar la bandeja al móvil (función de Supabase + claves; con el «sí» de Cristian).
 
-### 2.9 Avisos al móvil (16/11, parte 6) — APLICADO 16/11 (0031, función «avisos» v1 instalada sin JWT, claves creadas, respuesta 200)
+### 2.9 Avisos al móvil (16/11, parte 6) — APLICADO 16/11 (0031, función «avisos» v2 instalada sin JWT, claves creadas; probado en iPhone: llega)
 Con el «sí» de Cristian (instalar la función «avisos» en colada-mapri cuando pegue la migración).
 - `0031_avisos_movil.sql`: `nucleo.suscripciones` (+ `guardar_suscripcion`, `quitar_suscripcion`), claves en Vault (`push_secreto` y `push_url`
   los crea la migración; `push_publica`/`push_privada` los crea la función la primera vez), `clave_push` (si no hay, pide a la función que las cree),
@@ -324,6 +324,8 @@ Con el «sí» de Cristian (instalar la función «avisos» en colada-mapri cuan
   `nucleo.notificaciones` que llama a la función con pg_net si algún avisado tiene móvil, y pg_cron `avisos-al-movil` cada 5 min de reintento.
 - Función `supabase/functions/avisos` (Deno, web-push 3.6.7; sin JWT: la protege la contraseña del Vault). Probada en Deno: claves y cifrado.
 - App: `public/sw-avisos.js` (push y clic), `vite.config.ts` importScripts, «Avisos en este móvil» en Inicio (`src/nucleo/AvisosMovil.tsx`).
+- v2: el contacto VAPID es la dirección de la app (Apple rechaza con 403 los inventados).
+- Pendiente: `_push_resultado` no borra `envio_error` cuando un reintento sale bien (solo es el texto del intento anterior).
 - Pruebas: `71-avisos-movil.sql` (17) y 2 en `pruebas/incidencias.spec.ts`. La imitación de Supabase tiene Vault, pg_net y pg_cron de mentira.
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
