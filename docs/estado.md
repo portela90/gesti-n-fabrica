@@ -355,6 +355,23 @@ costes, pestaña «Investigar»). Decidido por Cristian (20/11):
 - Pruebas: `supabase/pruebas/72-limpieza-informes.sql` (25) y `pruebas/resumen.spec.ts` (7; descargan el PDF y el Excel y miran dentro).
 - Sin datos que traer. No hace falta tocar «Exposed schemas» (`limpieza` ya está).
 
+### 2.11 Investigar (21/11, parte 7, trozo 2 de 4) — PREPARADO, SIN APLICAR (0033 pendiente de pegar)
+Decidido por Cristian (21/11): igual que la pestaña «Investigar» de la app vieja (`07e`, `07g` de COLADA), con estos cambios:
+- **Solo el administrador** (permiso `limpieza.informe.todo`): tercer botón «Investigar» dentro de «Resumen».
+- **Problemas con los temas** de la parte 6 (`limpieza.temas`), no con las 7 categorías fijas de la vieja; sitio = máquina o zona
+  (`limpieza._clave_lugar`, la misma regla que los problemas repetidos). Las tareas fijas no cuentan como problema.
+- **«Pasar» igual que la vieja**: cambia la tarea fija desde hoy y sus trabajos pendientes (lo hecho no). Candidatos: mismo equipo,
+  con horario todos los días de la tarea y sin pasar del límite (la ficha no tiene turno, así que no se mira el turno).
+- **Tiempos igual que la vieja**: propuesto = (5 × previsto + n × real) / (5 + n), con la mediana de las últimas 20 veces sin las
+  que pasan del triple; «Aplicar» y «Aplicar todos».
+- **85 % y 30 min se pueden cambiar** («Cambiar» en Investigar): ajustes `investigar_limite` e `investigar_hueco` (módulo limpieza).
+- Si la unidad no tiene Personal, la jornada sale del horario de cada ficha.
+- `0033_limpieza_investigar.sql`: `limpieza.investigar(empresa, desde, hasta)` (= informe + problemas con tema y sitio + tareas +
+  horas de horario por día de la semana), `limpieza.pasar_tarea(tarea, de, a)` y `limpieza.poner_tiempos(empresa, items)` (todo o nada).
+- Pantalla `src/limpieza/Investigar.tsx` (se descarga al abrirla), cuentas en `src/limpieza/investigar.ts`, PDF y Excel en
+  `src/limpieza/pdfInvestigar.ts` (informe completo, ficha de un sitio y lista de un trabajo).
+- Pruebas: `supabase/pruebas/73-limpieza-investigar.sql` (23) y `pruebas/investigar.spec.ts` (6).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

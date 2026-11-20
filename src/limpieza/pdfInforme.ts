@@ -18,7 +18,7 @@ const INC_ESTADO: Record<string, string> = { abierta: 'Abierta', en_proceso: 'En
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Doc = any;
-async function nuevoPDF() {
+export async function nuevoPDF() {
   const [{ jsPDF }, at] = await Promise.all([import('jspdf'), import('jspdf-autotable')]);
   const doc: Doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const W = 210, M = 14;
@@ -169,10 +169,10 @@ export async function pdfSemanal(D: DatosSemana): Promise<Blob> {
 }
 
 // ---------- Excel ----------
-type Celda = string | number | null | { value: string | number; fontWeight?: 'bold'; format?: string };
-const neg = (v: string) => ({ value: v, fontWeight: 'bold' as const });
-const cab = (r: string[]) => r.map(neg);
-async function libro(hojas: { nombre: string; filas: Celda[][]; anchos: number[] }[]) {
+export type Celda = string | number | null | { value: string | number; fontWeight?: 'bold'; format?: string };
+export const neg = (v: string) => ({ value: v, fontWeight: 'bold' as const });
+export const cab = (r: string[]) => r.map(neg);
+export async function libro(hojas: { nombre: string; filas: Celda[][]; anchos: number[] }[]) {
   const { default: escribir } = await import('write-excel-file/browser');
   return escribir(hojas.map((h) => ({ sheet: h.nombre, data: h.filas as never, columns: h.anchos.map((width) => ({ width })) }))).toBlob();
 }

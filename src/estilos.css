@@ -415,3 +415,22 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .segmentos.res-cuatro { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 10px; }
 .segmentos.res-cuatro button { font-size: 14px; }
 .res-fechas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; max-width: 520px; }
+/* Investigar */
+.res-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 10px; }
+.res-chips .boton[aria-pressed="true"] { background: color-mix(in srgb, var(--area) 14%, transparent); color: var(--area); border-color: var(--area); }
+.res-sub { font-size: 13px; font-weight: 400; color: var(--suave); margin-left: 6px; }
+.res-bloque { display: block; margin-top: 4px; color: var(--tinta2); }
+.res-mal { color: var(--mal); font-weight: 600; }
+.res-bien { color: var(--bien); font-weight: 600; }
+.res-poco { color: var(--suave); }
+.res-barra.llena > i { background: var(--mal); }
+.res-grupo { margin: 0 0 14px; }
+.res-grupo > b { display: block; margin: 0 0 6px; }
+.res-pildora { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--fondo); color: var(--tinta2); border: 1px solid var(--linea); }
+.res-pildora.mal { color: var(--mal); border-color: color-mix(in srgb, var(--mal) 40%, transparent); }
+.res-pildora.bien { color: var(--bien); border-color: color-mix(in srgb, var(--bien) 40%, transparent); }
+details.res-tarjeta > summary { cursor: pointer; list-style-position: outside; }
+details.res-tarjeta > summary h3 { display: inline; }
+details.res-tarjeta[open] > summary { margin-bottom: 8px; }
+.res-tarjeta .fila .boton.peq { flex: none; }
+.res-tarjeta .caja-aviso small { display: block; }

@@ -1,6 +1,9 @@
 // Pestaña «Resumen» de Limpieza (administrador y encargados): En pantalla e Informes (semanal y por operario).
 // Cada uno ve lo que le toca (lo decide la base de datos en limpieza.informe). Las horas, solo el administrador.
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+
+/** «Investigar» solo lo usa el administrador: se descarga al abrirlo. */
+const Investigar = lazy(() => import('./Investigar').then((m) => ({ default: m.Investigar })));
 import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { Ventana } from '../componentes/basicos';
@@ -15,19 +18,22 @@ import type { IncInf, RepInf } from './pdfInforme';
 const informes = () => import('./pdfInforme');
 
 const hoy = () => new Date().toLocaleDateString('sv-SE');
-type Sub = 'pantalla' | 'informes';
+type Sub = 'pantalla' | 'informes' | 'investigar';
 
 export function Resumen({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
+  const { puede } = useSesion();
+  const investiga = puede('limpieza.informe.todo');   // Investigar: solo el administrador
   const partes = ruta.split('/');
-  const sub: Sub = partes[4] === 'informes' ? 'informes' : 'pantalla';
+  const sub: Sub = partes[4] === 'informes' ? 'informes' : partes[4] === 'investigar' && investiga ? 'investigar' : 'pantalla';
   const lunes = /^\d{4}-\d{2}-\d{2}$/.test(partes[5] ?? '') ? lunesDe(partes[5]) : null;
   return (
     <>
-      <div className="segmentos no-imprimir" role="group" aria-label="Resumen">
+      <div className={'segmentos no-imprimir' + (investiga ? ' tres' : '')} role="group" aria-label="Resumen">
         <button type="button" aria-pressed={sub === 'pantalla'} onClick={() => ir('/m/limpieza/resumen/pantalla')}>En pantalla</button>
         <button type="button" aria-pressed={sub === 'informes'} onClick={() => ir('/m/limpieza/resumen/informes')}>Informes</button>
+        {investiga && <button type="button" aria-pressed={sub === 'investigar'} onClick={() => ir('/m/limpieza/resumen/investigar')}>Investigar</button>}
       </div>
-      {sub === 'pantalla' ? <EnPantalla /> : <Informes lunes={lunes} />}
+      {sub === 'pantalla' ? <EnPantalla /> : sub === 'informes' ? <Informes lunes={lunes} /> : <Suspense fallback={<p className="nota">Cargando…</p>}><Investigar /></Suspense>}
     </>
   );
 }
