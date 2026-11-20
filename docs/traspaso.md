@@ -35,8 +35,7 @@ Hechas y aplicadas las partes 1 a 6 del plan de Limpieza (detalle en `docs/estad
    (función `avisos` v2 instalada en colada-mapri, sin JWT; probado en iPhone).
 
 7. **En curso (20/11): Resumen e informes.** Decidido todo en `docs/estado.md` apartado 2.10. Trozo 1 (pestaña «Resumen»:
-   en pantalla, informe semanal, informe por operario, aviso de los lunes) **hecho y probado; falta que Cristian pegue la 0032**,
-   comprobarla y subir a `dev`. Después, en este orden: **trozo 2** Investigar de Limpieza (botón «Investigar» dentro de
+   en pantalla, informe semanal, informe por operario, aviso de los lunes) **hecho, aplicado (0032) y publicado el 20/11**. Después, en este orden: **trozo 2** Investigar de Limpieza (botón «Investigar» dentro de
    «Resumen»: saturación y pasar trabajos, tiempos con «Aplicar», problemas y sitios; mirar `src/limpieza/js/07e`, `07g` de COLADA);
    **trozo 3** Investigar personas en **Personal** (días de baja, días y horas trabajadas…); **trozo 4** «Pregúntale» (`07f`).
    Antes de cada trozo, preguntarle a Cristian lo que haga falta, una a una.

@@ -328,7 +328,7 @@ Con el «sí» de Cristian (instalar la función «avisos» en colada-mapri cuan
 - ~~Pendiente: `_push_resultado` no borra `envio_error` cuando un reintento sale bien~~: arreglado en la 0032.
 - Pruebas: `71-avisos-movil.sql` (17) y 2 en `pruebas/incidencias.spec.ts`. La imitación de Supabase tiene Vault, pg_net y pg_cron de mentira.
 
-### 2.10 Resumen e informes (20/11, parte 7, trozo 1 de 4) — PREPARADO, SIN APLICAR (0032 pendiente de pegar)
+### 2.10 Resumen e informes (20/11, parte 7, trozo 1 de 4) — APLICADO 20/11 (0032 pegada por Cristian; comprobado: permisos, funciones, reloj de los lunes, arreglo de avisos e informe con datos reales)
 Estudiada la app vieja (informe semanal PDF + Excel, informe por operario, «Por persona», «Cuánto tarda cada trabajo»,
 costes, pestaña «Investigar»). Decidido por Cristian (20/11):
 - Entra en la parte 7: informe semanal, informe por operario, resumen en pantalla e **Investigar entera** (saturación y pasar
