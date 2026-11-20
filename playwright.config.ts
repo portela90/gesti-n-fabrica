@@ -2,6 +2,10 @@
 import { defineConfig } from '@playwright/test';
 import { existsSync } from 'node:fs';
 
+// Las pruebas calculan «hoy» con la misma hora que la app en el navegador (Madrid): si no, entre las 23:00 y las
+// 00:00 UTC el «hoy» de la prueba y el de la app son días distintos y fallan pruebas que no tienen nada mal.
+process.env.TZ = 'Europe/Madrid';
+
 const local = '/opt/pw-browsers/chromium';
 export default defineConfig({
   testDir: 'pruebas',
