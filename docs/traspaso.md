@@ -34,10 +34,14 @@ Hechas y aplicadas las partes 1 a 6 del plan de Limpieza (detalle en `docs/estad
 6. Incidencias (automáticas y a mano), problemas repetidos, tablón, bandeja «Te ha llegado» y **avisos al móvil**
    (función `avisos` v2 instalada en colada-mapri, sin JWT; probado en iPhone).
 
-**Lo siguiente: parte 7 — Horas y costes + Informes.** Empieza estudiando qué hace la app vieja de Limpieza
-(informe semanal PDF + Excel, «Por persona», «Cuánto tarda cada trabajo», horas del mes / Excel mensual, costes) y
-pregúntale a Cristian, una a una, qué quiere igual y qué distinto. Después, **parte 8: 2–4 semanas en paralelo** con la
-app vieja antes del cambio.
+7. **En curso (20/11): Resumen e informes.** Decidido todo en `docs/estado.md` apartado 2.10. Trozo 1 (pestaña «Resumen»:
+   en pantalla, informe semanal, informe por operario, aviso de los lunes) **hecho y probado; falta que Cristian pegue la 0032**,
+   comprobarla y subir a `dev`. Después, en este orden: **trozo 2** Investigar de Limpieza (botón «Investigar» dentro de
+   «Resumen»: saturación y pasar trabajos, tiempos con «Aplicar», problemas y sitios; mirar `src/limpieza/js/07e`, `07g` de COLADA);
+   **trozo 3** Investigar personas en **Personal** (días de baja, días y horas trabajadas…); **trozo 4** «Pregúntale» (`07f`).
+   Antes de cada trozo, preguntarle a Cristian lo que haga falta, una a una.
+
+Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio.
 
 ## Decisiones de Cristian que conviene recordar
 - Pantallas: se dice **«unidad de trabajo»**, nunca «empresa». Fábrica (MAPRI) y Limpieza (CIE).
@@ -58,9 +62,12 @@ app vieja antes del cambio.
 - Los datos de reconocimientos médicos no se migran.
 - No hay usuarios de solo lectura por ahora.
 
+- Informes de Limpieza (20/11): una sola pestaña «Resumen» para no saturar; encargados sin horas; el de fin de semana ve
+  los de su equipo; aviso del informe semanal los lunes a las 9:00; informe por operario muy detallado (PDF + Excel).
+- **Costes de limpieza** (€/hora + productos por máquina o zona): más adelante, después del cambio.
+
 ## Pendientes sueltos
-- **Avisos al móvil:** `nucleo._push_resultado` no borra `envio_error` cuando un reintento sale bien (solo queda el
-  texto del intento anterior). Arreglarlo en la próxima migración.
+- **Costes de limpieza:** decidido dejarlos para más adelante (ver la app vieja `07-fichaje-y-costes.js`).
 - **Sesión:** salir de la app nueva ya solo cierra ese dispositivo (`signOut({ scope: 'local' })`), pero si se sale en
   otra herramienta con la misma cuenta, cierra todas las sesiones. Si «dar acceso» dice que la sesión se cerró: salir y entrar.
 - **PIN para los operarios** (antes del día del cambio): hoy los operarios no pueden entrar con PIN; se prueba con el usuario «pruebas».

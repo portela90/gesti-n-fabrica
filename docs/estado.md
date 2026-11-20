@@ -325,8 +325,35 @@ Con el «sí» de Cristian (instalar la función «avisos» en colada-mapri cuan
 - Función `supabase/functions/avisos` (Deno, web-push 3.6.7; sin JWT: la protege la contraseña del Vault). Probada en Deno: claves y cifrado.
 - App: `public/sw-avisos.js` (push y clic), `vite.config.ts` importScripts, «Avisos en este móvil» en Inicio (`src/nucleo/AvisosMovil.tsx`).
 - v2: el contacto VAPID es la dirección de la app (Apple rechaza con 403 los inventados).
-- Pendiente: `_push_resultado` no borra `envio_error` cuando un reintento sale bien (solo es el texto del intento anterior).
+- ~~Pendiente: `_push_resultado` no borra `envio_error` cuando un reintento sale bien~~: arreglado en la 0032.
 - Pruebas: `71-avisos-movil.sql` (17) y 2 en `pruebas/incidencias.spec.ts`. La imitación de Supabase tiene Vault, pg_net y pg_cron de mentira.
+
+### 2.10 Resumen e informes (20/11, parte 7, trozo 1 de 4) — PREPARADO, SIN APLICAR (0032 pendiente de pegar)
+Estudiada la app vieja (informe semanal PDF + Excel, informe por operario, «Por persona», «Cuánto tarda cada trabajo»,
+costes, pestaña «Investigar»). Decidido por Cristian (20/11):
+- Entra en la parte 7: informe semanal, informe por operario, resumen en pantalla e **Investigar entera** (saturación y pasar
+  trabajos, tiempos con «Aplicar», problemas y sitios, «Pregúntale»). **Costes: más adelante.** Las horas del mes ya estaban (2.2).
+- **Investigar personas** (días de baja, días y horas trabajadas…) va en **Personal**, no en Limpieza.
+- Orden: 1) informes (este trozo); 2) Investigar de Limpieza; 3) Investigar personas en Personal; 4) «Pregúntale».
+- Para no saturar: **una sola pestaña «Resumen»** en Limpieza con botones «En pantalla» e «Informes» (e «Investigar» cuando llegue).
+- Informe semanal **igual que la vieja + aviso cada lunes a las 9:00** (hora de Madrid) al administrador.
+- Informe por operario: lo de la vieja + **tiempo real** + **horas con detalle** (días y horas trabajadas, entre semana / fin de
+  semana, extra, fuera de presupuesto, por sustitución, faltas, día a día). **PDF + Excel.**
+- Resumen en pantalla: 7 días, 30 días o **entre fechas**.
+- Quién lo ve: administrador todo; **encargados sin horas**; el Encargado hornos solo su equipo (`limpieza.responsables`);
+  el resto de encargados (el de fin de semana) **los trabajos del equipo de su ficha**.
+- `0032_limpieza_informes.sql`: permisos `limpieza.informe.ver` (el encargado lo coge por `limpieza.*.ver`) y `limpieza.informe.todo`
+  (solo el administrador, por `*`); `limpieza.informe(empresa, desde, hasta)` (como mucho 400 días) devuelve los trabajos que le
+  tocan a quien pregunta con los nombres puestos y su gente; `limpieza._aviso_informe_semanal` + pg_cron `informe-limpieza-lunes`
+  (`0 7,8 * * 1` UTC y solo avisa si en Madrid son las 9; una vez por semana; solo si hubo trabajos; ruta
+  `/m/limpieza/resumen/informes/<lunes>`); **arreglo de `nucleo._push_resultado`** (un reintento que sale bien borra el error).
+- Pantalla: `src/limpieza/Resumen.tsx`; cuentas en `src/limpieza/informe.ts`; PDF y Excel en `src/limpieza/pdfInforme.ts` (se carga
+  solo al sacar un informe). Librerías nuevas (MIT): `jspdf-autotable` 5.0.9 (tablas del PDF) y `write-excel-file` 4.1.1 (.xlsx con hojas).
+- Diferencias con la vieja: en la nueva no hay «no se pudo hacer»: sale **«Con problema»** (el operario pulsó «Hay un problema») y
+  «Sin hacer». Incidencias y problemas repetidos solo en el informe del administrador. Horas solo si la unidad tiene Personal y quien
+  lo saca tiene `personal.horas.editar`; «por sustitución» = horas por encima de su horario hasta las del que falta (como la vieja).
+- Pruebas: `supabase/pruebas/72-limpieza-informes.sql` (25) y `pruebas/resumen.spec.ts` (7; descargan el PDF y el Excel y miran dentro).
+- Sin datos que traer. No hace falta tocar «Exposed schemas» (`limpieza` ya está).
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).

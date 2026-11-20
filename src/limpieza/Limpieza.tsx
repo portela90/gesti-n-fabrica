@@ -6,6 +6,7 @@ import { MiDia } from './MiDia';
 import { Hoy } from './Hoy';
 import { Finde } from './Finde';
 import { Incidencias } from './Incidencias';
+import { Resumen } from './Resumen';
 import { Tablon } from '../nucleo/Tablon';
 import { PersonasReparto, Semana } from './Reparto';
 import { useListas, type Listas, type Maquina, type Opcion } from './listas';
@@ -62,7 +63,7 @@ export function encaja(texto: string, codigos: string | undefined) {
   });
 }
 
-type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'incidencias' | 'tareas' | 'checklists' | 'personas';
+type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'incidencias' | 'tareas' | 'checklists' | 'personas' | 'resumen';
 
 /** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
 export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
@@ -71,7 +72,8 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
   const apunta = puede('limpieza.trabajo.apuntar');
   const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')],
     ['finde', 'Fin de semana', puede('limpieza.trabajo.repartir') || puede('limpieza.excel.editar')], ['dia', 'Mi día', apunta],
-    ['incidencias', 'Incidencias', apunta || puede('limpieza.incidencia.editar')], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve]] as [Pestana, string, boolean][])
+    ['incidencias', 'Incidencias', apunta || puede('limpieza.incidencia.editar')], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve],
+    ['resumen', 'Resumen', puede('limpieza.informe.ver') || puede('limpieza.informe.todo')]] as [Pestana, string, boolean][])
     .filter((p) => p[2]);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? pestanas[0]?.[0];
@@ -96,6 +98,7 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
       {actual === 'personas' && <PersonasReparto />}
       {actual === 'finde' && <Finde />}
       {actual === 'incidencias' && <Incidencias />}
+      {actual === 'resumen' && <Resumen ruta={ruta} ir={ir} />}
     </main>
   );
 }

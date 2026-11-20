@@ -395,3 +395,23 @@ label.boton { display: inline-flex; align-items: center; justify-content: center
 .seguimiento small { color: var(--suave); }
 @media (prefers-color-scheme: dark) { .aviso-tablon { background: #3a2a07; color: #fde68a; border-color: #5b4210; } }
 .avisos-movil { margin-top: 22px; display: grid; gap: 6px; justify-items: start; }
+
+/* ---------- Limpieza · Resumen e informes ---------- */
+.res-titulo { font-size: 16px; margin: 22px 0 8px; }
+.res-barra { display: block; height: 6px; margin-top: 6px; border-radius: 3px; background: var(--linea); overflow: hidden; }
+.res-barra > i { display: block; height: 100%; background: var(--area); }
+.res-barra.grande { height: 10px; border-radius: 5px; }
+.res-tarde { color: var(--mal); font-weight: 600; }
+.res-tarjeta { padding: 14px; margin: 0 0 16px; background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); min-width: 0; }
+.res-tarjeta h3 { margin: 0 0 8px; font-size: 17px; }
+.res-tarjeta .acciones-cal { margin-top: 14px; }
+.res-semana { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.res-semana b { flex: 1; min-width: 0; text-align: center; overflow-wrap: anywhere; }
+.res-titulo-campo { margin: 16px 0 6px; font-weight: 600; color: var(--tinta2); }
+.res-marcas { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px 12px; margin: 10px 0 0; }
+.res-marca { display: flex; align-items: center; gap: 8px; min-height: 40px; min-width: 0; overflow-wrap: anywhere; }
+.res-marca input { width: 22px; height: 22px; flex: none; accent-color: var(--area); }
+.res-tarjeta > .res-marca { margin-top: 12px; }
+.segmentos.res-cuatro { grid-template-columns: repeat(4, minmax(0, 1fr)); margin-bottom: 10px; }
+.segmentos.res-cuatro button { font-size: 14px; }
+.res-fechas { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px; max-width: 520px; }
