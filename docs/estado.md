@@ -1,6 +1,6 @@
 # Estado del proyecto (para empezar una conversación nueva)
 
-Última actualización: 12/11/2026 (noche). Léelo junto con `CLAUDE.md` y `README.md`.
+Última actualización: 20/11/2026. Léelo junto con `CLAUDE.md`, `README.md` y `docs/traspaso.md`.
 
 ## Qué es
 App nueva de planta para MAPRI y CIE que sustituye poco a poco a las apps de ahora (repo `portela90/COLADA`:
