@@ -169,7 +169,7 @@ test('investigar: nada se sale a 320 px, tampoco las fichas', async ({ page }) =
   await page.setViewportSize({ width: 320, height: 700 });
   await simular(page, { dentro: true, sesion: sesion(ADMIN), rpc: rpc() });
   await abrir(page);
-  for (const d of ['Tiempos que no cuadran', 'En qué se va el tiempo', 'Tiempos de cada trabajo', 'Qué días pasan más']) await page.getByText(d).first().click();
+  for (const d of ['Tiempos que no cuadran', 'En qué se va el tiempo', 'Tiempos de cada trabajo', 'Qué días pasan más']) await page.locator('details.res-tarjeta > summary', { hasText: d }).click();
   expect(await desbordes(page)).toEqual([]);
   await page.locator('.res-tarjeta', { hasText: 'Saturación de cada trabajador' }).locator('.fila', { hasText: 'Ana Prueba' }).click();
   await expect(page.getByRole('dialog', { name: 'Ana Prueba' })).toBeVisible();

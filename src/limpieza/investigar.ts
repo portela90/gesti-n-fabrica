@@ -117,19 +117,21 @@ export interface Investigacion {
  * Las cuentas de un periodo [d0, d1]. `T` trae los trabajos desde antes (al menos el periodo anterior y 4 meses, para los tiempos).
  * `horasDia` son las horas de Personal de cada uno cada día (null = sin Personal: se usa su horario).
  */
+/** Tiempo real que no puede ser (trabajo que se quedó abierto): se cuenta lo previsto y sale para revisar. */
+export const dudosa = (o: TrabInf) => {
+  if (!tiempoReal(o)) return null;
+  const m = o.minutos!, e = o.minutos_est ?? 0;
+  if (m > 480) return 'más de 8 h abierto';
+  if (e && m > 3 * e && m > 120) return `el triple de lo previsto (${horasTxt(e)})`;
+  return null;
+};
+
 export function investigar(D: DatosInv, horasDia: DiaH[] | null, d0: string, d1: string, hoy: string, aj: Ajustes): Investigacion {
   const prob = new Map(D.problemas.map((p) => [p.id, p]));
   const T = D.trabajos;
   const TT = tiempos(T, D.tareas);
   const propuesto = (o: TrabInf) => TT.get(claveTiempo(o))?.prop ?? 0;
   const minDe = (o: TrabInf) => (o.estado !== 'hecho' ? 0 : o.minutos ?? o.minutos_est ?? propuesto(o));
-  const dudosa = (o: TrabInf) => {
-    if (!tiempoReal(o)) return null;
-    const m = o.minutos!, e = o.minutos_est ?? 0;
-    if (m > 480) return 'más de 8 h abierto';
-    if (e && m > 3 * e && m > 120) return `el triple de lo previsto (${horasTxt(e)})`;
-    return null;
-  };
   const enP = (o: TrabInf) => o.fecha >= d0 && o.fecha <= d1;
   const L = T.filter(enP), H = L.filter((o) => o.estado === 'hecho');
   const A = anterior(d0, d1);

@@ -5,6 +5,7 @@ import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { limp, textoError } from './MiDia';
+import { Preguntale } from './Preguntale';
 import { fCorta, fDM, sumaD, tiempoReal, type DatosInf, type DiaH, type TrabInf } from './informe';
 import {
   AJUSTES_PARTIDA, anterior, cambiaTiempo, candidatoTxt, DIAS_LARGOS, diasEntre, diasTareaTxt, fraseSitio, horasTxt, investigar, minutosDe, necesarias,
@@ -96,6 +97,7 @@ export function Investigar() {
         <label className="campo"><span>Desde</span><input type="date" value={per.d0} onChange={(e) => e.target.value && setPer({ k: '', d0: e.target.value, d1: per.d1, t: `del ${fDM(e.target.value)} al ${fDM(per.d1)}` })} /></label>
         <label className="campo"><span>Hasta</span><input type="date" value={per.d1} onChange={(e) => e.target.value && setPer({ k: '', d0: per.d0, d1: e.target.value, t: `del ${fDM(per.d0)} al ${fDM(e.target.value)}` })} /></label>
       </div>
+      {aj && <Preguntale pantalla={{ d0: per.d0, d1: per.d1, t: per.t }} aj={aj} />}
       {aj && <p className="nota">Muy cargado desde el {aj.limite} % · huecos de hasta {aj.hueco} min = desplazamiento y preparación.{' '}
         <button type="button" className="enlace" onClick={() => setCambiandoAj(true)}>Cambiar</button></p>}
       {!conHoras && <p className="nota">Sin horas de Personal: la jornada sale del horario de cada ficha.</p>}

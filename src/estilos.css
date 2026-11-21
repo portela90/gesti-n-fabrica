@@ -434,3 +434,21 @@ details.res-tarjeta > summary h3 { display: inline; }
 details.res-tarjeta[open] > summary { margin-bottom: 8px; }
 .res-tarjeta .fila .boton.peq { flex: none; }
 .res-tarjeta .caja-aviso small { display: block; }
+/* Pregúntale */
+.res-cab { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; }
+.res-cab h3 { flex: 1; margin: 0; }
+.res-pregunta { display: flex; gap: 8px; margin: 0 0 8px; }
+.res-pregunta input { flex: 1; min-width: 0; min-height: 48px; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
+.res-pregunta .boton { flex: none; }
+.res-ejemplos { margin: 8px 0 0; }
+.res-ejemplos > summary { cursor: pointer; color: var(--tinta2); font-size: 14px; font-weight: 600; margin: 0 0 6px; }
+.res-chips .boton { white-space: normal; text-align: left; height: auto; padding-top: 6px; padding-bottom: 6px; }
+.res-respuesta { margin-top: 12px; }
+.res-entendido { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 8px; }
+.res-entendido small { color: var(--suave); }
+.res-entendido .res-pildora { margin-left: 0; font-weight: 500; overflow-wrap: anywhere; }
+.res-ignoradas { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 6px; }
+.res-ignoradas .nota { flex: 1 1 200px; margin: 0; }
+.res-frase { font-weight: 600; margin: 6px 0 10px; }
+.res-servido { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 0; }
+.res-servido small { color: var(--tinta2); }
