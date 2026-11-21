@@ -22,7 +22,7 @@ test('dar acceso a alguien nuevo: enseña la contraseña temporal una vez', asyn
   await page.locator('.fila', { hasText: 'Usuarios' }).click();
   await expect(page.locator('.fila', { hasText: 'Persona Ejemplo' })).toContainText('Solo lectura · todas las naves');
   await expect(page.locator('.fila', { hasText: 'Ana Prueba (tú)' }).getByRole('button', { name: 'Quitar' })).toHaveCount(0);
-  await page.getByRole('button', { name: 'Dar acceso a alguien' }).click();
+  await page.getByRole('button', { name: 'Dar acceso con correo' }).click();
   await page.getByRole('button', { name: 'Dar acceso', exact: true }).click();
   await expect(page.getByRole('alert')).toHaveText('Escribe su correo.');
   await page.fill('#u-correo', 'nuevo@ejemplo.com');
@@ -60,7 +60,7 @@ test('a quien ya tiene cuenta solo se le da el rol (sin contraseña nueva) y se 
 test('no te puedes dar roles a ti mismo: el error se explica', async ({ page }) => {
   await simular(page, { dentro: true, sesion: admin, tablas: tablas() });
   await page.goto('./#/config/usuarios');
-  await page.getByRole('button', { name: 'Dar acceso a alguien' }).click();
+  await page.getByRole('button', { name: 'Dar acceso con correo' }).click();
   await page.fill('#u-correo', USUARIO.email);
   await page.fill('#u-nombre', 'Yo');
   await page.selectOption('#u-rol', 'r-enc');
@@ -94,7 +94,7 @@ test('Usuarios en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.goto('./#/config/usuarios');
   await expect(page.locator('.rol-linea')).toHaveCount(2);
   expect(await desbordes(page)).toEqual([]);
-  await page.getByRole('button', { name: 'Dar acceso a alguien' }).click();
+  await page.getByRole('button', { name: 'Dar acceso con correo' }).click();
   expect(await desbordes(page), 'ventana').toEqual([]);
 });
 

@@ -50,7 +50,10 @@ el móvil, filas); colores **«Pizarra»**: menú azul muy oscuro (#18202f), con
 modo oscuro. Propuestas que vio: https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a. Orden: 1) menú lateral y colores (**hecho y
 publicado el 21/11**, `docs/estado.md` A.1); 2) panel de Inicio (**hecho y publicado el 21/11**, A.2); 3) tablas en los cuatro módulos (**hecho y publicado el 21/11**, A.3). **El aspecto nuevo está terminado.** Los colores están en variables al principio de `src/estilos.css`.
 
-Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio.
+Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio (**empezada el 21/11**, `docs/estado.md` «Parte 8»).
+Decidido: en paralelo **solo usa la nueva Cristian**; los operarios cambian una vez, el día del cambio. Trozo 1, entrar con
+**código de alta + PIN** (8.1): hecho; falta que pegue 0035 e instalar la función «pin» (con su «sí»), y que lo pruebe con «pruebas».
+Lo siguiente: decidir qué apunta él en la nueva esas semanas y qué se compara cada semana.
 
 ## Decisiones de Cristian que conviene recordar
 - Pantallas: se dice **«unidad de trabajo»**, nunca «empresa». Fábrica (MAPRI) y Limpieza (CIE).
@@ -79,7 +82,7 @@ Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del camb
 - **Costes de limpieza:** decidido dejarlos para más adelante (ver la app vieja `07-fichaje-y-costes.js`).
 - **Sesión:** salir de la app nueva ya solo cierra ese dispositivo (`signOut({ scope: 'local' })`), pero si se sale en
   otra herramienta con la misma cuenta, cierra todas las sesiones. Si «dar acceso» dice que la sesión se cerró: salir y entrar.
-- **PIN para los operarios** (antes del día del cambio): hoy los operarios no pueden entrar con PIN; se prueba con el usuario «pruebas».
+- **PIN para los operarios:** hecho (parte 8.1); falta aplicarlo y probarlo con el usuario «pruebas».
 - **La ficha de pruebas tiene dos usuarios** («Pruebas» y «prueba»).
 - **Limpieza de datos de prueba el día del cambio:** persona y usuarios de pruebas, documentos y firmas de prueba,
   EPI y formación de prueba de Cristian, el diploma subido en Storage, la firma de prueba de «Semana 2027».

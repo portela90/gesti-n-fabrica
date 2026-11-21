@@ -557,3 +557,16 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
   .filtros > .campo { flex: 0 1 auto; min-width: 180px; }
   .filtros .boton { white-space: nowrap; }
 }
+/* Entrar con PIN: puntos y teclado de números grande */
+.entrar-otro { display: grid; gap: 6px; margin-top: 18px; }
+.pin { display: grid; justify-items: center; gap: 14px; }
+.pin-titulo { margin: 0; font-weight: 600; font-size: 17px; }
+.pin-puntos { display: flex; gap: 16px; }
+.pin-puntos i { width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--acento); }
+.pin-puntos i.lleno { background: var(--acento); }
+.pin-teclas { display: grid; grid-template-columns: repeat(3, 72px); gap: 12px; }
+.pin-teclas button { height: 64px; border-radius: 50%; border: 1px solid var(--linea); background: var(--sup); color: var(--tinta, inherit); font-size: 26px; font-weight: 600; cursor: pointer; }
+.pin-teclas button:active { background: color-mix(in srgb, var(--acento) 15%, var(--sup)); }
+.pin-teclas button:disabled { opacity: .5; }
+.codigo-alta { font: 700 32px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 3px; text-align: center; margin: 8px 0; }
+.qr-alta { display: block; margin: 0 auto; width: 220px; height: 220px; background: #fff; padding: 8px; border-radius: 8px; }

@@ -23,6 +23,8 @@ export interface Opciones {
   tablas?: Record<string, Record<string, unknown>[]>; // filas iniciales de las tablas (del núcleo o de un módulo; se guardan en memoria)
   archivos?: [string, Buffer][]; // archivos del almacén («bucket/ruta»)
   rpc?: Record<string, (cuerpo: Record<string, unknown>, tablas: Record<string, Record<string, unknown>[]>) => unknown>; // funciones de los módulos
+  /** Funciones de servidor (/functions/v1/<nombre>): devuelven [estado, cuerpo]. */
+  funciones?: Record<string, (cuerpo: Record<string, unknown>) => [number, unknown]>;
 }
 
 /** Permisos de un administrador de unidad: configurar todo el núcleo. */
@@ -51,7 +53,7 @@ export async function simular(page: Page, op: Opciones = {}) {
     const r = route.request(); anota(r);
     const u = new URL(r.url());
     const json = (body: unknown, status = 200) => route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
-    if (u.pathname === '/auth/v1/token') return json(sesionAuth());
+    if (u.pathname === '/auth/v1/token' || u.pathname === '/auth/v1/verify') return json(sesionAuth());
     if (u.pathname === '/auth/v1/otp' || u.pathname === '/auth/v1/recover') return json({});
     if (u.pathname === '/auth/v1/logout') return route.fulfill({ status: 204 });
     if (u.pathname === '/auth/v1/user') return json(sesionAuth().user);
@@ -73,6 +75,8 @@ export async function simular(page: Page, op: Opciones = {}) {
       try { return json(op.rpc[rpc[1]](r.postDataJSON() as Record<string, unknown>, tablas) ?? null); }
       catch (e) { return json({ code: 'P0001', message: String((e as Error).message) }, 400); }
     }
+    const fn = u.pathname.match(/^\/functions\/v1\/([a-z_-]+)$/);
+    if (fn && op.funciones?.[fn[1]]) { const [estado, cuerpo] = op.funciones[fn[1]](r.postDataJSON() as Record<string, unknown>); return json(cuerpo, estado); }
     if (u.pathname === '/functions/v1/invitar') {
       const b = r.postDataJSON() as { correo: string; nombre: string; rol_id: string; empresa_id: string; centro_id: string | null };
       if (b.correo === USUARIO.email) return json({ error: 'A_TI_MISMO' }, 400);

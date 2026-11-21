@@ -406,7 +406,7 @@ administrador**, contestando de **trabajos y también de personas**; se traen «
 - Ojo (21/11): de 27 trabajos en la nueva solo 1 tiene nave (la sale de la máquina o la zona con su nave en Configuración). Para que
   «compara naves» sirva, las máquinas y zonas de Limpieza tienen que tener su nave puesta y los trabajos su máquina o zona.
 
-## Aspecto nuevo (estilo Holded, «Pizarra») — EN CURSO
+## Aspecto nuevo (estilo Holded, «Pizarra») — TERMINADO 21/11
 Decidido por Cristian (21/11; propuestas en https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a): menú lateral, apartados dentro del menú,
 panel con cifras en Inicio, tablas en todas las listas en el ordenador, colores «Pizarra». En tres trozos.
 
@@ -487,6 +487,29 @@ Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para 
   - Decidido (13/11): las vacaciones y los días entre semana del fin de semana **cambian según el año**, así que los
     pone Cristian desde la app nueva, no se dejan fijos: tipos de día «Trabaja» (un día fuera de los de su equipo) y
     «Descanso» (un día de su equipo que no trabaja), y «Vacaciones para todo el equipo» (luego se cambian sueltas).
+
+## Parte 8: en paralelo con la app vieja (21/11) — EN CURSO
+Decidido por Cristian (21/11): durante las 2–4 semanas en paralelo **solo él** usa la app nueva a la vez que la vieja; los operarios
+siguen solo con la vieja y cambian una sola vez, el día del cambio.
+
+### 8.1 Entrar con código de alta + PIN — HECHO, falta aplicar (0035) e instalar la función «pin»
+Decidido (21/11): código de alta (o su QR) + PIN de 4 cifras; en la pantalla de entrar no sale ningún nombre. Si olvida el PIN,
+cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto por defecto: el código sirve una vez y caduca a los
+7 días; un móvil por persona; rol «Operario» de partida (se puede elegir otro y una nave).
+- `0035_nucleo_pin.sql`: `nucleo.codigos_alta` (huella sha256 del código) y `nucleo.moviles` (huellas de la llave del móvil y del PIN con
+  sal; fallos, bloqueado, último acceso). La app solo lee columnas sin huellas. `codigo_alta(persona, rol, nave)` (con
+  `nucleo.usuario.editar`; no a quien entra con correo, ni a uno mismo, ni de baja; anula el código y el móvil anteriores) y
+  `codigo_anular`. Solo para la función de servidor: `pin_codigo`, `pin_alta`, `pin_entrar` (cuenta fallos; al 5.º, bloqueado).
+- Función de servidor `supabase/functions/pin` (sin comprobar sesión, verify_jwt = false): «alta» crea la cuenta sin correo de verdad
+  (`pin-<id de su ficha>@pin.invalid`, nunca se le manda nada) y «entrar»; las dos devuelven un vale de un solo uso (`generateLink`
+  sin enviar correo) con el que la app abre la sesión (`verifyOtp`). La llave secreta del móvil está en `localStorage` (`gf-movil-pin`);
+  el PIN no se guarda nunca. PIN demasiado fácil (1111, 1234, 9876) no se deja.
+- Pantallas: entrar con PIN (teclado de números grande), «Soy operario: tengo un código de alta», alta con el QR (`#/alta/<código>`);
+  Configuración → Usuarios: «Operario: código de alta (PIN)» con el código y su QR (librería `qrcode`, MIT), estado de cada uno
+  (con PIN, bloqueado, sin móvil), «Nuevo código de alta» y «Códigos de alta sin usar» (anular). El botón de siempre pasa a llamarse
+  «Dar acceso con correo».
+- Pruebas: `supabase/pruebas/75-nucleo-pin.sql` (41) y `pruebas/pin.spec.ts` (6).
+- Pendiente: probarlo Cristian con el usuario «pruebas» (código → su móvil → PIN) antes de dárselo a nadie.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

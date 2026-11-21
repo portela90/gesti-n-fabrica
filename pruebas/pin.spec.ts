@@ -1,0 +1,140 @@
+// Entrar con código de alta + PIN (parte 8). Personas inventadas; la función «pin» está simulada.
+import { test, expect, type Page } from '@playwright/test';
+import { simular, desbordes, vigilar, USUARIO, PERMISOS_ADMIN, EMPRESA_A } from './simulador';
+
+const E = EMPRESA_A.id;
+const OLI = 'aaaaaaaa-0000-0000-0000-0000000000f1', PEPA = 'aaaaaaaa-0000-0000-0000-0000000000f2', LUIS = 'aaaaaaaa-0000-0000-0000-0000000000f3';
+const operario = { usuario: { id: USUARIO.id, nombre: 'Oli Prueba', superadmin: false, empresa_actual: null }, empresas: [{ ...EMPRESA_A, permisos: [] }] };
+const MOVIL = { movil: 'm-1', llave: 'a'.repeat(64), nombre: 'Oli Prueba' };
+
+async function teclear(page: Page, pin: string) {
+  for (const c of pin) await page.getByRole('group', { name: /PIN/ }).getByRole('button', { name: c, exact: true }).click();
+}
+
+test('el administrador saca el código de alta de un operario, con su QR; ve quién está bloqueado', async ({ page }) => {
+  const errores = vigilar(page);
+  const sim = await simular(page, { dentro: true,
+    sesion: { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null },
+      empresas: [{ ...EMPRESA_A, permisos: [...PERMISOS_ADMIN, 'nucleo.usuario.ver', 'nucleo.usuario.editar'] }] },
+    tablas: {
+      roles: [{ id: 'r-ope', empresa_id: null, codigo: 'operario', nombre: 'Operario', descripcion: null, baja: null },
+        { id: 'r-adm', empresa_id: null, codigo: 'admin_empresa', nombre: 'Administrador', descripcion: null, baja: null }],
+      personas: [{ id: OLI, empresa_id: E, nombre: 'Oli Prueba', baja: null }, { id: PEPA, empresa_id: E, nombre: 'Pepa Prueba', baja: null },
+        { id: LUIS, empresa_id: E, nombre: 'Luis Prueba', baja: null }],
+      usuarios: [{ id: USUARIO.id, nombre: 'Ana Prueba', email: USUARIO.email, superadmin: false, persona_id: null },
+        { id: 'u-pepa', nombre: 'Pepa Prueba', email: null, superadmin: false, persona_id: PEPA }],
+      asignaciones: [{ id: 'as-0', usuario_id: USUARIO.id, rol_id: 'r-adm', empresa_id: E, centro_id: null, hasta: null },
+        { id: 'as-1', usuario_id: 'u-pepa', rol_id: 'r-ope', empresa_id: E, centro_id: null, hasta: null }],
+      moviles: [{ id: 'm-p', usuario_id: 'u-pepa', empresa_id: E, fallos: 5, bloqueado: '2026-11-20T10:00:00Z', ultimo: null, baja: null, creado: '2026-11-01T10:00:00Z' }],
+      codigos_alta: [{ id: 'c-l', empresa_id: E, persona_id: LUIS, rol_id: 'r-ope', centro_id: null, caduca: '2099-01-01T00:00:00Z', usado: null, anulado: null }],
+    },
+    rpc: { codigo_alta: () => 'K7P2-9QXM', codigo_anular: () => null } });
+  await page.goto('./#/config/usuarios');
+  const pepa = page.locator('.fila', { hasText: 'Pepa Prueba' });
+  await expect(pepa).toContainText('Bloqueado: dale un código nuevo');
+  await expect(pepa.getByRole('button', { name: 'Otro rol' })).toHaveCount(0);
+  await expect(page.getByRole('region', { name: 'Códigos de alta sin usar' })).toContainText('Luis Prueba');
+
+  await page.getByRole('button', { name: 'Operario: código de alta (PIN)' }).click();
+  const v = page.getByRole('dialog');
+  await expect(v.locator('#pin-rol')).toHaveValue('r-ope');   // el rol de operario, de partida
+  await v.getByRole('button', { name: 'Sacar el código' }).click();
+  await expect(v.getByRole('alert')).toHaveText('Elige el trabajador.');
+  await v.locator('#pin-persona').selectOption({ label: 'Oli Prueba' });
+  await v.getByRole('button', { name: 'Sacar el código' }).click();
+  await expect(page.locator('#codigoAlta')).toHaveText('K7P2-9QXM');
+  await expect(page.getByRole('img', { name: /Código QR/ })).toBeVisible();
+  expect(sim.find((l) => l.ruta.endsWith('/rpc/codigo_alta'))!.cuerpo).toEqual({ p_persona: OLI, p_rol: 'r-ope', p_centro: null });
+  await page.getByRole('button', { name: 'Hecho' }).click();
+
+  // el bloqueado: código nuevo con su mismo rol
+  await pepa.getByRole('button', { name: 'Nuevo código de alta' }).click();
+  await expect(page.getByRole('dialog').locator('#pin-persona')).toHaveValue(PEPA);
+  await expect(page.getByRole('dialog').locator('#pin-persona')).toBeDisabled();
+  expect(errores).toEqual([]);
+});
+
+test('el operario da de alta su móvil con el QR y elige su PIN (no uno fácil, y dos veces igual)', async ({ page }) => {
+  const errores = vigilar(page);
+  let pedido: Record<string, unknown> | null = null;
+  const sim = await simular(page, { sesion: operario, funciones: {
+    pin: (b) => { pedido = b; return b.codigo === 'K7P29QXM' ? [200, { movil: 'm-1', nombre: 'Oli Prueba', token_hash: 'vale-1' }] : [400, { error: 'CODIGO' }]; } } });
+  await page.goto('./#/alta/K7P2-9QXM');
+  await expect(page.getByRole('heading', { name: 'Dar de alta este móvil' })).toBeVisible();
+  await expect(page.getByText('Código K7P2-9QXM.')).toBeVisible();
+  await teclear(page, '1234');
+  await expect(page.getByRole('alert')).toContainText('muy fácil de adivinar');
+  await teclear(page, '2580');
+  await expect(page.getByText('Repite tu PIN')).toBeVisible();
+  await teclear(page, '2581');
+  await expect(page.getByRole('alert')).toHaveText('No es el mismo PIN. Vuelve a elegirlo.');
+  await expect(page.getByText('Elige tu PIN', { exact: true })).toBeVisible();
+  await teclear(page, '2580');
+  await expect(page.getByText('Repite tu PIN')).toBeVisible();
+  await teclear(page, '2580');
+  await expect(page.locator('.cabecera')).toBeAttached();
+  expect(pedido).toMatchObject({ accion: 'alta', codigo: 'K7P29QXM', pin: '2580' });
+  expect(String(pedido!.llave)).toMatch(/^[0-9a-f]{64}$/);
+  expect(sim.find((l) => l.ruta.startsWith('/auth/v1/verify'))!.cuerpo).toMatchObject({ token_hash: 'vale-1', type: 'email' });
+  const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem('gf-movil-pin') ?? '{}'));
+  expect(guardado).toEqual({ movil: 'm-1', llave: pedido!.llave, nombre: 'Oli Prueba' });   // el PIN no se guarda
+  expect(page.url()).not.toContain('K7P2');   // el código se quita de la dirección
+  expect(errores).toEqual([]);
+});
+
+test('código escrito a mano: si no vale, lo dice', async ({ page }) => {
+  await simular(page, { sesion: operario, funciones: { pin: () => [400, { error: 'CODIGO' }] } });
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Soy operario: tengo un código de alta' }).click();
+  await page.locator('#codigo-alta').fill('abc');
+  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await expect(page.getByRole('alert')).toContainText('8 letras y números');
+  await page.locator('#codigo-alta').fill('zzzz zzzz');
+  await page.getByRole('button', { name: 'Siguiente' }).click();
+  await teclear(page, '2580');
+  await expect(page.getByText('Repite tu PIN')).toBeVisible();
+  await teclear(page, '2580');
+  await expect(page.getByRole('alert')).toContainText('Ese código no vale');
+  await expect(page.locator('#codigo-alta')).toBeVisible();
+});
+
+test('con el móvil ya dado de alta: solo el PIN; avisa de los intentos que quedan', async ({ page }) => {
+  const errores = vigilar(page);
+  const pedidos: Record<string, unknown>[] = [];
+  await page.addInitScript((m) => localStorage.setItem('gf-movil-pin', JSON.stringify(m)), MOVIL);
+  await simular(page, { sesion: operario, funciones: {
+    pin: (b) => { pedidos.push(b); return b.pin === '2580' ? [200, { token_hash: 'vale-2' }] : [401, { error: 'PIN', quedan: 3 }]; } } });
+  await page.goto('./');
+  await expect(page.getByRole('heading', { name: 'Hola, Oli' })).toBeVisible();
+  await teclear(page, '1111');
+  await expect(page.getByRole('alert')).toHaveText('PIN incorrecto. Te quedan 3 intentos antes de que se bloquee este móvil.');
+  // también con el teclado del ordenador
+  await page.keyboard.type('2580');
+  await expect(page.getByText('Pon tu PIN')).toHaveCount(0);
+  expect(pedidos.at(-1)).toEqual({ accion: 'entrar', movil: 'm-1', llave: MOVIL.llave, pin: '2580' });
+  expect(errores).toEqual([]);
+});
+
+test('móvil bloqueado o dado de baja: lo explica y deja usar un código nuevo', async ({ page }) => {
+  await page.addInitScript((m) => localStorage.setItem('gf-movil-pin', JSON.stringify(m)), MOVIL);
+  await simular(page, { sesion: operario, funciones: { pin: () => [403, { error: 'MOVIL' }] } });
+  await page.goto('./');
+  await teclear(page, '2580');
+  await expect(page.getByRole('alert')).toContainText('ya no está dado de alta');
+  expect(await page.evaluate(() => localStorage.getItem('gf-movil-pin'))).toBeNull();
+  await page.getByRole('button', { name: 'Tengo un código de alta nuevo' }).click();
+  await expect(page.locator('#codigo-alta')).toBeVisible();
+});
+
+test('la pantalla del PIN cabe en el móvil más estrecho', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.addInitScript((m) => localStorage.setItem('gf-movil-pin', JSON.stringify(m)), MOVIL);
+  await simular(page, { sesion: operario });
+  await page.goto('./');
+  await expect(page.getByText('Pon tu PIN')).toBeVisible();
+  expect(await desbordes(page)).toEqual([]);
+  await page.goto('./#/alta/K7P2-9QXM');
+  await page.reload();
+  await expect(page.getByText('Elige tu PIN', { exact: true })).toBeVisible();
+  expect(await desbordes(page)).toEqual([]);
+});
