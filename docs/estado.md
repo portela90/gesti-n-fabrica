@@ -355,7 +355,7 @@ costes, pestaña «Investigar»). Decidido por Cristian (20/11):
 - Pruebas: `supabase/pruebas/72-limpieza-informes.sql` (25) y `pruebas/resumen.spec.ts` (7; descargan el PDF y el Excel y miran dentro).
 - Sin datos que traer. No hace falta tocar «Exposed schemas» (`limpieza` ya está).
 
-### 2.11 Investigar (21/11, parte 7, trozo 2 de 4) — PREPARADO, SIN APLICAR (0033 pendiente de pegar)
+### 2.11 Investigar (21/11, parte 7, trozo 2 de 4) — APLICADO 21/11 (0033 pegada por Cristian; comprobado: funciones, permisos e Investigar con datos reales)
 Decidido por Cristian (21/11): igual que la pestaña «Investigar» de la app vieja (`07e`, `07g` de COLADA), con estos cambios:
 - **Solo el administrador** (permiso `limpieza.informe.todo`): tercer botón «Investigar» dentro de «Resumen».
 - **Problemas con los temas** de la parte 6 (`limpieza.temas`), no con las 7 categorías fijas de la vieja; sitio = máquina o zona
