@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Icono, ICONOS, Ventana } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 
 interface Asig { id: string; usuario_id: string; rol_id: string; centro_id: string | null }
 interface Rol { id: string; empresa_id: string | null; codigo: string; nombre: string; descripcion: string | null; baja: string | null }
@@ -20,6 +21,7 @@ const ERRORES: Record<string, string> = {
 
 /** Configuración → Usuarios: quién entra en esta unidad de trabajo, con qué rol y en qué nave. */
 export function Usuarios({ ir }: { ir: (r: string) => void }) {
+  const ordenador = useOrdenador();   // en el ordenador, tabla; en el móvil, las filas de siempre
   const { empresa, puede, estado } = useSesion();
   const yo = estado.fase === 'dentro' ? estado.sesion.usuario?.id : null;
   const [asigs, setAsigs] = useState<Asig[] | null>(null);
@@ -65,13 +67,33 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
   }
 
   return (
-    <main className="contenido estrecho">
+    <main className={ordenador ? "contenido" : "contenido estrecho"}>
       <button type="button" className="boton txt volver" onClick={() => ir('/config')}><Icono d={ICONOS.volver} tam={18} /> Configuración</button>
       <h1 className="titulo">Usuarios</h1>
       <p className="nota" style={{ margin: '-8px 0 14px' }}>Quién entra en {empresa.nombre}, con qué rol y en qué nave.</p>
       {editable && <button type="button" className="boton ancho" style={{ marginBottom: 14 }} onClick={() => setFormulario({})}>Dar acceso a alguien</button>}
       {error && <p className="error" role="alert">{error}</p>}
-      {asigs === null && !error ? <p className="nota">Cargando…</p> : (
+      {asigs === null && !error ? <p className="nota">Cargando…</p> : ordenador ? (
+        <Tabla filas={grupos} clave={(g) => g.u.id} etiquetaBuscar="Buscar usuario" pistaBuscar="Buscar por nombre, correo o trabajador…"
+          buscarEn={(g) => `${g.u.nombre} ${g.u.email ?? ''} ${personas.find((p) => p.id === g.u.persona_id)?.nombre ?? ''}`}
+          filtros={personas.length ? [{ clave: 'sin', texto: 'Sin enlazar con su ficha', cumple: (g) => !g.u.persona_id && !g.u.superadmin }] : undefined}
+          columnas={[
+            { clave: 'nombre', titulo: 'Usuario', valor: (g) => <>{g.u.nombre}{g.u.id === yo ? ' (tú)' : ''}</>, orden: (g) => g.u.nombre },
+            { clave: 'email', titulo: 'Correo', valor: (g) => g.u.email ?? '' },
+            ...(personas.length ? [{ clave: 'trabajador', titulo: 'Trabajador', orden: (g: typeof grupos[number]) => personas.find((p) => p.id === g.u.persona_id)?.nombre ?? '',
+              valor: (g: typeof grupos[number]) => (g.u.persona_id ? personas.find((p) => p.id === g.u.persona_id)?.nombre ?? 'de otra unidad'
+                : g.u.superadmin ? '' : <span className="aviso-texto">Sin enlazar</span>) }] : []),
+            { clave: 'roles', titulo: 'Roles y nave', orden: (g) => g.roles.map((a) => nombreRol(a.rol_id)).join(' '), valor: (g) => (
+              <span className="roles-celda">{g.roles.map((a) => (
+                <span key={a.id} className="rol-linea"><span>{nombreRol(a.rol_id)} · {nombreNave(a.centro_id)}</span>
+                  {editable && g.u.id !== yo && <button type="button" className="boton txt peq" onClick={() => quitar(a, g.u)}>Quitar</button>}</span>))}</span>) },
+            ...(editable ? [{ clave: 'acciones', titulo: '', valor: (g: typeof grupos[number]) => (
+              <span className="botones-fila">
+                {g.u.id !== yo && <button type="button" className="boton sec peq" onClick={() => setFormulario({ correo: g.u.email ?? '', nombre: g.u.nombre })}>Otro rol</button>}
+                {personas.length > 0 && <button type="button" className="boton txt peq" onClick={() => setEnlazando(g.u)}>{g.u.persona_id ? 'Cambiar trabajador' : 'Enlazar con su ficha'}</button>}
+              </span>) }] : []),
+          ]} />
+      ) : (
         <div className="lista">
           {grupos.map(({ u, roles: rs }) => (
             <div key={u.id} className="fila fija">

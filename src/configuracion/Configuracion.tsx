@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { anotarError } from '../nucleo/errores';
 import { aviso, Icono, ICONOS, Ventana } from '../componentes/basicos';
+import { Tabla, type Columna } from '../componentes/Tabla';
 import { CATALOGOS, catalogoPorTabla, codigoDe, DIAS_HORARIO, DIAS_SEMANA, estadosDeTexto, horarioDeTexto, textoDeEstados, textoDeHorario, type Campo, type Catalogo, type Fila } from './catalogos';
 
 /** ¿Puede configurar algo en esta unidad de trabajo? (para enseñar «Configuración» en el menú) */
@@ -66,12 +67,37 @@ export function IndiceConfiguracion({ ir }: { ir: (r: string) => void }) {
 }
 
 /** Lista de un catálogo: buscar, añadir, cambiar y dar de baja. */
+/** Las columnas de un catálogo, sacadas de sus campos: la principal (nombre o código), una por campo sencillo (las listas, naves,
+ *  tipos… con su nombre) y, solo en el móvil, el resumen de siempre. */
+function columnasDe(cat: Catalogo, nombres: (t: string, id: unknown) => string): Columna<Fila>[] {
+  const conCodigo = cat.campos.some((c) => c.clave === 'codigo');
+  const principal: Columna<Fila> = { clave: 'nombre', titulo: conCodigo && cat.campos.find((c) => c.clave === 'codigo')?.obligatorio ? 'Código' : 'Nombre',
+    orden: (f) => String(f.nombre || f.codigo || ''),
+    valor: (f) => <>{String(f.nombre || f.codigo)}{f.codigo && f.nombre && conCodigo ? <span className="cod"> · {String(f.codigo)}</span> : null}</> };
+  const campos = cat.campos.filter((c) => !['nombre', 'codigo', 'orden'].includes(c.clave) && !['estados', 'horario'].includes(c.tipo));
+  const valor = (c: Campo, f: Fila): string => {
+    const x = f[c.clave];
+    if (x == null || x === '') return '';
+    if (c.tipo === 'referencia') return nombres(c.ref!.tabla, x);
+    if (c.tipo === 'lista') return c.opciones?.find(([v]) => v === x)?.[1] ?? String(x);
+    if (c.tipo === 'dias') return DIAS_COL.filter(([n]) => (x as number[]).includes(n)).map(([, l]) => l).join(' ');
+    if (c.tipo === 'hora') return String(x).slice(0, 5);
+    return String(x);
+  };
+  return [principal,
+    ...campos.map((c): Columna<Fila> => ({ clave: c.clave, titulo: c.etiqueta, soloTabla: true, numero: c.tipo === 'numero', valor: (f) => valor(c, f),
+      orden: c.tipo === 'numero' ? (f) => (f[c.clave] == null || f[c.clave] === '' ? null : Number(f[c.clave])) : undefined })),
+    { clave: 'estado', titulo: 'Estado', soloTabla: true, valor: (f) => (f.baja ? 'Dado de baja' : ''), orden: (f) => (f.baja ? 1 : 0) },
+    { clave: 'detalle', titulo: '', soloMovil: true, valor: (f) => { const det = cat.detalle(f, nombres); return f.baja ? 'Dado de baja' + (det ? ' · ' + det : '') : det; } }];
+}
+const DIAS_COL: [number, string][] = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
+
 export function ListaCatalogo({ tabla, ir }: { tabla: string; ir: (r: string) => void }) {
   const { empresa, puede } = useSesion();
   const cat = catalogoPorTabla(tabla);
   const [filas, setFilas] = useState<Fila[] | null>(null);
   const [refs, setRefs] = useState<Record<string, Fila[]>>({});
-  const [buscar, setBuscar] = useState('');
+  const [buscar, setBuscar] = useState('');   // lo escrito en el buscador pasa al nombre al «Añadir»
   const [verBajas, setVerBajas] = useState(false);
   const [editando, setEditando] = useState<Fila | 'nueva' | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -93,42 +119,22 @@ export function ListaCatalogo({ tabla, ir }: { tabla: string; ir: (r: string) =>
     return f ? String(f.nombre || f.codigo || '') : '';
   }, [refs]);
 
-  const visibles = useMemo(() => {
-    const q = buscar.trim().toLowerCase();
-    return (filas ?? []).filter((f) => (verBajas || !f.baja) && (!q || `${f.nombre ?? ''} ${f.codigo ?? ''}`.toLowerCase().includes(q)));
-  }, [filas, buscar, verBajas]);
 
   if (!cat || !empresa) return null;
   const editable = puede(cat.permiso);
   const bajas = (filas ?? []).filter((f) => f.baja).length;
 
   return (
-    <main className="contenido estrecho">
+    <main className="contenido">
       <button type="button" className="boton txt volver" onClick={() => ir('/config')}><Icono d={ICONOS.volver} tam={18} /> Configuración</button>
       <h1 className="titulo">{cat.titulo}</h1>
-      <div className="barra-lista">
-        <input type="search" aria-label={'Buscar en ' + cat.titulo} placeholder={`Buscar ${cat.titulo.toLowerCase()}…`} value={buscar} onChange={(e) => setBuscar(e.target.value)} />
-        {editable && <button type="button" className="boton" onClick={() => setEditando('nueva')}>Añadir</button>}
-      </div>
       {error && <p className="error" role="alert">{error}</p>}
-      {filas === null && !error ? <p className="nota">Cargando…</p> : visibles.length === 0 ? (
-        <div className="vacio"><p>{buscar ? 'Nada coincide con la búsqueda.' : `Todavía no hay ${cat.titulo.toLowerCase()}.`}</p>
-          {editable && !buscar && <button type="button" className="boton" onClick={() => setEditando('nueva')}>Añadir {cat.singular}</button>}</div>
-      ) : (
-        <div className="lista">
-          {visibles.map((f) => {
-            const det = cat.detalle(f, nombres);
-            return (
-              <button key={f.id} type="button" className={'fila' + (f.baja ? ' de-baja' : '')} onClick={() => setEditando(f)}>
-                <span className="fila-txt">
-                  <b>{String(f.nombre || f.codigo)}{f.codigo && f.nombre && cat.campos.some((c) => c.clave === 'codigo') ? <span className="cod"> · {String(f.codigo)}</span> : null}</b>
-                  {(det || f.baja) && <small>{f.baja ? 'Dado de baja' + (det ? ' · ' : '') : ''}{det}</small>}
-                </span>
-                <span className="fila-flecha" aria-hidden="true">›</span>
-              </button>
-            );
-          })}
-        </div>
+      {filas === null && !error ? <p className="nota">Cargando…</p> : (
+        <Tabla filas={(filas ?? []).filter((f) => verBajas || !f.baja)} clave={(f) => f.id} alAbrir={(f) => setEditando(f)}
+          columnas={columnasDe(cat, nombres)} buscarEn={(f) => `${f.nombre ?? ''} ${f.codigo ?? ''}`} etiquetaBuscar={'Buscar en ' + cat.titulo} alBuscar={setBuscar} pistaBuscar={`Buscar ${cat.titulo.toLowerCase()}…`}
+          claseFila={(f) => (f.baja ? 'de-baja' : '')}
+          acciones={editable && <button type="button" className="boton" onClick={() => setEditando('nueva')}>Añadir</button>}
+          vacio={<>Todavía no hay {cat.titulo.toLowerCase()}.{editable && <> <button type="button" className="boton txt" onClick={() => setEditando('nueva')}>Añadir {cat.singular}</button></>}</>} />
       )}
       {bajas > 0 && <button type="button" className="boton txt" onClick={() => setVerBajas(!verBajas)}>{verBajas ? 'Esconder los dados de baja' : `Ver los dados de baja (${bajas})`}</button>}
       {editando && (

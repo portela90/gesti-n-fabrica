@@ -517,3 +517,27 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
 .titulo-ir + .mosaicos .mosaico small { font-size: 13px; }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tarjeta-lineas .naranja { color: #f5b041; } }
 .tarjeta-lineas li { min-width: 0; overflow-wrap: anywhere; }
+
+/* ---------- tabla común (listados) ---------- */
+.tabla-barra { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+.tabla-buscar { flex: 1 1 220px; min-width: 0; min-height: 44px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
+.tabla-filtros { display: flex; flex-wrap: wrap; gap: 6px; }
+.tabla-filtros button { min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--linea); background: var(--sup); color: var(--tinta2); font-size: 14px; font-weight: 500; cursor: pointer; }
+.tabla-filtros button[aria-pressed="true"] { border-color: var(--acento); color: var(--acento); font-weight: 600; background: color-mix(in srgb, var(--acento) 8%, var(--sup)); }
+.tabla-acciones { display: flex; gap: 8px; margin-left: auto; }
+.tabla-caja { background: var(--sup); border: 1px solid var(--linea); border-radius: var(--radio); overflow-x: auto; }
+.tabla { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla thead th { position: sticky; top: 0; background: var(--sup); text-align: left; padding: 0; border-bottom: 1px solid var(--linea); white-space: nowrap; }
+.tabla thead th button { width: 100%; padding: 10px 14px; border: 0; background: none; text-align: inherit; font-size: 12px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--tinta2); cursor: pointer; }
+.tabla thead th[aria-sort] button { color: var(--acento); }
+.tabla tbody th, .tabla tbody td { padding: 10px 14px; border-bottom: 1px solid var(--linea); text-align: left; vertical-align: middle; }
+.tabla tbody th { font-weight: 600; }
+.tabla tbody tr:last-child > * { border-bottom: 0; }
+.tabla .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla thead th.num button { text-align: right; }
+.tabla tr.abre { cursor: pointer; }
+.tabla tr.abre:hover, .tabla tr.abre:focus-visible { background: color-mix(in srgb, var(--acento) 6%, var(--sup)); outline: none; }
+.tabla tr.de-baja > * { color: var(--suave); }
+.tabla-pie { margin: 0; padding: 8px 14px; font-size: 13px; color: var(--suave); border-top: 1px solid var(--linea); }
+.roles-celda { display: flex; flex-direction: column; gap: 2px; }

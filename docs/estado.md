@@ -434,6 +434,16 @@ panel con cifras en Inicio, tablas en todas las listas en el ordenador, colores 
 - Pruebas: `pruebas/panel.spec.ts` (3). El simulador entiende ahora `not.is.null` y `cs.{…}`.
 - Aprendido: no usar la clase `aviso` (es la de los mensajes flotantes); el naranja del panel es `naranja`.
 
+### A.3 Tablas (21/11) — EN CURSO, módulo a módulo (sin migración)
+Decidido por Cristian (21/11): tabla en los **listados de verdad**; las listas pequeñas de las ventanas y las de escribir horas siguen
+en filas. Orden: Configuración, Limpieza, Personal, Prevención.
+- `src/componentes/Tabla.tsx`: en el ordenador (≥ 900 px, `useOrdenador`) tabla con buscador, filtros, columnas que se ordenan tocando
+  el título (▲ ▼, con números en su orden: F3 antes que F25) y «N filas»; en el móvil, las filas de siempre. Columnas `soloTabla` y
+  `soloMovil` para que el móvil se vea igual que antes. Tocar una fila abre su ficha (también con Intro).
+- **Configuración** (PUBLICADO 21/11): todos los catálogos (columnas sacadas de sus campos) y Usuarios (en el ordenador, tabla con roles
+  y botones; en el móvil, como antes). Salud de la app, sin cambios (listas cortas, solo superadmin).
+- Pruebas: `pruebas/tabla.spec.ts` (3). Arreglado de paso: una prueba de incidencias que miraba la petición antes de que saliera.
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

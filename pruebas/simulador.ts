@@ -166,7 +166,7 @@ export async function desbordes(page: Page) {
 /** Errores de la página (excepciones y errores de consola). */
 export function vigilar(page: Page) {
   const err: string[] = [];
-  page.on('pageerror', (e) => err.push(e.message));
+  page.on('pageerror', (e) => err.push(e.message + (process.env.PILA ? ' @ ' + (e.stack ?? '').split('\n').slice(1, 3).join(' | ') : '')));
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) err.push(m.text()); });
   return err;
 }

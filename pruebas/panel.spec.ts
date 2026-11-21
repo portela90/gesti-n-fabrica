@@ -22,7 +22,10 @@ test('el panel de quien lo ve todo: limpieza de hoy, incidencias, quién falta y
   await simular(page, { dentro: true, sesion: sesion(JEFA),
     rpc: {
       mi_dia: () => [t('t1', 'Barrer', { estado: 'hecho', minutos: 30 }), t('t2', 'Fregar', { estado: 'hecho', minutos: 20 }), t('t3', 'Basuras'), t('t4', 'Derrame', { asignados: [] })],
-      problemas_lista: () => [{ estado: 'pendiente' }, { estado: 'solucionado' }],
+      problemas_lista: () => [
+        { id: 'p1', tema: 'Aceite', lugar: 'F19', lugar_clave: 'F19', estado: 'pendiente', primera: dia(-6), ultima: dia(-1), reabierto: 0,
+          casos: [{ caso: 'c1', fecha: dia(-6), titulo: 'Fuga de aceite', quien: 'Ana Prueba' }, { caso: 'c2', fecha: dia(-1), titulo: 'Fuga de aceite', quien: 'Bea Prueba' }], notas: [] },
+        { id: 'p2', tema: 'Agua', lugar: 'Pasillo', lugar_clave: 'PASILLO', estado: 'solucionado', primera: dia(-20), ultima: dia(-15), reabierto: 0, casos: [], notas: [] }],
       investigar: () => ({ alcance: 'todo', unidad: 'Unidad P', personas: [], problemas: [], tareas: [], detalles: [], temas: [], naves: [], maquinas: [],
         horarios: [{ id: ANA, nombre: 'Ana Prueba', equipo_id: null, jornada: 'completa', horas_dow: [7, 7, 7, 7, 7, 7, 7] }],
         trabajos: [{ id: 'x1', fecha: HOY, clase: 'fija', tarea_id: null, titulo: 'Barrer', descripcion: null, lugar: null, maquina: null, minutos_est: null, minutos: 210, tiempo_auto: false,

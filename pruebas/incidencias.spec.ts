@@ -62,7 +62,7 @@ test('problemas repetidos: ver los casos y quitar uno que no es lo mismo', async
   const v = page.getByRole('dialog', { name: 'Aceite en F30' });
   await expect(v.locator('.fila b')).toHaveText(['Derrame de aceite', 'Hay aceite en el suelo']);
   await v.locator('.fila', { hasText: 'Derrame de aceite' }).getByRole('button', { name: 'No es lo mismo' }).click();
-  expect(sim.find((l) => l.ruta.includes('/rpc/problema_quitar'))!.cuerpo).toMatchObject({ p_id: 'p1', p_caso: 'c1' });
+  await expect.poll(() => sim.find((l) => l.ruta.includes('/rpc/problema_quitar'))?.cuerpo).toMatchObject({ p_id: 'p1', p_caso: 'c1' });   // espera a que salga la petición
 });
 
 test('crear una incidencia a mano', async ({ page }) => {
