@@ -7,6 +7,7 @@ import { useSesion } from '../nucleo/sesion';
 import { TallaStock, useStock } from './stock';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { descargar } from './pdfToolbox';
 import { fechaCorta, hoy, prev, textoError, useAjustes, usePersonas, type Persona } from './comun';
 import {
@@ -119,6 +120,7 @@ export function Documentos() {
   const [abierto, setAbierto] = useState<string | null>(null);
   const [haciendo, setHaciendo] = useState(false);
   const editable = puede('prevencion.documento.editar');
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const { data } = await prev().from('documentos').select('*').eq('empresa_id', empresa!.id).eq('tipo', tipo)
@@ -147,7 +149,17 @@ export function Documentos() {
       {docs === null ? <p className="nota">Cargando…</p> : !docs.length ? <div className="vacio"><p>No hay {T.plural.toLowerCase()} en {anio}.</p></div> : (
         <>
           <p className="nota" style={{ marginTop: 0 }}>{T.codigo} · {docs.length} en {anio}{sinFirmar.length ? ` · ${sinFirmar.length} sin firmar` : ''}.</p>
-          <div className="lista">
+          {ordenador ? (
+            <Tabla key={tipo} filas={docs} clave={(d) => d.id} alAbrir={(d) => setAbierto(d.id)} etiquetaBuscar="Buscar documento" claseFila={(d) => (d.anulado ? 'de-baja' : '')}
+              filtros={[{ clave: 'sin', texto: 'Sin firmar', cumple: (d) => !d.firma_id && !d.firmado_en && !d.anulado },
+                { clave: 'firm', texto: 'Firmados', cumple: (d) => !!(d.firma_id || d.firmado_en) && !d.anulado }, { clave: 'anul', texto: 'Anulados', cumple: (d) => !!d.anulado }]}
+              columnas={[
+                { clave: 'quien', titulo: tipo === 'botiquin' ? 'Botiquín' : 'Trabajador', valor: (d) => quien(d) },
+                { clave: 'fecha', titulo: 'Fecha', valor: (d) => fechaCorta(d.fecha), orden: (d) => d.fecha },
+                { clave: 'detalle', titulo: 'Detalle', valor: (d) => resumenDoc(d) },
+                { clave: 'estado', titulo: 'Estado', valor: (d) => { const [t, c] = estadoDoc(d); return <span className={'chapa ' + c}>{t}</span>; }, orden: (d) => estadoDoc(d)[0] },
+              ]} />
+          ) : <div className="lista">
             {docs.map((d) => {
               const [t, c] = estadoDoc(d);
               return (
@@ -157,7 +169,7 @@ export function Documentos() {
                 </button>
               );
             })}
-          </div>
+          </div>}
           <div className="botonera">
             {editable && tipo !== 'botiquin' && sinFirmar.some((d) => !d.enviado_en) && <button type="button" className="boton sec" onClick={async () => {
               const { data, error } = await prev().rpc('enviar_documentos', { p_ids: sinFirmar.map((d) => d.id) });

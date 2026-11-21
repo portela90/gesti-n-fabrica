@@ -48,7 +48,7 @@ pestañas de ahora) van dentro del menú lateral; panel de Inicio con Limpieza d
 firmar (cada uno según sus permisos; el operario ve lo suyo); tablas con buscador y filtros en **todas** las listas en el ordenador (en
 el móvil, filas); colores **«Pizarra»**: menú azul muy oscuro (#18202f), contenido claro (#f3f5f7) y acento verde azulado (#0f7f77), con
 modo oscuro. Propuestas que vio: https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a. Orden: 1) menú lateral y colores (**hecho y
-publicado el 21/11**, `docs/estado.md` A.1); 2) panel de Inicio (**hecho y publicado el 21/11**, A.2); 3) tablas (módulo a módulo: Configuración, Limpieza y Personal **publicadas el 21/11**; falta Prevención, A.3). Los colores están en variables al principio de `src/estilos.css`.
+publicado el 21/11**, `docs/estado.md` A.1); 2) panel de Inicio (**hecho y publicado el 21/11**, A.2); 3) tablas en los cuatro módulos (**hecho y publicado el 21/11**, A.3). **El aspecto nuevo está terminado.** Los colores están en variables al principio de `src/estilos.css`.
 
 Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio.
 

@@ -605,3 +605,34 @@ test('expediente PRL: un solo PDF con la portada, sus documentos firmados y el c
   expect(pdf.getPageCount()).toBe(4); // portada + entrega de EPI (FO-014) + 2 páginas del certificado
   expect(errores).toEqual([]);
 });
+
+test('ordenador: charlas, fichas y documentos en tabla', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion: sesion(JEFE_EPI), tablas: { ...tablas(), cursos: [],
+    documentos: [entrega(), entrega({ id: 'do-2', persona_id: BRUNO, nombre: 'Bruno Prueba', fecha: `${ANIO}-03-09`, firma_id: 'fi-d', firmado_en: `${ANIO}-03-09T09:00:00Z` })] }, rpc: rpcEntregas });
+  await page.goto('./#/m/prevencion/charlas');
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Mes', 'Charla', 'Enviada', 'Cerrada', 'Firmas', 'Estado']);
+  await expect(tabla.locator('tbody tr')).toHaveCount(12);
+  await expect(tabla.locator('tbody tr', { hasText: 'Marzo' }).locator('td')).toHaveText(['Riesgo eléctrico', '5/3/' + ANIO, '', '1 de 2', 'Firmando']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Firmando' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Marzo']);
+  await tabla.locator('tbody tr').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+
+  await page.goto('./#/m/prevencion/fichas');
+  await expect(tabla.locator('thead th')).toHaveText(['Persona', 'Puesto', 'Le falta', 'Cursos', 'Estado']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Bruno Prueba' }).locator('td').nth(1)).toHaveText('DNI, fecha de alta, tallas');
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Les falta algo' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Ana Prueba', 'Bruno Prueba']);   // a Ana le falta la talla de botas
+
+  await page.goto('./#/m/prevencion/documentos');
+  await expect(tabla.locator('thead th')).toHaveText(['Trabajador', 'Fecha', 'Detalle', 'Estado']);
+  await expect(tabla.locator('tbody th')).toHaveText(['Bruno Prueba', 'Ana Prueba']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Sin firmar' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Ana Prueba']);
+  await tabla.locator('tbody tr').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(errores).toEqual([]);
+});

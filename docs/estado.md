@@ -434,7 +434,7 @@ panel con cifras en Inicio, tablas en todas las listas en el ordenador, colores 
 - Pruebas: `pruebas/panel.spec.ts` (3). El simulador entiende ahora `not.is.null` y `cs.{…}`.
 - Aprendido: no usar la clase `aviso` (es la de los mensajes flotantes); el naranja del panel es `naranja`.
 
-### A.3 Tablas (21/11) — EN CURSO, módulo a módulo (sin migración)
+### A.3 Tablas (21/11) — PUBLICADO 21/11, los cuatro módulos (sin migración)
 Decidido por Cristian (21/11): tabla en los **listados de verdad**; las listas pequeñas de las ventanas y las de escribir horas siguen
 en filas. Orden: Configuración, Limpieza, Personal, Prevención.
 - `src/componentes/Tabla.tsx`: en el ordenador (≥ 900 px, `useOrdenador`) tabla con buscador, filtros, columnas que se ordenan tocando
@@ -455,6 +455,13 @@ en filas. Orden: Configuración, Limpieza, Personal, Prevención.
   Horas del día (se escribe), Mi calendario, Mis horas, el cuadro de horas de Firmas y la ficha de una persona.
   La tabla común admite casillas (`eleccion`) y un botón dentro de una fila ya no abre también la ficha.
   Pruebas: una de ordenador en `personal`, `horas` y `personas`.
+- **Prevención** (PUBLICADO 21/11): en el ordenador, tabla en Charlas (los 12 meses: charla, enviada, cerrada, firmas «1 de 2», estado;
+  filtros Sin charla / Sin enviar / Firmando / Cerradas), Documentos (trabajador o botiquín, fecha, detalle, estado; filtros Sin firmar /
+  Firmados / Anulados), Fichas (puesto, le falta, cursos, estado; filtros Les falta algo / Cursos caducados o a punto) y Stock (hay/mínimo
+  por talla en rojo si falta, pedir, estado; filtro Hay que pedir). Siguen en filas: Mis charlas, las firmas de una sesión, los cursos y
+  documentos de una ficha (dentro de ventanas). Arreglado de paso: en el ordenador, los campos y botones de arriba de las listas
+  (`.filtros`) van en una línea, cada uno de su tamaño (antes «Subir documentos del año» salía partido en tres líneas).
+  Pruebas: una de ordenador en `prevencion` y `stock`.
 - Pruebas: `pruebas/tabla.spec.ts` (3). Arreglado de paso: una prueba de incidencias que miraba la petición antes de que saliera.
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)

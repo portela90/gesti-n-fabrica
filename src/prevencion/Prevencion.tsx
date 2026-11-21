@@ -3,6 +3,7 @@ import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { Firma } from '../componentes/Firma';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { descargar, pdfToolbox, type DatosToolbox } from './pdfToolbox';
 import { MESES, fechaCorta, prev, textoError, useAjustes, usePersonas, type Persona } from './comun';
 import { Documentos, MisDocumentos, MisTallas, TallasPropuestas, descargarDocumentos, tituloDoc, type Documento } from './documentos-firma';
@@ -68,6 +69,7 @@ function Charlas() {
   const [ajustes, setAjustes] = useState(false);
   const [subir, setSubir] = useState<File[] | null>(null);
   const editable = puede('prevencion.charla.editar');
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const { data, error } = await prev().from('charlas').select('*').eq('empresa_id', empresa!.id).eq('anio', anio).order('mes');
@@ -93,7 +95,26 @@ function Charlas() {
           <label className="boton sec archivo">Subir documentos del año
             <input type="file" accept="application/pdf,.pdf" multiple onChange={(e) => { const f = [...(e.target.files ?? [])]; e.target.value = ''; if (f.length) setSubir(f); }} /></label></div>}
       </div>
-      {charlas === null ? <p className="nota">Cargando…</p> : (
+      {charlas === null ? <p className="nota">Cargando…</p> : ordenador ? (() => {
+        const meses = MESES.map((nombre, i) => {
+          const c = charlas.find((x) => x.mes === i + 1);
+          const s = c && sesiones.find((x) => x.charla_id === c.id);
+          const n = s ? firmas.filter((f) => f.sesion_id === s.id).length : 0;
+          return { mes: i + 1, nombre, c, s, n, estado: !c ? 'Sin charla' : !s?.enviada_en ? 'Sin enviar' : s.cerrada_en ? 'Cerrada' : 'Firmando' };
+        });
+        type M = (typeof meses)[number];
+        return <Tabla filas={meses} clave={(m) => String(m.mes)} sinBuscador claseFila={(m) => (!m.c ? 'de-baja' : '')}
+          alAbrir={(m) => { if (m.c || editable) setAbierto(m.mes); }}
+          filtros={(['Sin charla', 'Sin enviar', 'Firmando', 'Cerrada'] as const).map((e) => ({ clave: e, texto: e === 'Cerrada' ? 'Cerradas' : e, cumple: (m: M) => m.estado === e }))}
+          columnas={[
+            { clave: 'mes', titulo: 'Mes', valor: (m) => m.nombre, orden: (m) => m.mes },
+            { clave: 'charla', titulo: 'Charla', valor: (m) => (m.c ? (m.c.tema || m.c.compromiso || m.c.documento_nombre) : <span className="suave">{editable ? 'Toca para subir el documento o escribirla' : 'Todavía no hay charla'}</span>) },
+            { clave: 'env', titulo: 'Enviada', valor: (m) => (m.s?.enviada_en ? fechaCorta(m.s.enviada_en) : ''), orden: (m) => m.s?.enviada_en ?? null },
+            { clave: 'cerr', titulo: 'Cerrada', valor: (m) => (m.s?.cerrada_en ? fechaCorta(m.s.cerrada_en) : ''), orden: (m) => m.s?.cerrada_en ?? null },
+            { clave: 'firmas', titulo: 'Firmas', numero: true, valor: (m) => (m.s ? `${m.n} de ${m.s.previstos.length}` : ''), orden: (m) => (m.s ? m.n / Math.max(1, m.s.previstos.length) : null) },
+            { clave: 'estado', titulo: 'Estado', valor: (m) => <span className={'chapa ' + (m.estado === 'Cerrada' ? 'firmado' : m.estado === 'Firmando' ? 'pendiente' : 'sin')}>{m.estado}</span> },
+          ]} />;
+      })() : (
         <div className="lista">
           {MESES.map((nombre, i) => {
             const c = charlas.find((x) => x.mes === i + 1);
@@ -778,6 +799,7 @@ function Fichas() {
   const [abierta, setAbierta] = useState<Persona | null>(null);
   const [verBajas, setVerBajas] = useState(false);
   const [editarPrendas, setEditarPrendas] = useState(false);
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const [f, p, c] = await Promise.all([
@@ -796,7 +818,24 @@ function Fichas() {
   return (
     <>
       <p className="nota" style={{ marginTop: 0 }}>Datos personales: solo los ve quien tiene permiso. El encargado no los ve.</p>
-      <div className="lista">
+      {ordenador ? (() => {
+        const faltanDe = (p: Persona) => { const f = fichas.find((x) => x.persona_id === p.id);
+          return [!f?.dni && 'DNI', !f?.fecha_alta && 'fecha de alta', prendas.some((x) => !f?.tallas?.[x.codigo]) && 'tallas'].filter(Boolean) as string[]; };
+        const cursosDe = (p: Persona) => { const est = cursos.filter((x) => x.persona_id === p.id).map((x) => estadoCurso(x)[0]);
+          return { n: est.length, cad: est.filter((x) => x === 'Caducado').length, pronto: est.filter((x) => x === 'Caduca pronto').length }; };
+        return <Tabla filas={visibles} clave={(p) => p.id} alAbrir={(p) => setAbierta(p)} etiquetaBuscar="Buscar persona" claseFila={(p) => (p.baja ? 'de-baja' : '')}
+          filtros={[{ clave: 'falta', texto: 'Les falta algo', cumple: (p) => faltanDe(p).length > 0 },
+            { clave: 'cursos', texto: 'Cursos caducados o a punto', cumple: (p) => { const c = cursosDe(p); return c.cad + c.pronto > 0; } }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Persona', valor: (p) => p.nombre },
+            { clave: 'puesto', titulo: 'Puesto', valor: (p) => fichas.find((x) => x.persona_id === p.id)?.puesto ?? p.categoria ?? '' },
+            { clave: 'falta', titulo: 'Le falta', valor: (p) => { const f = faltanDe(p); return f.length ? <span className="naranja">{f.join(', ')}</span> : ''; }, orden: (p) => faltanDe(p).join(', ') },
+            { clave: 'cursos', titulo: 'Cursos', orden: (p) => { const c = cursosDe(p); return c.cad * 1000 + c.pronto * 10 + c.n; }, valor: (p) => { const c = cursosDe(p);
+              return c.cad ? <span className="chapa peligro">{c.cad === 1 ? 'Curso caducado' : `${c.cad} cursos caducados`}</span>
+                : c.pronto ? <span className="chapa pendiente">{c.pronto === 1 ? 'Curso caduca pronto' : `${c.pronto} caducan pronto`}</span> : c.n ? `${c.n} al día` : ''; } },
+            { clave: 'estado', titulo: 'Estado', valor: (p) => (p.baja ? 'Dado de baja' : '') },
+          ]} />;
+      })() : <div className="lista">
         {visibles.map((p) => {
           const f = fichas.find((x) => x.persona_id === p.id);
           const faltan = [!f?.dni && 'DNI', !f?.fecha_alta && 'fecha de alta', prendas.some((x) => !f?.tallas?.[x.codigo]) && 'tallas'].filter(Boolean);
@@ -814,7 +853,7 @@ function Fichas() {
             </button>
           );
         })}
-      </div>
+      </div>}
       <div className="botonera">
         {bajas > 0 && <button type="button" className="boton txt" onClick={() => setVerBajas(!verBajas)}>{verBajas ? 'Esconder los dados de baja' : `Ver los dados de baja (${bajas})`}</button>}
         {puede('prevencion.ficha.editar') && <button type="button" className="boton sec" onClick={() => setEditarPrendas(true)}>Prendas con talla</button>}

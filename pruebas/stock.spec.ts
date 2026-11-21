@@ -118,3 +118,22 @@ test('Stock en el móvil más estrecho: nada se aplasta ni se sale', async ({ pa
   await page.getByRole('button', { name: 'Recuento' }).click();
   expect(await desbordes(page), 'recuento').toEqual([]);
 });
+
+test('ordenador: el stock en tabla, con lo que hay que pedir', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/prevencion/stock');
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Material', 'Hay / mínimo por talla', 'Pedir', 'Estado']);
+  const botas = tabla.locator('tbody tr', { hasText: 'Botas' });
+  await expect(botas.locator('.falta')).toHaveText('43: 0/2');
+  await expect(botas.locator('td').nth(1)).toHaveText('2');
+  await tabla.getByRole('button', { name: 'Pedir' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Botas', 'Gafas']);
+  await tabla.getByRole('button', { name: 'Pedir' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Gafas', 'Botas']);
+  await botas.click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(errores).toEqual([]);
+});

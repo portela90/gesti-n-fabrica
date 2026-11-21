@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { fechaCorta, hoy, prev, textoError } from './comun';
 import { EPI_ITEMS } from './epi';
 import { descargar } from './pdfToolbox';
@@ -40,6 +41,7 @@ export function Stock() {
   const { material, filas, cargar } = useStock();
   const [abierto, setAbierto] = useState<Material | 'nuevo' | 'recibido' | 'recuento' | null>(null);
   const [bajas, setBajas] = useState(false);
+  const ordenador = useOrdenador();
   const vivos = (material ?? []).filter((m) => bajas || !m.baja);
   const nBajas = (material ?? []).filter((m) => m.baja).length;
   const totalPedir = filas.filter((f) => !f.baja).reduce((s, f) => s + pedir(f), 0);
@@ -80,6 +82,18 @@ export function Stock() {
       </div>
       {material === null ? <p className="nota">Cargando…</p> : !vivos.length ? (
         <div className="vacio"><p><b>Todavía no hay material.</b></p><p>Da de alta lo que tienes (botas, pantalón, gafas…), con sus tallas y cuántas quieres tener siempre. Luego haz un recuento para empezar.</p></div>
+      ) : ordenador ? (
+        <Tabla filas={vivos} clave={(m) => m.id} alAbrir={(m) => setAbierto(m)} etiquetaBuscar="Buscar material" claseFila={(m) => (m.baja ? 'de-baja' : '')}
+          filtros={[{ clave: 'pedir', texto: 'Hay que pedir', cumple: (m) => !m.baja && filasDe(m, filas).some((f) => pedir(f) > 0) }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Material', valor: (m) => m.nombre },
+            { clave: 'tallas', titulo: 'Hay / mínimo por talla', valor: (m) => <span className="tallas-stock">{filasDe(m, filas).map((f) => (
+              <span key={f.talla} className={f.stock < f.minimo ? 'falta' : ''}>{f.talla ? `${f.talla}: ` : ''}{f.stock}{f.minimo ? `/${f.minimo}` : ''}</span>))}</span>,
+              orden: (m) => filasDe(m, filas).reduce((n, f) => n + f.stock, 0) },
+            { clave: 'pedir', titulo: 'Pedir', numero: true, valor: (m) => filasDe(m, filas).reduce((n, f) => n + pedir(f), 0) || '', orden: (m) => filasDe(m, filas).reduce((n, f) => n + pedir(f), 0) },
+            { clave: 'estado', titulo: 'Estado', valor: (m) => { const p = filasDe(m, filas).reduce((n, f) => n + pedir(f), 0);
+              return m.baja ? <span className="chapa sin">De baja</span> : p > 0 ? <span className="chapa pendiente">Pedir {p}</span> : <span className="chapa firmado">Bien</span>; } },
+          ]} />
       ) : (
         <div className="lista">
           {vivos.map((m) => {

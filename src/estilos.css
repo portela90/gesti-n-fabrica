@@ -551,3 +551,9 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
 .tabla .celda-lineas { display: flex; flex-direction: column; gap: 2px; }
 .tabla .celda-lineas > span { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .tabla .suave { color: var(--suave); }
+/* En el ordenador, los campos y botones de arriba de cada lista en una sola línea, cada uno de su tamaño */
+@media (min-width: 900px) {
+  .filtros { display: flex; flex-wrap: wrap; align-items: flex-end; max-width: none; }
+  .filtros > .campo { flex: 0 1 auto; min-width: 180px; }
+  .filtros .boton { white-space: nowrap; }
+}
