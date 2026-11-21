@@ -10,6 +10,7 @@ import { Resumen } from './Resumen';
 import { Tablon } from '../nucleo/Tablon';
 import { PersonasReparto, Semana } from './Reparto';
 import { useListas, type Listas, type Maquina, type Opcion } from './listas';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 
 /** Tablas de Limpieza (esquema «limpieza»). */
 export const limp = () => supabase.schema('limpieza');
@@ -132,6 +133,7 @@ function useTareas() {
 
 function Tareas() {
   const { puede } = useSesion();
+  const ordenador = useOrdenador();
   const editable = puede('limpieza.plan.editar');
   const listas = useListas();
   const [tareas, recargar] = useTareas();
@@ -168,6 +170,22 @@ function Tareas() {
       {editable && <div className="acciones-cal"><button type="button" className="boton" onClick={() => setAbierta('nueva')}>+ Nueva tarea {clase === 'fija' ? 'fija' : 'habitual'}</button></div>}
       {tareas === null ? <p className="nota">Cargando…</p> : !vistas.length ? (
         <div className="vacio"><p><b>Todavía no hay tareas {clase === 'fija' ? 'fijas' : 'habituales'}.</b></p></div>
+      ) : ordenador ? (
+        <Tabla key={clase} filas={vistas} clave={(t) => t.id} alAbrir={(t) => setAbierta(t)} etiquetaBuscar="Buscar tarea" pistaBuscar="Buscar tarea, sitio o persona…"
+          claseFila={(t) => (t.baja ? 'de-baja' : '')}
+          filtros={grupos.length > 1 ? grupos.map(([g]) => ({ clave: g, texto: g,
+            cumple: (t: Tarea) => (clase === 'fija' ? nombre(listas.equipos, t.equipo_id) || 'Sin equipo' : t.grupo || 'Sin grupo') === g })) : undefined}
+          columnas={[
+            { clave: 'titulo', titulo: 'Tarea', valor: (t) => t.titulo },
+            clase === 'fija' ? { clave: 'equipo', titulo: 'Equipo', valor: (t) => nombre(listas.equipos, t.equipo_id) } : { clave: 'grupo', titulo: 'Grupo', valor: (t) => t.grupo ?? '' },
+            ...(clase === 'fija' ? [{ clave: 'dias', titulo: 'Días', valor: (t: Tarea) => textoDias(t.dias) }, { clave: 'turno', titulo: 'Turno', valor: (t: Tarea) => nombre(listas.turnos, t.turno_id) }] : []),
+            { clave: 'donde', titulo: 'Dónde', valor: (t) => [maquina(t.activo_id), nombre(listas.zonas, t.ubicacion_id) || t.lugar].filter(Boolean).join(' · ') },
+            { clave: 'quien', titulo: clase === 'fija' ? 'Quién' : 'Solo para', valor: (t) => (clase === 'fija'
+              ? (t.todo_equipo ? 'Todo el equipo' : t.asignados.length ? t.asignados.map((p) => nombre(listas.personas, p)).filter(Boolean).join(', ') : 'Sin asignar')
+              : t.solo_para.map((p) => nombre(listas.personas, p)).filter(Boolean).join(', ')) },
+            { clave: 'min', titulo: 'Previsto', numero: true, valor: (t) => (t.minutos_est ? `${t.minutos_est} min` : ''), orden: (t) => t.minutos_est },
+            { clave: 'estado', titulo: 'Estado', valor: (t) => (t.baja ? 'De baja' : '') },
+          ]} />
       ) : grupos.map(([g, ts]) => (
         <section key={g} className="grupo-tareas">
           <h2 className="subtitulo">{g}</h2>
@@ -336,6 +354,7 @@ function Checklists() {
   const { empresa, puede } = useSesion();
   const editable = puede('limpieza.plan.editar');
   const listas = useListas();
+  const ordenador = useOrdenador();
   const [tareas] = useTareas();
   const [plantillas, setPlantillas] = useState<Plantilla[] | null>(null);
   const [abierta, setAbierta] = useState<Plantilla | 'nueva' | null>(null);
@@ -355,6 +374,19 @@ function Checklists() {
       {editable && <div className="acciones-cal"><button type="button" className="boton" onClick={() => setAbierta('nueva')}>+ Nueva checklist</button></div>}
       {plantillas === null ? <p className="nota">Cargando…</p> : !vistas.length ? (
         <div className="vacio"><p><b>Todavía no hay checklists.</b></p></div>
+      ) : ordenador ? (
+        <Tabla filas={[...vistas].sort((a, b) => Number(a.cuando !== 'encargado') - Number(b.cuando !== 'encargado'))} clave={(p) => p.id} alAbrir={(p) => setAbierta(p)} etiquetaBuscar="Buscar checklist" claseFila={(p) => (p.baja ? 'de-baja' : '')}
+          filtros={[{ clave: 'enc', texto: 'Del encargado', cumple: (p) => p.cuando === 'encargado' }, { clave: 'trab', texto: 'Al terminar trabajos', cumple: (p) => p.cuando === 'trabajos' }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Checklist', valor: (p) => p.nombre },
+            { clave: 'cuando', titulo: 'Cuándo', valor: (p) => (p.cuando === 'encargado' ? 'Del encargado' : 'Al terminar trabajos') },
+            { clave: 'puntos', titulo: 'Puntos', numero: true, valor: (p) => p.puntos.length, orden: (p) => p.puntos.length },
+            { clave: 'sale', titulo: 'Sale en', valor: (p) => {
+              if (p.cuando !== 'trabajos') return '';
+              const n = listas.maquinas.filter((m) => !m.baja && encaja(m.codigo, p.aplica.codigos)).length, nt = (p.aplica.tareas ?? []).length;
+              return [n ? `${n} máquina${n === 1 ? '' : 's'}` : '', nt ? `${nt} tarea${nt === 1 ? '' : 's'}` : ''].filter(Boolean).join(' y ') || 'sin enganchar a nada'; } },
+            { clave: 'estado', titulo: 'Estado', valor: (p) => (p.baja ? 'De baja' : '') },
+          ]} />
       ) : (['encargado', 'trabajos'] as const).map((c) => {
         const ps = vistas.filter((p) => p.cuando === c);
         if (!ps.length) return null;

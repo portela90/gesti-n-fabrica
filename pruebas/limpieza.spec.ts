@@ -167,3 +167,26 @@ test('Limpieza en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.getByLabel('Cómo se contesta el punto 3').selectOption({ label: 'Un número' });
   expect(await desbordes(page), 'checklist').toEqual([]);
 });
+
+test('ordenador: tareas y checklists en tabla, con los equipos como filtros', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas() });
+  await page.goto('./#/m/limpieza/tareas');
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Tarea', 'Equipo', 'Días', 'Turno', 'Dónde', 'Quién', 'Previsto', 'Estado']);
+  await expect(tabla.locator('tbody tr').first().locator('th, td')).toHaveText(['Basuras Nave Z', 'Semana', 'De lunes a viernes', 'Tarde', '', 'Ana Prueba', '30 min', '']);
+  await page.getByRole('group', { name: 'Clase de tarea' }).getByRole('button', { name: 'Habituales' }).click();
+  await expect(tabla.locator('thead th')).toHaveText(['Tarea', 'Grupo', 'Dónde', 'Solo para', 'Previsto', 'Estado']);
+  await expect(tabla.locator('tbody th')).toHaveText(['Cambiar taladrina F90']);
+  await tabla.locator('tbody tr').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.goto('./#/m/limpieza/checklists');
+  await expect(tabla.locator('tbody th')).toHaveText(['Cierre', 'Inyectoras y zonas']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Inyectoras' }).locator('td')).toHaveText(['Al terminar trabajos', '2', '2 máquinas', '']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Del encargado' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Cierre']);
+  expect(errores).toEqual([]);
+});

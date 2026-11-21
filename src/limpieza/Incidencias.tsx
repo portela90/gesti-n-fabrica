@@ -5,6 +5,7 @@ import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { fotoAJpeg, limp, textoError } from './MiDia';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 
 type Estado = 'abierta' | 'en_proceso' | 'resuelta' | 'descartada';
 interface Incidencia { id: string; tema: string | null; texto: string; lugar: string | null; urgente: boolean; fotos: string[]; estado: Estado; origen: string;
@@ -20,6 +21,7 @@ const cuando = (f: string) => new Date(f).toLocaleString('es-ES', { day: 'numeri
 export function Incidencias() {
   const { empresa, puede } = useSesion();
   const admin = puede('limpieza.incidencia.editar');
+  const ordenador = useOrdenador();
   const [ver, setVer] = useState<'abiertas' | 'cerradas'>('abiertas');
   const [lista, setLista] = useState<Incidencia[] | null>(null);
   const [personas, setPersonas] = useState<Record<string, string>>({});
@@ -49,7 +51,23 @@ export function Incidencias() {
         {puede('limpieza.trabajo.apuntar') && <button type="button" className="boton" onClick={() => setNueva(true)}>+ Incidencia</button>}
       </div>
       {!admin && <p className="nota" style={{ marginTop: 0 }}>Aquí ves las incidencias que has abierto tú y cómo van.</p>}
-      {lista === null ? <p className="nota">Cargando…</p> : !lista.length ? <div className="vacio"><p>{ver === 'abiertas' ? 'No hay incidencias abiertas.' : 'No hay incidencias cerradas.'}</p></div> : (
+      {lista === null ? <p className="nota">Cargando…</p> : !lista.length ? <div className="vacio"><p>{ver === 'abiertas' ? 'No hay incidencias abiertas.' : 'No hay incidencias cerradas.'}</p></div> : ordenador ? (
+        <Tabla key={ver} filas={lista} clave={(i) => i.id} alAbrir={(i) => setAbierta(i)} etiquetaBuscar="Buscar incidencia" pistaBuscar="Buscar incidencia, sitio o tema…"
+          claseFila={(i) => (i.urgente && ver === 'abiertas' ? 'sin-leer' : '')}
+          filtros={ver === 'abiertas' ? [{ clave: 'urg', texto: 'Urgentes', cumple: (i) => i.urgente }, { clave: 'ab', texto: 'Abiertas', cumple: (i) => i.estado === 'abierta' },
+            { clave: 'pro', texto: 'En proceso', cumple: (i) => i.estado === 'en_proceso' }]
+            : [{ clave: 'res', texto: 'Resueltas', cumple: (i) => i.estado === 'resuelta' }, { clave: 'des', texto: 'Descartadas', cumple: (i) => i.estado === 'descartada' }]}
+          columnas={[
+            { clave: 'texto', titulo: 'Incidencia', valor: (i) => i.texto },
+            { clave: 'lugar', titulo: 'Dónde', valor: (i) => i.lugar ?? '' },
+            { clave: 'tema', titulo: 'Tema', valor: (i) => i.tema ?? '' },
+            ...(admin ? [{ clave: 'quien', titulo: 'Quién', valor: (i: Incidencia) => (i.persona_id ? personas[i.persona_id] ?? '' : '') }] : []),
+            { clave: 'cuando', titulo: 'Cuándo', valor: (i) => cuando(i.creado), orden: (i) => i.creado },
+            { clave: 'estado', titulo: 'Estado', orden: (i) => (i.urgente && ver === 'abiertas' ? 'a' : 'b') + i.estado, valor: (i) => <>
+              {i.urgente && ver === 'abiertas' && <span className="chapa sin-cuadrar">Urgente</span>}{' '}
+              <span className={'chapa ' + ESTADO[i.estado][1]}>{ESTADO[i.estado][0]}</span></> },
+          ]} />
+      ) : (
         <div className="lista">{lista.map((i) => (
           <button key={i.id} type="button" className={'fila fila-finde' + (i.urgente && ver === 'abiertas' ? ' sin-leer' : '')} onClick={() => setAbierta(i)}>
             <span className="fila-txt"><b>{i.texto}</b>
@@ -190,6 +208,7 @@ const EST_P: Record<Problema['estado'], [string, string]> = {
 
 function Problemas() {
   const { empresa } = useSesion();
+  const ordenador = useOrdenador();
   const [lista, setLista] = useState<Problema[] | null>(null);
   const [abierto, setAbierto] = useState<Problema | null>(null);
   const cargar = useCallback(async () => {
@@ -203,12 +222,21 @@ function Problemas() {
   return (
     <section style={{ marginTop: 18 }}>
       <h2 className="subtitulo">Problemas que se repiten</h2>
-      <div className="lista">{lista.map((p) => (
+      {ordenador ? (
+        <Tabla filas={lista} clave={(p) => p.id} alAbrir={(p) => setAbierto(p)} sinBuscador
+          columnas={[
+            { clave: 'prob', titulo: 'Problema', valor: (p) => `${p.tema} en ${p.lugar ?? p.lugar_clave}` },
+            { clave: 'veces', titulo: 'Veces', numero: true, valor: (p) => p.casos.length, orden: (p) => p.casos.length },
+            { clave: 'fechas', titulo: 'Fechas', valor: (p) => `${fecha(p.primera)}${p.ultima && p.ultima !== p.primera ? ` a ${fecha(p.ultima)}` : ''}`, orden: (p) => p.ultima ?? p.primera },
+            { clave: 'vuelto', titulo: 'Ha vuelto', numero: true, valor: (p) => (p.reabierto ? `${p.reabierto} ${p.reabierto === 1 ? 'vez' : 'veces'}` : ''), orden: (p) => p.reabierto },
+            { clave: 'estado', titulo: 'Estado', valor: (p) => <span className={'chapa ' + EST_P[p.estado][1]}>{EST_P[p.estado][0]}</span>, orden: (p) => p.estado },
+          ]} />
+      ) : <div className="lista">{lista.map((p) => (
         <button key={p.id} type="button" className="fila fila-finde" onClick={() => setAbierto(p)}>
           <span className="fila-txt"><b>{p.tema} en {p.lugar ?? p.lugar_clave}</b>
             <small>{p.casos.length} veces · {fecha(p.primera)}{p.ultima && p.ultima !== p.primera ? ` a ${fecha(p.ultima)}` : ''}{p.reabierto ? ` · ha vuelto a pasar ${p.reabierto === 1 ? '1 vez' : `${p.reabierto} veces`}` : ''}</small></span>
           <span className={'chapa ' + EST_P[p.estado][1]}>{EST_P[p.estado][0]}</span>
-        </button>))}</div>
+        </button>))}</div>}
       {abierto && <DetalleProblema p={abierto} alCerrar={() => setAbierto(null)} alCambiar={() => { setAbierto(null); cargar(); }} />}
     </section>
   );

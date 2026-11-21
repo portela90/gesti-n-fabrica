@@ -3,11 +3,13 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
 import { alVaciarse } from './cola';
-import { FilaTrabajo, hoy, limp, NuevoTrabajo, textoError, TrabajoAbierto, type Trabajo } from './MiDia';
+import { durTxt, FilaTrabajo, hoy, limp, NuevoTrabajo, textoError, TrabajoAbierto, type Trabajo } from './MiDia';
 import { useListas, type Opcion } from './listas';
 import { Sustitutos } from './Reparto';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 
 export function Hoy() {
+  const ordenador = useOrdenador();
   const { empresa, puede } = useSesion();
   const reparte = puede('limpieza.trabajo.repartir');
   const listas = useListas();
@@ -69,7 +71,27 @@ export function Hoy() {
           <button type="button" className="boton sec" onClick={() => setSustitutos(true)}>Faltas y sustitutos</button>
         </div>)}
       {lista === null ? <p className="nota">Cargando…</p> : !total ? <div className="vacio"><p>No hay trabajos este día.</p></div>
-        : grupos.map(([g, ts]) => (
+        : ordenador ? (
+          <Tabla filas={lista} clave={(x) => x.id} alAbrir={(x) => setAbierto(x.id)} etiquetaBuscar="Buscar trabajo" pistaBuscar="Buscar trabajo, sitio o persona…"
+            claseFila={(x) => (x.estado === 'hecho' ? 'de-baja' : '')}
+            filtros={[{ clave: 'pend', texto: 'Pendientes', cumple: (x) => x.estado !== 'hecho' },
+              { clave: 'sin', texto: 'Sin asignar', cumple: (x) => x.estado !== 'hecho' && !x.todo_equipo && !x.asignados.length },
+              { clave: 'prob', texto: 'Con problema', cumple: (x) => !!x.problema }, { clave: 'hecho', texto: 'Hechos', cumple: (x) => x.estado === 'hecho' }]}
+            columnas={[
+              { clave: 'titulo', titulo: 'Trabajo', valor: (x) => x.titulo },
+              { clave: 'donde', titulo: 'Dónde', valor: (x) => [x.maquina, x.zona, x.lugar].filter(Boolean).join(' · ') },
+              { clave: 'quien', titulo: 'Quién', valor: (x) => (x.todo_equipo ? `Todo el equipo ${nombre(listas.equipos, x.equipo_id)}`.trim()
+                : x.asignados.length ? x.asignados.map((p) => nombre(listas.personas, p) || 'Alguien').join(', ') : <span className="naranja">Sin asignar</span>),
+                orden: (x) => (x.todo_equipo ? 'Todo' : x.asignados.map((p) => nombre(listas.personas, p)).join(', ') || '') },
+              { clave: 'turno', titulo: 'Turno', valor: (x) => x.turno ?? '' },
+              { clave: 'estado', titulo: 'Estado', orden: (x) => ['pendiente', 'en_curso', 'pausado', 'hecho'].indexOf(x.estado), valor: (x) => {
+                const c = x.estado === 'hecho' ? ['Hecho', 'firmado'] : x.estado === 'en_curso' ? ['En curso', 'pendiente'] : x.estado === 'pausado' ? ['En pausa', 'pendiente']
+                  : x.problema ? ['Con problema', 'sin-cuadrar'] : x.atrasado ? ['Atrasado', 'sin-cuadrar'] : ['Pendiente', 'sin'];
+                return <span className={'chapa ' + c[1]}>{c[0]}</span>; } },
+              { clave: 'prev', titulo: 'Previsto', numero: true, valor: (x) => (x.minutos_est ? durTxt(x.minutos_est) : ''), orden: (x) => x.minutos_est },
+              { clave: 'real', titulo: 'Real', numero: true, valor: (x) => (x.estado === 'hecho' ? durTxt(x.minutos) : ''), orden: (x) => x.minutos },
+            ]} />
+        ) : grupos.map(([g, ts]) => (
           <section key={g} className="grupo-tareas">
             <h2 className="subtitulo">{g} <span className="nota">· {ts.filter((x) => x.estado === 'hecho').length}/{ts.length}</span></h2>
             <div className="lista">{ts.map((x) => <FilaTrabajo key={g + x.id} t={x} abrir={() => setAbierto(x.id)} />)}</div>

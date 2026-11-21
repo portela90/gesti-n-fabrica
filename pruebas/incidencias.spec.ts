@@ -143,3 +143,22 @@ test('inicio: en un iPhone sin añadir a la pantalla de inicio, explica cómo', 
   await expect(page.locator('.avisos-movil')).toContainText('añade la app a la pantalla de inicio');
   await ctx.close();
 });
+
+test('ordenador: incidencias y problemas que se repiten en tabla', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const t = tablas();
+  await simular(page, { dentro: true, sesion: sesion(), tablas: t, rpc: rpc(t) });
+  await page.goto('./#/m/limpieza/incidencias');
+  const tabla = page.locator('table.tabla').first();
+  await expect(tabla.locator('thead th')).toHaveText(['Incidencia', 'Dónde', 'Tema', 'Quién', 'Cuándo', 'Estado']);
+  await expect(tabla.locator('tbody th')).toHaveText(['Botiquín sin tiritas', 'Hay aceite en el suelo']);   // la urgente primero
+  await expect(tabla.locator('tbody tr').first().locator('td').last()).toHaveText('Urgente Abierta');
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Urgentes' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Botiquín sin tiritas']);
+  const prob = page.locator('section', { hasText: 'Problemas que se repiten' }).locator('table.tabla');
+  await expect(prob.locator('tbody tr').first().locator('th, td')).toContainText(['Aceite en F30', '2']);
+  await prob.locator('tbody tr').first().click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(errores).toEqual([]);
+});

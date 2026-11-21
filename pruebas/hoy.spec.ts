@@ -92,3 +92,22 @@ test('Hoy del equipo en el móvil más estrecho: nada se aplasta ni se sale', as
   await page.getByRole('button', { name: 'Cambiar a quién le toca' }).click();
   expect(await desbordes(page), 'repartir').toEqual([]);
 });
+
+test('ordenador: hoy del equipo en una tabla, con filtros y abrir un trabajo', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: rpc() });
+  await page.goto('./#/m/limpieza');
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Trabajo', 'Dónde', 'Quién', 'Turno', 'Estado', 'Previsto', 'Real']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Fregar' }).locator('td')).toHaveText(['', 'Leo Prueba, Marta Prueba', '', 'Hecho', '20 min', '30 min']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Pasillo' }).locator('td').nth(1)).toHaveText('Todo el equipo Semana');
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Sin asignar' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Derrame']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Hechos' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Fregar']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Todos' }).click();
+  await tabla.locator('tbody tr', { hasText: 'Derrame' }).click();
+  await expect(page.getByRole('button', { name: 'Cambiar a quién le toca' })).toBeVisible();
+  expect(errores).toEqual([]);
+});

@@ -8,6 +8,7 @@ import { nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { Ventana } from '../componentes/basicos';
 import { limp, textoError } from './MiDia';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import {
   cuentas, durTxt, fDM, fDMA, horasPorPersona, lunesDe, numSemana, pct, sumaD,
   type DatosInf, type DiaH, type HorasPersona, type Sust,
@@ -66,6 +67,7 @@ async function leerHoras(empresa: string, desde: string, hasta: string): Promise
 // =====================================================================================
 type Periodo = '7' | '30' | 'fechas';
 function EnPantalla() {
+  const ordenador = useOrdenador();
   const { empresa } = useSesion();
   const [per, setPer] = useState<Periodo>('7');
   const [desde, setDesde] = useState(sumaD(hoy(), -29));
@@ -105,7 +107,14 @@ function EnPantalla() {
           </div>
           <h3 className="res-titulo">Por persona</h3>
           {!X.porPersona.length ? <div className="vacio"><p>No hay trabajos en estas fechas.</p></div> : (
-            <div className="lista">
+            ordenador ? <Tabla filas={X.porPersona} clave={(p) => p.nombre} sinBuscador columnas={[
+              { clave: 'nombre', titulo: 'Persona', valor: (p) => p.nombre },
+              { clave: 'h', titulo: 'Hechos', numero: true, valor: (p) => `${p.h} de ${p.t}`, orden: (p) => p.h },
+              { clave: 'pct', titulo: '% hecho', numero: true, valor: (p) => <span className="res-celda-barra">{pct(p.h, p.t)} %<span className="res-barra" aria-hidden="true"><i style={{ width: `${pct(p.h, p.t)}%` }} /></span></span>, orden: (p) => (p.t ? p.h / p.t : 0) },
+              { clave: 'prob', titulo: 'Con problema', numero: true, valor: (p) => p.prob || '', orden: (p) => p.prob },
+              { clave: 'mal', titulo: 'Checklist mal', numero: true, valor: (p) => p.mal || '', orden: (p) => p.mal },
+              { clave: 'media', titulo: 'Tiempo medio', numero: true, valor: (p) => (p.nm ? durTxt(p.minReal / p.nm) : '—'), orden: (p) => (p.nm ? p.minReal / p.nm : null) },
+            ]} /> : <div className="lista">
               {X.porPersona.map((p) => (
                 <div key={p.nombre} className="fila fija centrada">
                   <span className="fila-txt"><b>{p.nombre}</b>
@@ -118,7 +127,14 @@ function EnPantalla() {
           )}
           <h3 className="res-titulo">Cuánto tarda cada trabajo</h3>
           {!X.tarda.length ? <div className="vacio"><p>Todavía no hay tiempos. Salen cuando los trabajos se empiezan con «Empezar» y se terminan con «Terminar».</p></div> : (
-            <div className="lista">
+            ordenador ? <Tabla filas={X.tarda} clave={(t) => t.titulo} etiquetaBuscar="Buscar trabajo" columnas={[
+              { clave: 'titulo', titulo: 'Trabajo', valor: (t) => t.titulo },
+              { clave: 'est', titulo: 'Previsto', numero: true, valor: (t) => (t.est ? durTxt(t.est) : '—'), orden: (t) => t.est },
+              { clave: 'media', titulo: 'Media real', numero: true, valor: (t) => <span className={t.tarde ? 'res-tarde' : ''}>{durTxt(t.media)}</span>, orden: (t) => t.media },
+              { clave: 'n', titulo: 'Veces', numero: true, valor: (t) => t.n, orden: (t) => t.n },
+              { clave: 'mn', titulo: 'Más rápido', numero: true, valor: (t) => durTxt(t.mn), orden: (t) => t.mn },
+              { clave: 'mx', titulo: 'Más lento', numero: true, valor: (t) => durTxt(t.mx), orden: (t) => t.mx },
+            ]} /> : <div className="lista">
               {X.tarda.map((t) => (
                 <div key={t.titulo} className="fila fija centrada">
                   <span className="fila-txt"><b>{t.titulo}</b>

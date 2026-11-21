@@ -442,6 +442,12 @@ en filas. Orden: Configuración, Limpieza, Personal, Prevención.
   `soloMovil` para que el móvil se vea igual que antes. Tocar una fila abre su ficha (también con Intro).
 - **Configuración** (PUBLICADO 21/11): todos los catálogos (columnas sacadas de sus campos) y Usuarios (en el ordenador, tabla con roles
   y botones; en el móvil, como antes). Salud de la app, sin cambios (listas cortas, solo superadmin).
+- **Limpieza** (PUBLICADO 21/11): en el ordenador, tabla en Hoy del equipo (filtros Pendientes / Sin asignar / Con problema / Hechos;
+  tocar abre el trabajo), Tareas (los equipos o grupos como filtros), Checklists, Incidencias (urgentes, abiertas, en proceso…),
+  Problemas que se repiten y las dos listas de Resumen → En pantalla (por persona y cuánto tarda). Siguen en filas a propósito: Mi día
+  (es la agenda del operario), Personas (se escribe en ella), las listas pequeñas del fin de semana y las de Investigar (llevan
+  botones y barras). Arreglado de paso: la chapa verde «Hecho/Firmado» cogía el borde de la caja de firmas (misma clase `firmado`).
+  Pruebas: una de ordenador en `limpieza`, `hoy` e `incidencias`.
 - Pruebas: `pruebas/tabla.spec.ts` (3). Arreglado de paso: una prueba de incidencias que miraba la petición antes de que saliera.
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
