@@ -71,7 +71,7 @@ export function periodoQ(t: string, h: string): Periodo | null {
   const Y = Number(h.slice(0, 4)), M = Number(h.slice(5, 7));
   const anio = (s: string | undefined) => (s ? (s.length === 2 ? 2000 + Number(s) : Number(s)) : Y);
   let m: RegExpMatchArray | null;
-  if ((m = t.match(/desde (?:el )?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?.*?hasta (?:el )?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/))) {
+  if ((m = t.match(/(?:desde|del|entre) (?:el )?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?.*?(?:hasta|al|y) (?:el )?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/))) {
     const a = ymd(anio(m[3]), Number(m[2]), Number(m[1])), b = ymd(anio(m[6]), Number(m[5]), Number(m[4])); return { d0: a, d1: b, t: `del ${fDM(a)} al ${fDM(b)}` };
   }
   if ((m = t.match(/desde (?:el )?(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?/))) {
@@ -96,6 +96,13 @@ export function periodoQ(t: string, h: string): Periodo | null {
     const k = ({ dos: 2, tres: 3, seis: 6 } as Record<string, number>)[m[1]], n = k * (m[2] === 'semanas' ? 7 : 30); return { d0: sumaD(h, -(n - 1)), d1: h, t: `los últimos ${k} ${m[2]}` };
   }
   const mi = MESES.findIndex((x) => new RegExp(`\\b${x}\\b`).test(t)), ya = (t.match(/\b(20\d\d)\b/) ?? [])[1];
+  // «octubre y noviembre», «de marzo a junio»: del primer mes al último
+  const ms = MESES.map((x, i) => ({ i, p: t.search(new RegExp(`\\b${x}\\b`)) })).filter((x) => x.p >= 0).sort((a, b) => a.p - b.p).map((x) => x.i);
+  if (ms.length >= 2) {
+    const i0 = ms[0], i1 = ms[ms.length - 1], y1 = ya ? Number(ya) : i1 + 1 > M ? Y - 1 : Y, y0 = i0 > i1 ? y1 - 1 : y1;
+    const a = ymd(y0, i0 + 1, 1), b = finMes(y1, i1 + 1);
+    return { d0: a, d1: b < h ? b : h, t: `de ${MESES[i0]} a ${MESES[i1]}` + (y1 !== Y ? ` de ${y1}` : '') };
+  }
   if (mi >= 0) { const y = ya ? Number(ya) : mi + 1 > M ? Y - 1 : Y; const a = ymd(y, mi + 1, 1), b = finMes(y, mi + 1); return { d0: a, d1: b < h ? b : h, t: MESES[mi] + (y !== Y ? ` de ${y}` : '') }; }
   if (ya) return { d0: `${ya}-01-01`, d1: `${ya}-12-31` < h ? `${ya}-12-31` : h, t: `el año ${ya}` };
   if (/(este ano|en lo que va de ano|el ano)/.test(t)) { const p = periodo('ano', h); return { d0: p.d0, d1: p.d1, t: p.t }; }
@@ -612,6 +619,11 @@ function personas(E: Entendido, C: Contexto): Respuesta {
       const ds = f.extras.filter((e) => (E.medida === 'extra' ? e.extra : e.fuera) > 0);
       r.cols = ['Día', mayus(m.t), 'Motivo']; r.filas = ds.map((e) => [fCorta(e.fecha), num(E.medida === 'extra' ? e.extra : e.fuera, 'h'), e.nota ?? '']);
       r.frase = `${f.nombre} ${E.per.t}: ${num(v, 'h')} ${m.t.replace(/^horas /, '')}` + (ds.length ? ` en ${ds.length} ${ds.length === 1 ? 'día' : 'días'}.` : '.');
+    } else if (E.medida === 'dias') {
+      // «qué días ha trabajado»: cada día, con sus horas (pedido por Cristian en la app vieja: «bien especificado»)
+      const ds = f.dias.filter((d) => Number(d.horas) > 0);
+      r.cols = ['Día', 'Horas', 'Calendario']; r.filas = ds.map((d) => [fCorta(d.fecha), num(Number(d.horas), 'h'), d.nombre_dia ?? (d.tipo_dia === 'festivo' ? 'Festivo' : '')]);
+      r.frase = `${f.nombre} ${E.per.t}: ${f.diasTrab} días trabajados (${num(f.horas, 'h')})` + (ds.length ? `: ${lista(ds.map((d) => fCorta(d.fecha)), 6)}.` : '.');
     } else {
       r.cols = ['', 'Días', 'Horas']; r.filas = (['entre', 'sabado', 'domingo', 'festivo'] as const).map((c) => [({ entre: 'Entre semana', sabado: 'Sábados', domingo: 'Domingos', festivo: 'Festivos' })[c], f.porClase[c].dias, num(f.porClase[c].horas, 'h')]);
       r.filas.push(['Total', f.diasTrab, num(f.horas, 'h')]);

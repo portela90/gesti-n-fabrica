@@ -59,6 +59,10 @@ test('motor: entiende el periodo escrito', () => {
   expect(periodoQ('desde el 10/11', HOY)).toEqual({ d0: '2026-11-10', d1: HOY, t: 'desde el 10/11' });
   expect(periodoQ('en octubre', HOY)).toMatchObject({ d0: '2026-10-01', d1: '2026-10-31' });
   expect(periodoQ('los ultimos 7 dias', HOY)).toMatchObject({ d0: '2026-11-14', d1: HOY });
+  expect(periodoQ('del 9/11 al 13/11', HOY)).toMatchObject({ d0: '2026-11-09', d1: '2026-11-13' });
+  expect(periodoQ('entre el 2/11 y el 6/11', HOY)).toMatchObject({ d0: '2026-11-02', d1: '2026-11-06' });
+  expect(periodoQ('en octubre y noviembre', HOY)).toEqual({ d0: '2026-10-01', d1: HOY, t: 'de octubre a noviembre' });
+  expect(periodoQ('de noviembre a febrero de 2027', '2027-03-10')).toMatchObject({ d0: '2026-11-01', d1: '2027-02-28' });
 });
 test('motor: «¿Cuántas veces ha perdido aceite la F19 este mes?»', () => {
   const { E, r } = pregunta('¿Cuántas veces ha perdido aceite la F19 este mes?');
@@ -104,6 +108,12 @@ test('motor: personas — días de baja de una persona y quién ha hecho más ho
   const c = pregunta('días de baja mes a mes desde el 1/10');
   expect(c.r.filas).toEqual([['octubre 2026', '0', 0], ['noviembre 2026', '3', 1]]);
 });
+test('motor: «¿qué días ha trabajado …?» da la lista de días', () => {
+  const { E, r } = pregunta('¿Qué días ha trabajado Bea del 9/11 hasta el 13/11?');
+  expect(E).toMatchObject({ int: 'personas', medida: 'dias', pers: ['Bea Prueba'] });
+  expect(r.frase).toBe('Bea Prueba del 09/11 al 13/11: 2 días trabajados (14 h): jue 12/11, vie 13/11.');
+  expect(r.filas).toEqual([['jue 12/11', '7 h', ''], ['vie 13/11', '7 h', '']]);
+});
 test('motor: una palabra que no encaja se ignora y se dice', () => {
   const { E } = pregunta('¿Cuántas veces cachimbo este mes?');
   expect(E.ignoradas).toEqual(['cachimbo']);
@@ -128,6 +138,8 @@ test('pantalla: preguntar, ver lo entendido y la respuesta, y abrir los trabajos
   await page.getByRole('button', { name: 'Preguntar' }).click();
   const r = page.locator('.res-respuesta');
   await expect(r.locator('.res-entendido')).toContainText('Problema: Aceite');
+  await expect(r.locator('.res-entendido')).toContainText('Periodo: de octubre a noviembre');
+  await expect(r.locator('.res-frase')).toContainText('4 en total, 2 h');
   await expect(r.locator('.res-frase')).toContainText('El que más: F19');
   await r.locator('.fila', { hasText: 'F19' }).first().click();
   await expect(page.getByRole('dialog', { name: 'F19' })).toContainText('Fuga de aceite');

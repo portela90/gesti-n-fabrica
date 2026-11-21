@@ -173,7 +173,7 @@ function RespuestaVista({ res, alLista, alEnsenar, servido, alServido, alPedir, 
       {r.rowL?.some((a) => a?.length) && <p className="nota">Toca una fila para ver sus trabajos.</p>}
       {(r.extra ?? []).filter((x) => x.filas.length).map((x) => <div key={x.titulo}><h4 className="res-titulo">{x.titulo}</h4>{filas(x.cols, x.filas)}</div>)}
       {L.length > 0 && (
-        <details className="res-ejemplos"><summary>Ver los {L.length} trabajos</summary>
+        <details className="res-ejemplos"><summary>{L.length === 1 ? 'Ver el trabajo' : `Ver los ${L.length} trabajos`}</summary>
           <div className="lista compacta">{L.slice(0, 200).map((o) => <FilaTrabajo key={o.id} o={o} />)}</div></details>)}
       <div className="res-servido">
         {servido === '' && <><small>¿Te ha servido?</small>

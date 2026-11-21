@@ -386,6 +386,24 @@ Decidido por Cristian (21/11): en **Personal → Horas**, tercer botón «Invest
   para que Personal no dependa de Limpieza.
 - Pruebas: `pruebas/personas.spec.ts` (8: 4 de cuentas y 4 de pantallas).
 
+### 2.13 Pregúntale (21/11, parte 7, trozo 4 de 4) — PREPARADO, SIN APLICAR (0034 y copia de datos pendientes de pegar)
+Decidido por Cristian (21/11): el buscador de la app vieja (`07f` de COLADA) arriba de Limpieza → Resumen → Investigar, **solo el
+administrador**, contestando de **trabajos y también de personas**; se traen «Enséñale», «¿Te ha servido?», favoritas y ejemplos, y
+**todo lo enseñado en la vieja** (21 entradas: 5 personas, 12 lugares, 4 grupos) y sus 4 preguntas.
+- Entiende con reglas (sin servicios de pago), regla a regla como la vieja: periodo, persona (y motes), máquina (las dadas de alta),
+  nave (las del núcleo), lugar (con lo enseñado), tema (los de Incidencias, no las 7 categorías fijas), día, turno (el del trabajo; las
+  fichas no tienen turno, así que no hay «cuánto sobra por turno»), grupos y palabras del trabajo; y unas 20 intenciones.
+- Nuevo: **personas** (bajas, vacaciones, permisos, faltas, días y horas trabajadas, extra, fuera de presupuesto; de una persona, ranking o
+  mes a mes) con las horas de Personal; «qué días ha trabajado X» da la lista de días (la vieja no, Cristian lo pidió). Periodos nuevos:
+  «del … al …», «entre el … y el …» y dos meses («octubre y noviembre»).
+- `0034_limpieza_preguntale.sql`: `limpieza.preguntas_dic` (persona, lugar, problema = tema, frase, grupo, favorita; con historial) y
+  `limpieza.preguntas` (pregunta, lo entendido, respuesta, ok, lo que quería), solo con `limpieza.informe.todo`; `limpieza.investigar`
+  trae además nave y hora de cada trabajo, temas, naves y máquinas.
+- Copia de datos (fuera del repositorio): `preguntale_datos.sql` (ensayado dos veces: no repite; las personas por su nombre en la ficha).
+- Motor `src/limpieza/preguntale.ts`, pantalla `src/limpieza/Preguntale.tsx` (dentro de Investigar, que se descarga al abrirlo).
+  Las cuentas de personas pasan a `src/componentes/horasPersonas.ts` (las usan Personal y Pregúntale).
+- Pruebas: `supabase/pruebas/74-limpieza-preguntale.sql` (13) y `pruebas/preguntale.spec.ts` (14: 10 del motor con preguntas de verdad y 4 de pantalla).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde
