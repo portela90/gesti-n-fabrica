@@ -386,7 +386,7 @@ Decidido por Cristian (21/11): en **Personal → Horas**, tercer botón «Invest
   para que Personal no dependa de Limpieza.
 - Pruebas: `pruebas/personas.spec.ts` (8: 4 de cuentas y 4 de pantallas).
 
-### 2.13 Pregúntale (21/11, parte 7, trozo 4 de 4) — PREPARADO, SIN APLICAR (0034 y copia de datos pendientes de pegar)
+### 2.13 Pregúntale (21/11, parte 7, trozo 4 de 4) — APLICADO 21/11 (0034 y copia de datos pegadas por Cristian; comprobado: 21 del diccionario, 4 preguntas, personas enlazadas)
 Decidido por Cristian (21/11): el buscador de la app vieja (`07f` de COLADA) arriba de Limpieza → Resumen → Investigar, **solo el
 administrador**, contestando de **trabajos y también de personas**; se traen «Enséñale», «¿Te ha servido?», favoritas y ejemplos, y
 **todo lo enseñado en la vieja** (21 entradas: 5 personas, 12 lugares, 4 grupos) y sus 4 preguntas.
@@ -403,6 +403,8 @@ administrador**, contestando de **trabajos y también de personas**; se traen «
 - Motor `src/limpieza/preguntale.ts`, pantalla `src/limpieza/Preguntale.tsx` (dentro de Investigar, que se descarga al abrirlo).
   Las cuentas de personas pasan a `src/componentes/horasPersonas.ts` (las usan Personal y Pregúntale).
 - Pruebas: `supabase/pruebas/74-limpieza-preguntale.sql` (13) y `pruebas/preguntale.spec.ts` (14: 10 del motor con preguntas de verdad y 4 de pantalla).
+- Ojo (21/11): de 27 trabajos en la nueva solo 1 tiene nave (la sale de la máquina o la zona con su nave en Configuración). Para que
+  «compara naves» sirva, las máquinas y zonas de Limpieza tienen que tener su nave puesta y los trabajos su máquina o zona.
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
