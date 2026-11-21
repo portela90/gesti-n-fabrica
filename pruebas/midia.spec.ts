@@ -1,7 +1,7 @@
 // Limpieza · «Mi día» del operario: siguiente / después / atrasados / hechos, empezar, pausar, terminar con checklist,
 // fotos, sin red y crear un trabajo de la lista. Unidades, personas y máquinas inventadas.
 import { test, expect } from '@playwright/test';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, abrirMenu } from './simulador';
 
 const UNIDAD = '12121212-0000-0000-0000-000000000001';
 const LEO = '12121212-0000-0000-0000-0000000000f1';
@@ -51,6 +51,7 @@ test('mi día: lo siguiente, lo de después, lo atrasado y lo hecho; solo lo mí
   await expect(page.locator('.fila', { hasText: 'Barrer pasillo' })).toBeVisible();
   await expect(page.locator('.fila', { hasText: 'Vaciar basuras' }).locator('.chapa')).toHaveText('Hecho');
   await expect(page.locator('.fila', { hasText: 'De otra persona' })).toHaveCount(0);
+  await abrirMenu(page);
   await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Mi día', 'Incidencias']); // el operario no ve Tareas ni Checklists
   expect(errores).toEqual([]);
 });

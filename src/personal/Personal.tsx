@@ -62,17 +62,22 @@ function usePersonas() {
   return personas;
 }
 
-/** Módulo Personal: mi calendario (todos) y, según permisos, los calendarios del año, vacaciones y firmas. */
-export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
-  const { empresa, puede } = useSesion();
-  const pestanas = ([
+/** Los apartados de Personal que puede ver cada uno (salen en el menú lateral, debajo de «Personal»). */
+export function apartadosPersonal(puede: (p: string) => boolean): [Pestana, string][] {
+  return ([
     ['mio', 'Mi calendario', true],
     ['mis-horas', 'Mis horas', !puede('personal.horas.editar')],
     ['calendario', 'Calendario', puede('personal.calendario.ver')],
     ['vacaciones', 'Vacaciones', puede('personal.calendario.ver')],
     ['firmas', 'Firmas', puede('personal.firma.ver') || puede('personal.firma.enviar')],
     ['horas', 'Horas', puede('personal.horas.editar')],
-  ] as [Pestana, string, boolean][]).filter((p) => p[2]);
+  ] as [Pestana, string, boolean][]).filter((p) => p[2]).map(([c, n]) => [c, n]);
+}
+
+/** Módulo Personal: mi calendario (todos) y, según permisos, los calendarios del año, vacaciones y firmas. */
+export function Personal({ ruta }: { ruta: string; ir?: (r: string) => void }) {
+  const { empresa, puede } = useSesion();
+  const pestanas = apartadosPersonal(puede);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.some((p) => p[0] === 'calendario') ? 'calendario' : 'mio');
   const [anio, setAnio] = useState(ANIO_ACTUAL);
@@ -112,11 +117,6 @@ export function Personal({ ruta, ir }: { ruta: string; ir: (r: string) => void }
 
   return (
     <main className="contenido" style={{ ['--area' as string]: '#9a3412' }}>
-      {pestanas.length > 1 && (
-        <nav className="pestanas no-imprimir" aria-label="Personal">
-          {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/personal/${c}`)}>{n}</button>)}
-        </nav>
-      )}
       {elegir}
       {!['mio', 'mis-horas', 'horas', 'calendario'].includes(actual) && cals?.length === 0 && (
         <div className="vacio"><p><b>Todavía no hay calendarios de {anio}.</b></p>

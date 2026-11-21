@@ -27,25 +27,25 @@ interface Asistencia { id: string; sesion_id: string; persona_id: string; nombre
 
 type Pestana = 'mias' | 'charlas' | 'documentos' | 'fichas' | 'stock';
 
-/** Módulo Prevención: mis charlas (todos) y, según permisos, las charlas de cada mes y las fichas de los trabajadores. */
-export function Prevencion({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
-  const { puede } = useSesion();
-  const pestanas = ([
+/** Los apartados de Prevención que puede ver cada uno (salen en el menú lateral, debajo de «Prevención»). */
+export function apartadosPrevencion(puede: (p: string) => boolean): [Pestana, string][] {
+  return ([
     ['mias', 'Mis charlas', true],
     ['charlas', 'Charlas', puede('prevencion.charla.ver')],
     ['documentos', 'Documentos', puede('prevencion.documento.ver')],
     ['fichas', 'Fichas', puede('prevencion.ficha.ver')],
     ['stock', 'Stock', puede('prevencion.stock.editar')],
-  ] as [Pestana, string, boolean][]).filter((p) => p[2]);
+  ] as [Pestana, string, boolean][]).filter((p) => p[2]).map(([c, n]) => [c, n]);
+}
+
+/** Módulo Prevención: mis charlas (todos) y, según permisos, las charlas de cada mes y las fichas de los trabajadores. */
+export function Prevencion({ ruta }: { ruta: string; ir?: (r: string) => void }) {
+  const { puede } = useSesion();
+  const pestanas = apartadosPrevencion(puede);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? (pestanas.length > 1 ? 'charlas' : 'mias');
   return (
     <main className="contenido" style={{ ['--area' as string]: '#b91c1c' }}>
-      {pestanas.length > 1 && (
-        <nav className="pestanas no-imprimir" aria-label="Prevención">
-          {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/prevencion/${c}`)}>{n}</button>)}
-        </nav>
-      )}
       {actual === 'mias' && <MisCharlas />}
       {actual === 'charlas' && <Charlas />}
       {actual === 'documentos' && <Documentos />}

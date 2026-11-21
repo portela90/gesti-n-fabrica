@@ -16,6 +16,8 @@ export const ICONOS = {
   salir: 'M15 4h4v16h-4M10 16l-4-4 4-4M6 12h10',
   empresa: 'M3 21V8l6 4V8l6 4V4h6v17zM3 21h18',
   volver: 'M15 18l-6-6 6-6',
+  inicio: 'M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',
+  persona: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zM4 21a8 8 0 0 1 16 0',
 };
 
 /** Ventana encima de la pantalla (cierra con Escape o tocando fuera). */

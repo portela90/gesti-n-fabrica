@@ -1,7 +1,7 @@
 // Personal · Calendario laboral: el jefe marca días, pone vacaciones y envía a firmar; el trabajador firma el suyo.
 // Unidades y personas inventadas.
 import { test, expect, type Page } from '@playwright/test';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, abrirMenu, cerrarMenu, irApartado } from './simulador';
 
 const UNIDAD = 'cccccccc-0000-0000-0000-000000000001';
 const SEMANA = 'cccccccc-0000-0000-0000-0000000000e1'; // calendario «Semana»
@@ -225,7 +225,7 @@ test('el jefe pone vacaciones y envía el calendario a quien falta por firmar', 
   expect(sim.tablas.vacaciones.filter((v) => v.nota === 'Navidad').map((v) => v.persona_id).sort()).toEqual([ANA, BRUNO]);
   await expect(page.locator('.fila', { hasText: 'Bruno Prueba' })).toContainText('8 días · Navidad');
 
-  await page.getByRole('button', { name: 'Firmas' }).click();
+  await irApartado(page, 'Personal', 'Firmas');
   await expect(page.getByText(/Han firmado 1 de 2/)).toBeVisible();
   await expect(page.locator('.fila', { hasText: 'Ana Prueba' }).filter({ has: page.getByRole('checkbox') }).locator('.chapa')).toHaveText('Firmado');
   await page.getByLabel('Elegir a Bruno Prueba').check();
@@ -240,7 +240,9 @@ test('la trabajadora ve su calendario pendiente y lo firma con el dedo', async (
   const sim = await simular(page, { dentro: true, sesion: sesion(['personal.tarea.ver'], 'Ana Prueba'), tablas: t, rpc });
   await page.goto('./#/');
   await page.locator('.mosaico', { hasText: 'Personal' }).click();
-  await expect(page.locator('.pestanas button')).toHaveText(['Mi calendario', 'Mis horas']); // solo lo suyo
+  await abrirMenu(page);
+  await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('button')).toHaveText(['Mi calendario', 'Mis horas']); // solo lo suyo
+  await cerrarMenu(page);
   await expect(page.getByText('Tienes un calendario por revisar y firmar.')).toBeVisible();
   await page.locator('.fila', { hasText: `Calendario laboral ${ANIO}` }).click();
   await expect(page.locator('.documento')).toContainText('Ana Prueba · Semana');
@@ -279,7 +281,7 @@ test('Personal en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: tablas(), rpc });
   for (const p of ['calendario', 'vacaciones', 'firmas']) {
     await page.goto(`./#/m/personal/${p}`);
-    await expect(page.getByRole('button', { name: p === 'calendario' ? 'Calendario' : p === 'vacaciones' ? 'Vacaciones' : 'Firmas', pressed: true })).toBeVisible();
+    await expect(page.locator('.cabecera b')).toHaveText(p === 'calendario' ? 'Calendario' : p === 'vacaciones' ? 'Vacaciones' : 'Firmas');
     await expect(page.locator('.lista, .anio').first()).toBeVisible();
     expect(await desbordes(page), p).toEqual([]);
   }

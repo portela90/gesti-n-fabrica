@@ -65,16 +65,21 @@ export function encaja(texto: string, codigos: string | undefined) {
 
 type Pestana = 'hoy' | 'semana' | 'finde' | 'dia' | 'incidencias' | 'tareas' | 'checklists' | 'personas' | 'resumen';
 
-/** Módulo Limpieza. De momento: lo que prepara el administrador (tareas y checklists). */
-export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
-  const { empresa, puede } = useSesion();
+/** Los apartados de Limpieza que puede ver cada uno (salen en el menú lateral, debajo de «Limpieza»). */
+export function apartadosLimpieza(puede: (p: string) => boolean): [Pestana, string][] {
   const ve = puede('limpieza.plan.ver') || puede('limpieza.plan.editar');
   const apunta = puede('limpieza.trabajo.apuntar');
-  const pestanas = ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')],
+  return ([['hoy', 'Hoy del equipo', puede('limpieza.trabajo.ver')], ['semana', 'Semana', puede('limpieza.trabajo.ver')],
     ['finde', 'Fin de semana', puede('limpieza.trabajo.repartir') || puede('limpieza.excel.editar')], ['dia', 'Mi día', apunta],
     ['incidencias', 'Incidencias', apunta || puede('limpieza.incidencia.editar')], ['tareas', 'Tareas', ve], ['checklists', 'Checklists', ve], ['personas', 'Personas', ve],
     ['resumen', 'Resumen', puede('limpieza.informe.ver') || puede('limpieza.informe.todo')]] as [Pestana, string, boolean][])
-    .filter((p) => p[2]);
+    .filter((p) => p[2]).map(([c, n]) => [c, n]);
+}
+
+/** Módulo Limpieza: el apartado que diga la ruta (los apartados están en el menú lateral). */
+export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
+  const { empresa, puede } = useSesion();
+  const pestanas = apartadosLimpieza(puede);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
   const actual = pestanas.find((p) => p[0] === pedida)?.[0] ?? pestanas[0]?.[0];
   if (!empresa) return null;
@@ -82,11 +87,6 @@ export function Limpieza({ ruta, ir }: { ruta: string; ir: (r: string) => void }
     <main className="contenido" style={{ ['--area' as string]: '#0f766e' }}>
       <Tablon compacto />
       {puede('limpieza.trabajo.repartir') && !puede('limpieza.excel.editar') && actual !== 'finde' && <AvisoInstrucciones ir={() => ir('/m/limpieza/finde')} />}
-      {pestanas.length > 1 && (
-        <nav className="pestanas no-imprimir" aria-label="Limpieza">
-          {pestanas.map(([c, n]) => <button key={c} type="button" aria-pressed={actual === c} onClick={() => ir(`/m/limpieza/${c}`)}>{n}</button>)}
-        </nav>
-      )}
       {!pestanas.length && (
         <div className="vacio"><p><b>No tienes nada de Limpieza.</b></p>
           <p>Si crees que deberías, díselo a tu administrador.</p></div>)}

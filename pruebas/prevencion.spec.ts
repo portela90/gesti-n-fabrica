@@ -1,7 +1,7 @@
 // Prevención: charlas del mes (escribir, preparar la sesión, enviar, firmas, recoger una firma), mis charlas y fichas.
 // Unidades y personas inventadas.
 import { test, expect, type Page } from '@playwright/test';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, abrirMenu } from './simulador';
 
 const UNIDAD = 'dddddddd-0000-0000-0000-000000000001';
 const ANA = 'dddddddd-0000-0000-0000-0000000000f1';
@@ -73,7 +73,7 @@ test('el jefe escribe la charla de un mes nuevo, prepara la sesión y la envía'
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
   await page.goto('./#/m/prevencion');
-  await expect(page.getByRole('button', { name: 'Charlas', pressed: true })).toBeVisible();
+  await expect(page.locator('.cabecera b')).toHaveText('Charlas');
   await expect(page.locator('.fila', { hasText: 'Marzo' })).toContainText('1 de 2 firmas');
   await page.locator('.fila', { hasText: 'Abril' }).click();
   await page.getByRole('button', { name: 'Escribir también el texto de la charla' }).click();
@@ -206,7 +206,9 @@ test('fichas: el jefe pone el DNI y una talla; el encargado no ve las fichas', a
 test('el encargado no tiene la pestaña de fichas', async ({ page }) => {
   await simular(page, { dentro: true, sesion: sesion(ENCARGADO, 'Carla'), tablas: tablas(), rpc });
   await page.goto('./#/m/prevencion/fichas');
-  await expect(page.getByRole('button', { name: 'Charlas', pressed: true })).toBeVisible();
+  await expect(page.locator('.cabecera b')).toHaveText('Charlas');
+  await abrirMenu(page);
+  await expect(page.getByRole('navigation', { name: 'Prevención' }).getByRole('button', { name: 'Charlas', pressed: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Fichas' })).toHaveCount(0);
 });
 

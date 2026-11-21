@@ -1,7 +1,7 @@
 // Limpieza · lo que prepara el administrador: tareas fijas y habituales y checklists.
 // Unidades, personas y máquinas inventadas.
 import { test, expect } from '@playwright/test';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, irApartado } from './simulador';
 
 const UNIDAD = 'dddddddd-0000-0000-0000-000000000001';
 const SEMANA = 'dddddddd-0000-0000-0000-0000000000e1';
@@ -141,7 +141,7 @@ test('el encargado ve tareas y checklists pero no puede cambiarlas', async ({ pa
   await expect(v.getByLabel('Qué hay que hacer')).toBeDisabled();
   await expect(v.getByRole('button', { name: 'Guardar' })).toHaveCount(0);
   await v.getByRole('button', { name: 'Cerrar' }).click();
-  await page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button', { name: 'Checklists' }).click();
+  await irApartado(page, 'Limpieza', 'Checklists');
   await expect(page.getByRole('button', { name: '+ Nueva checklist' })).toHaveCount(0);
 });
 

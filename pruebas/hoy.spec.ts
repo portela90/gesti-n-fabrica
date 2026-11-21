@@ -1,6 +1,6 @@
 // Limpieza · «Hoy del equipo»: todos los trabajos del día por persona y repartirlos. Personas inventadas.
 import { test, expect } from '@playwright/test';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, abrirMenu, cerrarMenu } from './simulador';
 
 const UNIDAD = '34343434-0000-0000-0000-000000000001';
 const LEO = '34343434-0000-0000-0000-0000000000f1';
@@ -40,7 +40,10 @@ test('hoy del equipo: los trabajos por persona, sin asignar primero, y repartir 
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(), tablas: tablas(), rpc: rpc() });
   await page.goto('./#/m/limpieza');
+  await abrirMenu(page);
   await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Hoy del equipo', 'Semana', 'Fin de semana', 'Mi día', 'Incidencias', 'Tareas', 'Checklists', 'Personas']);
+  await cerrarMenu(page);
+  await expect(page.locator('.cabecera b')).toHaveText('Hoy del equipo');
   await expect(page.getByText('1 de 4 hechos.')).toBeVisible();
   await expect(page.locator('.subtitulo')).toHaveText(['Sin asignar · 0/1', 'Leo Prueba · 1/2', 'Marta Prueba · 1/1', 'Todo el equipo Semana · 0/1']);
   await page.locator('.grupo-tareas', { hasText: 'Sin asignar' }).locator('.fila', { hasText: 'Derrame' }).click();

@@ -169,3 +169,20 @@ export function vigilar(page: Page) {
   page.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) err.push(m.text()); });
   return err;
 }
+
+/** Abre el menú lateral (en el móvil está escondido tras ≡; en el ordenador ya se ve). */
+export async function abrirMenu(page: Page) {
+  await page.locator('.lateral').waitFor({ state: 'attached' });   // que la pantalla haya cargado
+  const b = page.getByRole('button', { name: 'Menú' });
+  if (await b.isVisible()) { await b.click(); await page.locator('.lateral.abierto').waitFor(); }
+}
+/** Va a un apartado de un módulo desde el menú lateral (como haría una persona). */
+export async function irApartado(page: Page, modulo: string, nombre: string) {
+  await abrirMenu(page);
+  await page.getByRole('navigation', { name: modulo }).getByRole('button', { name: nombre, exact: true }).click();
+}
+/** Cierra el menú lateral si está abierto (en el móvil). */
+export async function cerrarMenu(page: Page) {
+  const b = page.getByRole('button', { name: 'Cerrar el menú' });
+  if (await b.isVisible()) await b.click();
+}

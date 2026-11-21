@@ -406,6 +406,21 @@ administrador**, contestando de **trabajos y también de personas**; se traen «
 - Ojo (21/11): de 27 trabajos en la nueva solo 1 tiene nave (la sale de la máquina o la zona con su nave en Configuración). Para que
   «compara naves» sirva, las máquinas y zonas de Limpieza tienen que tener su nave puesta y los trabajos su máquina o zona.
 
+## Aspecto nuevo (estilo Holded, «Pizarra») — EN CURSO
+Decidido por Cristian (21/11; propuestas en https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a): menú lateral, apartados dentro del menú,
+panel con cifras en Inicio, tablas en todas las listas en el ordenador, colores «Pizarra». En tres trozos.
+
+### A.1 Menú lateral y colores (21/11) — PUBLICADO 21/11 (sin migración)
+- `src/pantallas/Lateral.tsx`: Inicio, los módulos de la unidad (con su puntito de color) y, bajo el módulo abierto, sus apartados (las
+  pestañas de antes; cada módulo los da con `apartadosLimpieza/Personal/Prevencion(puede)`, con las mismas reglas de permisos);
+  Configuración; al pie «Tengo un problema» y «Tu cuenta» (la ventana de antes: cambiar de unidad, salir, versión).
+  Ordenador (≥ 900 px): siempre a la vista. Móvil: se abre con ≡ («Menú») y se cierra al elegir o con ✕.
+- La barra de arriba es clara y dice el apartado abierto («Resumen», con «Limpieza · unidad» debajo); si la ruta no dice apartado, el
+  de partida de cada módulo. Ya no hay pestañas arriba en Limpieza, Personal ni Prevención.
+- Colores en las variables del principio de `src/estilos.css` (menú #18202f, fondo #f3f5f7, acento #0f7f77; con modo oscuro).
+- Pruebas: `pruebas/lateral.spec.ts` (4) y ayudas `abrirMenu/irApartado/cerrarMenu` en `pruebas/simulador.ts` (las pruebas que usaban
+  las pestañas ahora van por el menú, como una persona).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

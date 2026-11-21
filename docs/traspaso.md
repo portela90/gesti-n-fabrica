@@ -47,8 +47,8 @@ su logo, nombre ni colores de marca. **Decidido 21/11:** en el móvil el menú s
 pestañas de ahora) van dentro del menú lateral; panel de Inicio con Limpieza de hoy, incidencias, quién falta hoy y pendientes de
 firmar (cada uno según sus permisos; el operario ve lo suyo); tablas con buscador y filtros en **todas** las listas en el ordenador (en
 el móvil, filas); colores **«Pizarra»**: menú azul muy oscuro (#18202f), contenido claro (#f3f5f7) y acento verde azulado (#0f7f77), con
-modo oscuro. Propuestas que vio: https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a. Orden: 1) menú lateral y colores; 2) panel de
-Inicio; 3) tablas. Los colores están en variables al principio de `src/estilos.css`.
+modo oscuro. Propuestas que vio: https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a. Orden: 1) menú lateral y colores (**hecho y
+publicado el 21/11**, `docs/estado.md` A.1); 2) panel de Inicio; 3) tablas. Los colores están en variables al principio de `src/estilos.css`.
 
 Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio.
 

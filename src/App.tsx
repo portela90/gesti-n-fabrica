@@ -8,14 +8,16 @@ import { Avisos, Icono, ICONOS, useRuta, Ventana } from './componentes/basicos';
 import { Problema } from './componentes/Problema';
 import { Entrar, NuevaClave } from './pantallas/Entrar';
 import { ElegirEmpresa, Inicio, PantallaModulo } from './pantallas/Inicio';
+import { Lateral, nombreApartado } from './pantallas/Lateral';
 import { IndiceConfiguracion, ListaCatalogo, useConfigurable } from './configuracion/Configuracion';
 import { Usuarios } from './configuracion/Usuarios';
 import { Salud } from './configuracion/Salud';
 
 export function App() {
-  const { estado, empresa, salir, recargar } = useSesion();
+  const { estado, empresa, salir, recargar, puede } = useSesion();
   const [ruta, ir] = useRuta();
-  const [menu, setMenu] = useState(false);
+  const [menu, setMenu] = useState(false);          // «Tu cuenta»
+  const [lateral, setLateral] = useState(false);    // el menú lateral en el móvil
   const [problema, setProblema] = useState(false);
   const { needRefresh: [hayNueva], updateServiceWorker } = useRegisterSW();
   const configurable = useConfigurable();
@@ -51,28 +53,38 @@ export function App() {
   const enConfig = ruta.startsWith('/config');
   const sesion = estado.fase === 'dentro' ? estado.sesion : null;
 
+  const conLateral = dentro && !!empresa;
+  const apartado = conLateral ? nombreApartado(ruta, puede) : null;
+  const cabecera = dentro && (
+    <header className="cabecera" style={modulo ? { ['--area' as string]: modulo.color } : undefined}>
+      {/* en el móvil, ≡ abre el menú lateral; sin unidad elegida (no hay menú lateral), abre «Tu cuenta» */}
+      <button type="button" className={'boton-icono' + (conLateral ? ' solo-movil' : '')} aria-label="Menú"
+        onClick={() => (conLateral ? setLateral(true) : setMenu(true))}><Icono d={ICONOS.menu} /></button>
+      <div className="cabecera-txt">
+        <b>{apartado ?? modulo?.nombre ?? (enConfig ? 'Configuración' : empresa?.nombre ?? 'Gestión de fábrica')}</b>
+        <small>{apartado ? `${modulo?.nombre} · ${empresa?.nombre}` : modulo || enConfig ? empresa?.nombre : new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small>
+      </div>
+      <button type="button" className="boton-icono" aria-label="Tengo un problema" onClick={() => setProblema(true)}><Icono d={ICONOS.ayuda} /></button>
+    </header>
+  );
+  const banda = hayNueva && (
+    <div className="banda-nueva" role="status">
+      Hay una versión nueva de la app.
+      <button type="button" className="boton peq" onClick={() => updateServiceWorker(true)}>Actualizar</button>
+    </div>
+  );
+
   return (
     <>
-      {dentro && (
-        <header className="cabecera" style={modulo ? { ['--area' as string]: modulo.color } : undefined}>
-          {(modulo || enConfig) && <button type="button" className="boton-icono claro" aria-label="Volver al inicio" onClick={() => ir('/')}><Icono d={ICONOS.volver} /></button>}
-          <div className="cabecera-txt">
-            <b>{modulo?.nombre ?? (enConfig ? 'Configuración' : empresa?.nombre ?? 'Gestión de fábrica')}</b>
-            <small>{modulo || enConfig ? empresa?.nombre : new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small>
-          </div>
-          <button type="button" className="boton-icono claro" aria-label="Tengo un problema" onClick={() => setProblema(true)}><Icono d={ICONOS.ayuda} /></button>
-          <button type="button" className="boton-icono claro" aria-label="Menú" onClick={() => setMenu(true)}><Icono d={ICONOS.menu} /></button>
-        </header>
-      )}
-      {hayNueva && (
-        <div className="banda-nueva" role="status">
-          Hay una versión nueva de la app.
-          <button type="button" className="boton peq" onClick={() => updateServiceWorker(true)}>Actualizar</button>
+      {conLateral ? (
+        <div className="marco">
+          <Lateral ruta={ruta} ir={ir} abierto={lateral} alCerrar={() => setLateral(false)} configurable={!!configurable}
+            alCuenta={() => setMenu(true)} alProblema={() => setProblema(true)} />
+          <div className="marco-cuerpo">{cabecera}{banda}{cuerpo}</div>
         </div>
-      )}
-      {cuerpo}
+      ) : (<>{cabecera}{banda}{cuerpo}</>)}
       {menu && sesion && (
-        <Ventana titulo="Menú" alCerrar={() => setMenu(false)}>
+        <Ventana titulo="Tu cuenta" alCerrar={() => setMenu(false)}>
           <p className="menu-quien"><b>{sesion.usuario?.nombre}</b>{sesion.usuario?.superadmin && <small>Superadministrador</small>}</p>
           <div className="lista">
             {sesion.empresas.length > 1 && (

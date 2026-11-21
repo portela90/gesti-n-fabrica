@@ -9,6 +9,8 @@ test('sin permisos de configuración no sale «Configuración» ni se puede entr
   await page.goto('./');
   await expect(page.locator('.mosaico', { hasText: 'Configuración' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Menú' }).click();
+  await expect(page.getByRole('navigation', { name: 'Módulos' }).getByRole('button', { name: 'Configuración' })).toHaveCount(0);
+  await page.getByRole('button', { name: /Tu cuenta/ }).click();
   await expect(page.locator('.fila', { hasText: 'Configuración' })).toHaveCount(0);
   await page.goto('./#/config');
   await expect(page.getByText('No tienes permiso para configurar nada.')).toBeVisible();

@@ -58,6 +58,7 @@ test('con dos unidades de trabajo pregunta en cuál trabajar y la recuerda', asy
   await page.reload();
   await expect(page.locator('.cabecera')).toContainText('Unidad B');
   await page.getByRole('button', { name: 'Menú' }).click();
+  await page.getByRole('button', { name: /Tu cuenta/ }).click();
   await expect(page.locator('.menu-quien')).toContainText('Superadministrador');
   await expect(page.locator('#version')).toContainText('Versión ');
   await expect(page.locator('.fila', { hasText: 'Cambiar de unidad de trabajo' })).toBeVisible();

@@ -2,7 +2,7 @@
 import { test, expect, type Page } from '@playwright/test';
 import { readFileSync } from 'node:fs';
 import readXlsxFile from 'read-excel-file/node';
-import { simular, desbordes, vigilar, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, USUARIO, abrirMenu, irApartado } from './simulador';
 
 const UNIDAD = '72727272-0000-0000-0000-000000000001';
 const LEO = '72727272-0000-0000-0000-0000000000f1';
@@ -79,8 +79,8 @@ test('resumen en pantalla: cifras, por persona y cuánto tarda (en rojo si tarda
   const errores = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: sesion(ADMIN), tablas: tablas(), rpc: rpc('todo', [...trabajos()].map((t) => ({ ...t, fecha: hoy }))) });
   await page.goto('./#/m/limpieza');
-  await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button', { name: 'Resumen' })).toBeVisible();
-  await page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button', { name: 'Resumen' }).click();
+  await irApartado(page, 'Limpieza', 'Resumen');
+  await expect(page.locator('.cabecera b')).toHaveText('Resumen');
   await expect(page.locator('.cifras > div b')).toHaveText(['5', '4', '80 %', '1']);
   await expect(page.locator('.lista').first().locator('.fila')).toHaveText([/Leo Prueba.*3 de 3 hechos.*1 checklist mal.*tiempo medio 32 min/, /Marta Prueba.*1 de 2 hechos.*1 con problema/]);
   await expect(page.locator('.fila', { hasText: 'Barrer F4' }).locator('.res-tarde')).toHaveText('media real 35 min');
@@ -191,6 +191,7 @@ test('el encargado: ve el Resumen de su equipo, sin horas ni incidencias', async
 test('el operario no ve la pestaña Resumen', async ({ page }) => {
   await simular(page, { dentro: true, sesion: sesion(['limpieza.modulo.ver', 'limpieza.trabajo.apuntar']), rpc: { mi_dia: () => [] } });
   await page.goto('./#/m/limpieza');
+  await abrirMenu(page);
   await expect(page.getByRole('navigation', { name: 'Limpieza' }).getByRole('button')).toHaveText(['Mi día', 'Incidencias']);
 });
 
