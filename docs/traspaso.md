@@ -43,8 +43,12 @@ Hechas y aplicadas las partes 1 a 6 del plan de Limpieza (detalle en `docs/estad
 **Después de la parte 7 y antes de la parte 8: aspecto nuevo de la app** (decidido 21/11). Cristian quiere un estilo parecido
 al de Holded: **menú lateral** en el ordenador, **aspecto limpio** (fondo claro, mucho aire, líneas finas), **listas como tablas**
 en el ordenador (columnas, filtros y buscador arriba) y **paneles con cifras** en las pantallas de inicio. Solo el estilo: nada de
-su logo, nombre ni colores de marca. Los detalles (colores, móvil…) se le preguntan uno a uno al empezar. Los colores están en
-variables al principio de `src/estilos.css`.
+su logo, nombre ni colores de marca. **Decidido 21/11:** en el móvil el menú se abre con ≡; los apartados de cada módulo (las
+pestañas de ahora) van dentro del menú lateral; panel de Inicio con Limpieza de hoy, incidencias, quién falta hoy y pendientes de
+firmar (cada uno según sus permisos; el operario ve lo suyo); tablas con buscador y filtros en **todas** las listas en el ordenador (en
+el móvil, filas); colores **«Pizarra»**: menú azul muy oscuro (#18202f), contenido claro (#f3f5f7) y acento verde azulado (#0f7f77), con
+modo oscuro. Propuestas que vio: https://claude.ai/artifact/RPSNo1UMtrmnHC9QEUdP8a. Orden: 1) menú lateral y colores; 2) panel de
+Inicio; 3) tablas. Los colores están en variables al principio de `src/estilos.css`.
 
 Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio.
 
