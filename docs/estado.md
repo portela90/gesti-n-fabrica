@@ -372,6 +372,20 @@ Decidido por Cristian (21/11): igual que la pestaña «Investigar» de la app vi
   `src/limpieza/pdfInvestigar.ts` (informe completo, ficha de un sitio y lista de un trabajo).
 - Pruebas: `supabase/pruebas/73-limpieza-investigar.sql` (23) y `pruebas/investigar.spec.ts` (6).
 
+### 2.12 Investigar personas (21/11, parte 7, trozo 3 de 4) — PUBLICADO 21/11 (sin migración)
+Decidido por Cristian (21/11): en **Personal → Horas**, tercer botón «Investigar» (no una pestaña más), **solo quien edita horas**.
+- Tres vistas con un periodo (este mes, mes pasado, 3 meses, este año o entre fechas; solo días ya pasados, hasta ayer):
+  **Una persona** (días y horas trabajadas entre semana / sábados / domingos / festivos y previstas; bajas, vacaciones, permisos y
+  otras faltas como periodos de días seguidos con su nota; extra y fuera de presupuesto con su motivo; día a día),
+  **Todos** (una fila por persona, ordenable por días de baja, horas, días trabajados, vacaciones, permisos, extra o fuera) y
+  **Mes a mes** (de una persona o de todos; «bajas nuevas» = bajas que empiezan ese mes).
+- PDF de la ficha y Excel (hojas Todos, Faltas, Extra y fuera, Mes a mes, Día a día).
+- Sin migración: todo sale de `personal.horas_dias`. Cuentas en `src/personal/investigar.ts`, pantalla `src/personal/InvestigarPersonas.tsx`
+  (se descarga al abrirla), PDF/Excel en `src/personal/pdfPersonas.ts`.
+- Las piezas comunes de PDF y Excel (cabecera, cajas, tablas, Excel con hojas, bajar o compartir) pasan a `src/componentes/informes.ts`
+  para que Personal no dependa de Limpieza.
+- Pruebas: `pruebas/personas.spec.ts` (8: 4 de cuentas y 4 de pantallas).
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

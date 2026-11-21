@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso } from '../componentes/basicos';
@@ -6,6 +6,8 @@ import { personal, textoError } from './calendario';
 import { CABECERA_MES, csv, dec, filaExcel, finDeMes, resumenMes, sumaDias, type DiaHoras, type FilaMes } from './horas';
 
 const hoy = () => new Date().toLocaleDateString('sv-SE');
+/** «Investigar personas» se descarga al abrirlo. */
+const InvestigarPersonas = lazy(() => import('./InvestigarPersonas').then((m) => ({ default: m.InvestigarPersonas })));
 const FALTAS: [string, string][] = [['', 'Ninguna'], ['baja', 'Baja'], ['vacaciones', 'Vacaciones'], ['permiso', 'Permiso'], ['otro', 'Otra falta']];
 const TIPO_DIA: Record<string, string> = { festivo: 'Festivo', cierre: 'Cierre', descanso: 'Descanso', intensiva: 'Jornada intensiva', especial: 'Horario especial', trabaja: 'Trabaja' };
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -15,7 +17,7 @@ const num = (s: string) => { const x = parseFloat(s.replace(',', '.')); return N
 const txt = (x: number | null) => (x == null ? '' : String(x).replace('.', ','));
 
 /** Los días de horas de la unidad (o de una persona) en trozos de un año como mucho. */
-async function leerDias(empresa: string, desde: string, hasta: string, persona?: string) {
+export async function leerDias(empresa: string, desde: string, hasta: string, persona?: string) {
   const todos: DiaHoras[] = [];
   for (let d = desde; d <= hasta; d = sumaDias(d, 366)) {
     const h = sumaDias(d, 365) < hasta ? sumaDias(d, 365) : hasta;
@@ -43,14 +45,15 @@ function useBolsaInicio() {
 // Administrador: horas del día y del mes
 // =====================================================================================
 export function Horas() {
-  const [vista, setVista] = useState<'dia' | 'mes'>('dia');
+  const [vista, setVista] = useState<'dia' | 'mes' | 'investigar'>('dia');
   return (
     <>
-      <div className="segmentos" role="group" aria-label="Horas">
+      <div className="segmentos tres" role="group" aria-label="Horas">
         <button type="button" aria-pressed={vista === 'dia'} onClick={() => setVista('dia')}>Horas del día</button>
         <button type="button" aria-pressed={vista === 'mes'} onClick={() => setVista('mes')}>Horas del mes</button>
+        <button type="button" aria-pressed={vista === 'investigar'} onClick={() => setVista('investigar')}>Investigar</button>
       </div>
-      {vista === 'dia' ? <HorasDia /> : <HorasMes />}
+      {vista === 'dia' ? <HorasDia /> : vista === 'mes' ? <HorasMes /> : <Suspense fallback={<p className="nota">Cargando…</p>}><InvestigarPersonas /></Suspense>}
     </>
   );
 }

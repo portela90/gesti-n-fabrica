@@ -35,8 +35,9 @@ Hechas y aplicadas las partes 1 a 6 del plan de Limpieza (detalle en `docs/estad
    (función `avisos` v2 instalada en colada-mapri, sin JWT; probado en iPhone).
 
 7. **En curso (20/11): Resumen e informes.** Decidido todo en `docs/estado.md` apartado 2.10. Trozo 1 (pestaña «Resumen»:
-   en pantalla, informe semanal, informe por operario, aviso de los lunes) **hecho, aplicado (0032) y publicado el 20/11**. **Trozo 2** Investigar de Limpieza (`docs/estado.md` 2.11) **hecho, aplicado (0033) y publicado el 21/11**. Después:
-   **trozo 3** Investigar personas en **Personal** (días de baja, días y horas trabajadas…); **trozo 4** «Pregúntale» (`07f`).
+   en pantalla, informe semanal, informe por operario, aviso de los lunes) **hecho, aplicado (0032) y publicado el 20/11**. **Trozo 2** Investigar de Limpieza (`docs/estado.md` 2.11) **hecho, aplicado (0033) y publicado el 21/11**. **Trozo 3** Investigar personas en Personal → Horas
+   (`docs/estado.md` 2.12) **hecho y publicado el 21/11** (sin migración). Falta: **trozo 4** «Pregúntale» (`07f` de COLADA; en la vieja solo
+   contesta sobre trabajos: decidir con Cristian si también sobre personas).
    Antes de cada trozo, preguntarle a Cristian lo que haga falta, una a una.
 
 **Después de la parte 7 y antes de la parte 8: aspecto nuevo de la app** (decidido 21/11). Cristian quiere un estilo parecido
