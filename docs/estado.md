@@ -421,6 +421,19 @@ panel con cifras en Inicio, tablas en todas las listas en el ordenador, colores 
 - Pruebas: `pruebas/lateral.spec.ts` (4) y ayudas `abrirMenu/irApartado/cerrarMenu` en `pruebas/simulador.ts` (las pruebas que usaban
   las pestañas ahora van por el menú, como una persona).
 
+### A.2 Panel de Inicio (21/11) — PUBLICADO 21/11 (sin migración)
+- Inicio: saludo, tablón y «Te ha llegado» como antes; después el panel (`section.panel`) y, más pequeños, «Ir a» con los módulos.
+- Tarjetas (componente común `src/componentes/Panel.tsx`), cada una según los permisos de siempre y tocándola se va a su apartado:
+  - Limpieza (`src/limpieza/panel.tsx`): **Limpieza de hoy** (`mi_dia`: hechos, pendientes, sin asignar; saturación de la semana con las
+    cuentas de Investigar solo con `informe.todo` y horas) o, al operario, **Tus trabajos de hoy** (lo siguiente; va a «Mi día»);
+    **Incidencias** (abiertas, urgentes, problemas que se repiten, la última); **Quién falta hoy** (`nucleo.ausencias` sin festivos, con
+    quién cubre; con `nucleo.persona.ver` y repartir).
+  - **Pendientes de firmar**: suman lo que aporta cada módulo (`src/personal/panel.ts`: calendarios sin firmar del año o el tuyo;
+    `src/prevencion/panel.ts`: firmas de charlas que faltan, documentos sin firmar, cursos caducados o que caducan en 60 días; al
+    trabajador, sus charlas y documentos).
+- Pruebas: `pruebas/panel.spec.ts` (3). El simulador entiende ahora `not.is.null` y `cs.{…}`.
+- Aprendido: no usar la clase `aviso` (es la de los mensajes flotantes); el naranja del panel es `naranja`.
+
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)
 Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para su unidad (cada unidad el suyo).
 - `0023_prevencion_stock.sql`: `prevencion.material` (nombre, línea de la hoja oficial `epi`, prenda de la ficha de donde

@@ -1,4 +1,10 @@
+import { useEffect, useState } from 'react';
 import { useSesion } from '../nucleo/sesion';
+import { nucleo } from '../nucleo/supabase';
+import { Tarjeta, type LineaPendiente } from '../componentes/Panel';
+import { TarjetasLimpieza } from '../limpieza/panel';
+import { pendientesPersonal } from '../personal/panel';
+import { pendientesPrevencion } from '../prevencion/panel';
 import { MODULOS, moduloPorCodigo } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
 import { Personal } from '../personal/Personal';
@@ -38,6 +44,11 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
       <h1 className="titulo">Hola, {nombre}</h1>
       <Tablon />
       <MisNotificaciones ir={ir} />
+      <section className="panel" aria-label="Panel">
+        <TarjetasLimpieza ir={ir} />
+        <Pendientes ir={ir} />
+      </section>
+      {mios.length > 0 && <h2 className="titulo-ir">Ir a</h2>}
       {mios.length === 0 && !configurable ? (
         <div className="vacio">
           <p><b>Todavía no tienes ningún módulo en {empresa.nombre}.</b></p>
@@ -63,6 +74,29 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
       )}
       <AvisosMovil />
     </main>
+  );
+}
+
+/** «Pendientes de firmar»: lo que aporta cada módulo (Personal y Prevención), según los permisos de cada uno. */
+function Pendientes({ ir }: { ir: (r: string) => void }) {
+  const { estado, empresa, puede } = useSesion();
+  const [L, setL] = useState<LineaPendiente[] | null>(null);
+  const conPersonal = !!empresa?.modulos.includes('personal'), conPrev = !!empresa?.modulos.includes('prevencion');
+  useEffect(() => {
+    if (!empresa || estado.fase !== 'dentro' || (!conPersonal && !conPrev)) return;
+    (async () => {
+      const { data } = await nucleo().from('usuarios').select('persona_id').eq('id', estado.sesion.usuario!.id).maybeSingle();
+      const persona = (data as { persona_id: string | null } | null)?.persona_id ?? null;
+      const partes = await Promise.all([conPersonal ? pendientesPersonal(empresa.id, puede, persona) : [], conPrev ? pendientesPrevencion(empresa.id, puede, persona) : []]);
+      setL(partes.flat());
+    })().catch(() => setL([]));
+  }, [empresa, estado, puede, conPersonal, conPrev]);
+  if (!conPersonal && !conPrev) return null;
+  if (!L) return <Tarjeta titulo="Pendientes de firmar" ir={ir} cargando />;
+  const n = L.filter((x) => !x.aviso).reduce((s, x) => s + x.n, 0);
+  return (
+    <Tarjeta titulo="Pendientes de firmar" ir={ir} cifra={n} ruta={L[0]?.ruta} vacio="No hay nada pendiente de firmar."
+      lineas={L.map((x) => <><b className={x.aviso ? 'naranja' : undefined}>{x.n}</b> {x.texto}</>)} />
   );
 }
 

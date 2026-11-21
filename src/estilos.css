@@ -490,3 +490,30 @@ details.res-tarjeta[open] > summary { margin-bottom: 8px; }
 .res-frase { font-weight: 600; margin: 6px 0 10px; }
 .res-servido { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 12px 0 0; }
 .res-servido small { color: var(--tinta2); }
+
+/* ---------- panel de Inicio ---------- */
+.panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin: 0 0 22px; }
+.panel:empty { display: none; }
+.tarjeta-panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px; text-align: left; background: var(--sup); color: var(--tinta);
+  border: 1px solid var(--linea); border-radius: var(--radio); font: inherit; }
+button.tarjeta-panel { cursor: pointer; }
+button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: var(--acento); }
+.tarjeta-tit { font-size: 13px; font-weight: 600; color: var(--tinta2); text-transform: uppercase; letter-spacing: .04em; }
+.tarjeta-num { font-size: 28px; font-weight: 700; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.tarjeta-num small { font-size: 14px; font-weight: 500; color: var(--tinta2); }
+.tarjeta-num.mal { color: var(--mal); }
+.tarjeta-barra { display: block; height: 6px; border-radius: 3px; background: var(--linea); overflow: hidden; }
+.tarjeta-barra > i { display: block; height: 100%; background: var(--acento); }
+.tarjeta-lineas { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 3px; min-width: 0; font-size: 14px; color: var(--tinta2); }
+.tarjeta-lineas b { color: var(--tinta); font-variant-numeric: tabular-nums; }
+.tarjeta-lineas b.mal { color: var(--mal); }
+.tarjeta-lineas .naranja { color: #a35b00; }
+.tarjeta-corta { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tarjeta-nota { font-size: 14px; color: var(--suave); }
+.titulo-ir { font-size: 15px; color: var(--tinta2); margin: 0 0 10px; }
+.titulo-ir + .mosaicos .mosaico { min-height: 0; padding: 12px 14px; }
+.titulo-ir + .mosaicos .mosaico-icono { width: 34px; height: 34px; }
+.titulo-ir + .mosaicos .mosaico b { font-size: 16px; }
+.titulo-ir + .mosaicos .mosaico small { font-size: 13px; }
+@media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tarjeta-lineas .naranja { color: #f5b041; } }
+.tarjeta-lineas li { min-width: 0; overflow-wrap: anywhere; }

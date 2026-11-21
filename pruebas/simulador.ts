@@ -90,7 +90,8 @@ export async function simular(page: Page, op: Opciones = {}) {
     if (tablas[tabla] !== undefined) {
       const filtros = [...u.searchParams.entries()].filter(([k]) => !['select', 'order', 'limit', 'columns'].includes(k));
       const cumple = (f: Record<string, unknown>) => filtros.every(([k, v]) =>
-        v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null
+        v.startsWith('eq.') ? String(f[k]) === v.slice(3) : v === 'is.null' ? f[k] == null : v === 'not.is.null' ? f[k] != null
+          : v.startsWith('cs.{') ? v.slice(4, -1).split(',').map((x) => x.replace(/^"|"$/g, '')).every((x) => ((f[k] ?? []) as unknown[]).map(String).includes(x))
           : v.startsWith('neq.') ? String(f[k]) !== v.slice(4)
           : v.startsWith('gte.') ? String(f[k]) >= v.slice(4) : v.startsWith('lte.') ? String(f[k]) <= v.slice(4)
           : v.startsWith('in.(') ? v.slice(4, -1).split(',').map((x) => x.replace(/^"|"$/g, '')).includes(String(f[k])) : true);
