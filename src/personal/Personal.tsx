@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { Firma } from '../componentes/Firma';
 import { PorOperario } from './PorOperario';
 import { Horas, MisHoras } from './Horas';
@@ -239,12 +240,19 @@ function usePersonasEquipo(equipo: Equipo) {
   return personas;
 }
 
+/** Días naturales de vacaciones dentro del año. */
+function diasNaturales(vs: Vacacion[], anio: number) {
+  const a = Date.UTC(anio, 0, 1), b = Date.UTC(anio, 11, 31), d = (f: string) => { const [y, m, x] = f.split('-').map(Number); return Date.UTC(y, m - 1, x); };
+  return vs.reduce((n, v) => { const i = Math.max(a, d(v.desde)), f = Math.min(b, d(v.hasta)); return n + (f >= i ? Math.round((f - i) / 864e5) + 1 : 0); }, 0);
+}
+
 function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
   const { empresa, puede } = useSesion();
   const personas = usePersonasEquipo(equipo);
   const [vacs, setVacs] = useState<Vacacion[]>([]);
   const [editando, setEditando] = useState<Partial<Vacacion> | null>(null);
   const editable = puede('personal.vacaciones.editar');
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const { data } = await personal().from('vacaciones').select('id, persona_id, desde, hasta, nota')
@@ -259,7 +267,21 @@ function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
     <>
       {editable && <button type="button" className="boton sec ancho" style={{ marginBottom: 12 }} onClick={() => setEditando({ persona_id: '*' })}>
         Vacaciones para todo {equipo.nombre}</button>}
-      <div className="lista">
+      {ordenador ? (
+        <Tabla filas={personas} clave={(p) => p.id} etiquetaBuscar="Buscar persona"
+          filtros={[{ clave: 'sin', texto: `Sin vacaciones en ${anio}`, cumple: (p) => !vacs.some((v) => v.persona_id === p.id) }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Persona', valor: (p) => p.nombre },
+            { clave: 'vac', titulo: `Vacaciones de ${anio}`, orden: (p) => vacs.find((v) => v.persona_id === p.id)?.desde ?? null, valor: (p) => {
+              const suyas = vacs.filter((v) => v.persona_id === p.id);
+              return !suyas.length ? <span className="suave">Sin vacaciones</span> : <span className="celda-lineas">{suyas.map((v) => (
+                <span key={v.id}>{periodo(v)}{v.nota ? ` · ${v.nota}` : ''}{editable && <button type="button" className="boton txt peq" onClick={() => setEditando(v)}>Cambiar</button>}</span>))}</span>; } },
+            { clave: 'dias', titulo: 'Días naturales', numero: true, valor: (p) => diasNaturales(vacs.filter((v) => v.persona_id === p.id), anio) || '',
+              orden: (p) => diasNaturales(vacs.filter((v) => v.persona_id === p.id), anio) },
+            ...(editable ? [{ clave: 'acc', titulo: '', valor: (p: Persona) => (
+              <button type="button" className="boton sec peq" aria-label={`Añadir vacaciones a ${p.nombre}`} onClick={() => setEditando({ persona_id: p.id })}>Añadir</button>) }] : []),
+          ]} />
+      ) : <div className="lista">
         {personas.map((p) => {
           const suyas = vacs.filter((v) => v.persona_id === p.id);
           return (
@@ -276,7 +298,7 @@ function Vacaciones({ anio, equipo }: { anio: number; equipo: Equipo }) {
             </div>
           );
         })}
-      </div>
+      </div>}
       {editando && <FormVacacion v={editando} equipo={equipo} personas={editando.persona_id === '*' ? personas : personas.filter((p) => p.id === editando.persona_id)} alCerrar={() => setEditando(null)}
         alGuardar={() => { setEditando(null); cargar(); }} />}
     </>
@@ -340,6 +362,7 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
   const [viendo, setViendo] = useState<Envio | null>(null);
   const [ocupado, setOcupado] = useState(false);
   const enviar = puede('personal.firma.enviar');
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const { data, error } = await personal().from('v_envios').select('*').eq('empresa_id', empresa!.id).eq('anio', anio).eq('calendario_id', equipo.id).order('enviado', { ascending: false });
@@ -381,7 +404,21 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
       {otrasHoras && <OtrasHoras cal={equipo} h={otrasHoras} alCerrar={() => setOtrasHoras(null)} alGuardar={() => { setOtrasHoras(null); cargarHoras(); }} />}
       <p className="nota" style={{ marginTop: 0 }}>Han firmado <b>{firmados}</b> de {personas.length}.
         {enviar && ' Elige a quién enviar el calendario de ' + anio + ' para que lo firme.'}</p>
-      <div className="lista">
+      {ordenador ? (
+        <Tabla filas={personas} clave={(p) => p.id} etiquetaBuscar="Buscar persona" alAbrir={(p) => { const e = vigente.get(p.id); if (e) setViendo(e); }}
+          eleccion={enviar ? { elegidos, cambiar: setElegidos, nombre: (p) => p.nombre } : undefined}
+          filtros={[{ clave: 'sin', texto: 'Sin enviar', cumple: (p) => !vigente.get(p.id) }, { clave: 'pend', texto: 'Pendientes', cumple: (p) => vigente.get(p.id)?.estado === 'pendiente' },
+            { clave: 'firm', texto: 'Firmados', cumple: (p) => vigente.get(p.id)?.estado === 'firmado' }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Persona', valor: (p) => p.nombre },
+            { clave: 'estado', titulo: 'Estado', orden: (p) => vigente.get(p.id)?.estado ?? 'a', valor: (p) => { const e = vigente.get(p.id);
+              return <span className={'chapa ' + (e?.estado ?? 'sin')}>{!e ? 'Sin enviar' : e.estado === 'firmado' ? 'Firmado' : 'Pendiente'}</span>; } },
+            { clave: 'env', titulo: 'Enviado', valor: (p) => { const e = vigente.get(p.id); return e ? fechaCorta(e.enviado.slice(0, 10)) : ''; }, orden: (p) => vigente.get(p.id)?.enviado ?? null },
+            { clave: 'firm', titulo: 'Firmado', valor: (p) => { const e = vigente.get(p.id); return e?.firmado_en ? fechaCorta(e.firmado_en.slice(0, 10)) : ''; }, orden: (p) => vigente.get(p.id)?.firmado_en ?? null },
+            { clave: 'conf', titulo: 'Conforme', valor: (p) => { const e = vigente.get(p.id); return e?.estado !== 'firmado' ? '' : e.conforme ? 'Sí' : 'Con observaciones'; } },
+            { clave: 'ver', titulo: '', valor: (p) => { const e = vigente.get(p.id); return e ? <button type="button" className="boton txt peq" onClick={() => setViendo(e)}>Ver</button> : ''; } },
+          ]} />
+      ) : <div className="lista">
         {personas.map((p) => {
           const e = vigente.get(p.id);
           return (
@@ -396,7 +433,7 @@ function Firmas({ anio, equipo }: { anio: number; equipo: Equipo }) {
             </div>
           );
         })}
-      </div>
+      </div>}
       {errorEnvio && <p className="error" role="alert">{errorEnvio}</p>}
       {enviar && (
         <div className="botonera no-imprimir">

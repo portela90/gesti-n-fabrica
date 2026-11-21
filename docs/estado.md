@@ -448,6 +448,13 @@ en filas. Orden: Configuración, Limpieza, Personal, Prevención.
   (es la agenda del operario), Personas (se escribe en ella), las listas pequeñas del fin de semana y las de Investigar (llevan
   botones y barras). Arreglado de paso: la chapa verde «Hecho/Firmado» cogía el borde de la caja de firmas (misma clase `firmado`).
   Pruebas: una de ordenador en `limpieza`, `hoy` e `incidencias`.
+- **Personal** (PUBLICADO 21/11): en el ordenador, tabla en Calendario (operarios: calendario, horas, debe hacer, estado; filtros Sin
+  hacer / No cuadran / Sin enviar / Sin firmar / Firmados; casillas para elegir varios), Vacaciones (periodos con «Cambiar», días
+  naturales del año, «Añadir»), Firmas (estado, enviado, firmado, conforme, «Ver», casillas), Horas del mes (un dato por columna) e
+  Investigar personas (Todos y Mes a mes; en el ordenador se ordena tocando la columna en lugar del desplegable). Siguen en filas:
+  Horas del día (se escribe), Mi calendario, Mis horas, el cuadro de horas de Firmas y la ficha de una persona.
+  La tabla común admite casillas (`eleccion`) y un botón dentro de una fila ya no abre también la ficha.
+  Pruebas: una de ordenador en `personal`, `horas` y `personas`.
 - Pruebas: `pruebas/tabla.spec.ts` (3). Arreglado de paso: una prueba de incidencias que miraba la petición antes de que saliera.
 
 ### Stock de ropa y EPI (15/11, pedido por Cristian) — APLICADO 15/11 (0023, comprobado)

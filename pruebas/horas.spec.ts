@@ -179,3 +179,17 @@ test('Horas en el móvil más estrecho: nada se aplasta ni se sale', async ({ pa
   await expect(page.locator('.fila', { hasText: 'Lola Prueba' })).toBeVisible();
   expect(await desbordes(page), 'mes').toEqual([]);
 });
+
+test('ordenador: horas del mes en una tabla, un dato por columna', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion: sesion(JEFE), tablas: tablas(), rpc });
+  await page.goto('./#/m/personal/horas');
+  await page.getByRole('group', { name: 'Horas' }).getByRole('button', { name: 'Horas del mes' }).click();
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Persona', 'Jornada', 'Trabajadas (h)', 'Extra (h)', 'Fuera de presupuesto (h)', 'Baja (días)',
+    'Vacaciones (días)', 'Permiso (días)', 'Otra falta (días)', 'Bolsa (h)']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Pepe Prueba' }).locator('td').first()).toHaveText('Parcial · 16 h/sem');
+  await expect(tabla.locator('tbody tr', { hasText: 'Lola Prueba' }).locator('.chapa')).toBeVisible();
+  expect(errores).toEqual([]);
+});

@@ -143,3 +143,23 @@ test('investigar personas: nada se sale a 320 px', async ({ page }) => {
   await page.getByRole('group', { name: 'Investigar' }).getByRole('button', { name: 'Mes a mes' }).click();
   expect(await desbordes(page)).toEqual([]);
 });
+
+test('ordenador: todos y mes a mes en tabla, ordenando por la columna', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await simular(page, { dentro: true, sesion, rpc });
+  await abrir(page);
+  await page.getByRole('group', { name: 'Investigar' }).getByRole('button', { name: 'Todos' }).click();
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['Persona', 'Días trabajados', 'Horas', 'Extra (h)', 'Fuera (h)', 'Baja (días)', 'Vacaciones (días)', 'Permiso (días)', 'Otra falta (días)']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Lola Prueba' }).locator('td')).toHaveText(['17', '117', '1', '2', '4 (2 bajas)', '2', '', '']);
+  await tabla.getByRole('button', { name: 'Horas' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Lola Prueba', 'Pepe Prueba']);
+  await tabla.getByRole('button', { name: 'Horas' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Pepe Prueba', 'Lola Prueba']);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Con bajas' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Lola Prueba']);
+  await page.getByRole('group', { name: 'Investigar' }).getByRole('button', { name: 'Mes a mes' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['octubre 2026']);
+  expect(errores).toEqual([]);
+});

@@ -323,3 +323,41 @@ test('quitar gente de un calendario avisa con sus nombres, y si se cancela no se
   expect(mensaje).toContain('sin calendario');
   expect(sim.some((l) => l.ruta.endsWith('/rpc/poner_personas'))).toBe(false);
 });
+
+test('ordenador: operarios, vacaciones y firmas en tabla', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 800 });
+  const t = tablas(); t.v_envios = [envio(BRUNO, 'pendiente')];
+  const sim = await simular(page, { dentro: true, sesion: sesion(PERMISOS_JEFE), tablas: t, rpc });
+  await page.goto('./#/m/personal/calendario');
+  const tabla = page.locator('table.tabla');
+  await expect(tabla.locator('thead th')).toHaveText(['', 'Operario', 'Calendario', 'Horas', 'Debe hacer', 'Estado', '']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Bruno Prueba' }).locator('td').nth(4)).toHaveText('Enviado, sin firmar');
+  await expect(tabla.locator('tbody tr', { hasText: 'Carla Finde' }).locator('td').nth(1)).toHaveText(`Sin calendario de ${ANIO}`);
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Sin enviar' }).click();
+  await expect(tabla.locator('tbody th')).toHaveText(['Ana Prueba']);
+  // el botón de la fila envía y no abre el calendario
+  await tabla.getByRole('button', { name: 'Enviar a firmar' }).click();
+  await expect(page.getByText('Enviado a firmar a 1 trabajador')).toBeVisible();
+  expect(sim.find((l) => l.ruta.endsWith('/rpc/enviar_calendario'))?.cuerpo).toEqual({ p_calendario: SEMANA, p_personas: [ANA] });
+  await expect(tabla).toBeVisible();
+  // elegir con las casillas
+  await page.getByRole('group', { name: 'Filtros' }).getByRole('button', { name: 'Todos' }).click();
+  await page.getByLabel('Elegir todos').check();
+  await expect(page.locator('.barra-abajo')).toContainText('3 operarios');
+
+  await page.goto('./#/m/personal/vacaciones');
+  await expect(tabla.locator('thead th')).toHaveText(['Persona', `Vacaciones de ${ANIO}`, 'Días naturales', '']);
+  await expect(tabla.locator('tbody tr', { hasText: 'Ana Prueba' }).locator('td').nth(1)).toHaveText('12');
+  await tabla.locator('tbody tr', { hasText: 'Ana Prueba' }).getByRole('button', { name: 'Cambiar' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  await page.keyboard.press('Escape');
+
+  await page.goto('./#/m/personal/firmas');
+  const firmas = page.locator('table.tabla').last();
+  await expect(firmas.locator('thead th')).toHaveText(['', 'Persona', 'Estado', 'Enviado', 'Firmado', 'Conforme', '']);
+  await expect(firmas.locator('tbody tr', { hasText: 'Bruno Prueba' }).locator('td').nth(1)).toHaveText('Pendiente');
+  await firmas.getByLabel('Elegir a Ana Prueba').check();
+  await expect(page.getByRole('button', { name: 'Enviar a firmar (1)' })).toBeEnabled();
+  expect(errores).toEqual([]);
+});

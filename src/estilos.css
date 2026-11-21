@@ -545,3 +545,9 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
 .res-celda-barra .res-barra { width: 70px; }
 .tabla .naranja { color: #a35b00; font-weight: 600; }
 @media (prefers-color-scheme: dark) { :root:not([data-tema="claro"]) .tabla .naranja { color: #f5b041; } }
+.tabla .tabla-marca, .tabla thead th.tabla-marca { width: 36px; padding: 10px 0 10px 14px; }
+.tabla .tabla-marca input { width: 18px; height: 18px; margin: 0; accent-color: var(--acento); }
+.tabla .celda-botones { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
+.tabla .celda-lineas { display: flex; flex-direction: column; gap: 2px; }
+.tabla .celda-lineas > span { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.tabla .suave { color: var(--suave); }

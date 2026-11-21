@@ -30,11 +30,13 @@ export function useOrdenador() {
   return si;
 }
 
+/** Un clic en un botón, enlace o casilla de la fila no abre la ficha. */
+const dentroDeControl = (t: EventTarget) => t instanceof Element && !!t.closest('button, a, input, select, label, textarea');
 const plano = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
 const texto = (n: ReactNode): string => (n == null || typeof n === 'boolean' ? '' : typeof n === 'string' || typeof n === 'number' ? String(n)
   : Array.isArray(n) ? n.map(texto).join(' ') : '');
 
-export function Tabla<T>({ filas, columnas, clave, alAbrir, buscarEn, etiquetaBuscar, filtros, acciones, vacio, claseFila, ordenInicial, sinBuscador, alBuscar, pistaBuscar }: {
+export function Tabla<T>({ filas, columnas, clave, alAbrir, buscarEn, etiquetaBuscar, filtros, acciones, vacio, claseFila, ordenInicial, sinBuscador, alBuscar, pistaBuscar, eleccion }: {
   filas: T[];
   columnas: Columna<T>[];
   clave: (f: T) => string;
@@ -53,6 +55,8 @@ export function Tabla<T>({ filas, columnas, clave, alAbrir, buscarEn, etiquetaBu
   alBuscar?: (q: string) => void;
   /** El texto gris del buscador (si no, «Buscar…»). */
   pistaBuscar?: string;
+  /** Casillas para elegir varias filas (solo en la tabla; el móvil de cada pantalla pone las suyas). */
+  eleccion?: { elegidos: Set<string>; cambiar: (elegidos: Set<string>) => void; nombre: (f: T) => string };
 }) {
   const ordenador = useOrdenador();
   const [q, setQ] = useState('');
@@ -118,15 +122,21 @@ export function Tabla<T>({ filas, columnas, clave, alAbrir, buscarEn, etiquetaBu
       {nada || (
         <div className="tabla-caja">
           <table className="tabla">
-            <thead><tr>{enTabla.map((c) => (
+            <thead><tr>{eleccion && (
+              <th scope="col" className="tabla-marca"><input type="checkbox" aria-label="Elegir todos"
+                checked={vistas.length > 0 && vistas.every((f) => eleccion.elegidos.has(clave(f)))}
+                onChange={(e) => { const n = new Set(eleccion.elegidos); vistas.forEach((f) => (e.target.checked ? n.add(clave(f)) : n.delete(clave(f)))); eleccion.cambiar(n); }} /></th>)}
+              {enTabla.map((c) => (
               <th key={c.clave} scope="col" className={c.numero ? 'num' : undefined}
                 aria-sort={orden?.clave === c.clave ? (orden.asc ? 'ascending' : 'descending') : undefined}>
                 <button type="button" onClick={() => ordenar(c.clave)}>{c.titulo}<span className="tabla-flecha" aria-hidden="true">
                   {orden?.clave === c.clave ? (orden.asc ? ' ▲' : ' ▼') : ''}</span></button>
               </th>))}</tr></thead>
             <tbody>{vistas.map((f) => (
-              <tr key={clave(f)} className={(alAbrir ? 'abre ' : '') + (claseFila?.(f) ?? '')} onClick={alAbrir ? () => alAbrir(f) : undefined}
-                tabIndex={alAbrir ? 0 : undefined} onKeyDown={alAbrir ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alAbrir(f); } } : undefined}>
+              <tr key={clave(f)} className={(alAbrir ? 'abre ' : '') + (claseFila?.(f) ?? '')} onClick={alAbrir ? (e) => { if (!dentroDeControl(e.target)) alAbrir(f); } : undefined}
+                tabIndex={alAbrir ? 0 : undefined} onKeyDown={alAbrir ? (e) => { if (e.target !== e.currentTarget) return; if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); alAbrir(f); } } : undefined}>
+                {eleccion && <td className="tabla-marca"><input type="checkbox" aria-label={`Elegir a ${eleccion.nombre(f)}`} checked={eleccion.elegidos.has(clave(f))}
+                  onChange={() => { const n = new Set(eleccion.elegidos); if (n.has(clave(f))) n.delete(clave(f)); else n.add(clave(f)); eleccion.cambiar(n); }} /></td>}
                 {enTabla.map((c, i) => i === 0
                   ? <th key={c.clave} scope="row" className={c.numero ? 'num' : undefined}>{c.valor(f)}</th>
                   : <td key={c.clave} className={c.numero ? 'num' : undefined}>{c.valor(f)}</td>)}

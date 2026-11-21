@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Ventana } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { Anio, diaSemana, iso, Leyenda, periodo, personal, textoError, type Dia, type Vacacion } from './calendario';
 
 /** Un calendario del año tal como lo carga Personal. */
@@ -39,6 +40,7 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
   const [enviando, setEnviando] = useState(false);
   const editable = puede('personal.calendario.editar');
   const puedeEnviar = puede('personal.firma.enviar');
+  const ordenador = useOrdenador();
 
   const cargar = useCallback(async () => {
     const { data } = await nucleo().from('personas').select('id, nombre, baja').eq('empresa_id', empresa!.id).is('baja', null).order('nombre');
@@ -52,6 +54,14 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
 
   /** El envío que cuenta: el más nuevo sin anular y del calendario que tiene ahora. */
   const envioDe = (p: string, cal?: CalAnio) => envios.find((e) => e.persona_id === p && e.estado !== 'anulado' && e.calendario_id === cal?.id);
+  const difDe = (p: string) => { const h = horas.find((x) => x.persona_id === p); return h && h.objetivo != null ? Math.round((h.horas - h.objetivo) * 100) / 100 : null; };
+  /** El texto y el color del estado de cada uno (el mismo en el móvil y en la tabla). */
+  const estadoDe = (p: string, cal?: CalAnio): [string, string] => {
+    const e = envioDe(p, cal), dif = difDe(p);
+    if (e) return e.estado === 'firmado' ? ['Firmado', 'firmado'] : ['Enviado, sin firmar', 'pendiente'];
+    return [!cal ? 'Sin hacer' : dif === null ? 'Sin horas' : dif === 0 ? 'Cuadra · sin enviar' : dif < 0 ? `Faltan ${fmtH(-dif)} h` : `Sobran ${fmtH(dif)} h`,
+      !cal ? 'sin' : dif === 0 ? 'firmado' : 'sin-cuadrar'];
+  };
   const cuadra = (p: string) => { const h = horas.find((x) => x.persona_id === p); return !!h && h.objetivo != null && Math.round((h.horas - h.objetivo) * 100) === 0; };
   /** Enviar a firmar el calendario de estas personas (cada una con el suyo). */
   async function enviar(ids: string[]) {
@@ -79,7 +89,29 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
   return (
     <>
       <p className="nota" style={{ marginTop: 0 }}>{editable ? 'Toca un operario para hacer su calendario, o marca varios para hacerles el mismo.' : 'Cómo van las horas de cada uno.'}</p>
-      <div className="lista">
+      {ordenador ? (
+        <Tabla filas={personas} clave={(p) => p.id} alAbrir={editable ? (p) => setEditando([p.id]) : undefined} etiquetaBuscar="Buscar operario"
+          eleccion={editable ? { elegidos, cambiar: setElegidos, nombre: (p) => p.nombre } : undefined}
+          filtros={[{ clave: 'sin', texto: 'Sin hacer', cumple: (p) => !cals.some((c) => c.personas.includes(p.id)) },
+            { clave: 'mal', texto: 'No cuadran', cumple: (p) => { const d = difDe(p.id); return cals.some((c) => c.personas.includes(p.id)) && d !== 0; } },
+            { clave: 'env', texto: 'Sin enviar', cumple: (p) => { const c = cals.find((x) => x.personas.includes(p.id)); return !!c && difDe(p.id) === 0 && !envioDe(p.id, c); } },
+            { clave: 'pend', texto: 'Sin firmar', cumple: (p) => envioDe(p.id, cals.find((x) => x.personas.includes(p.id)))?.estado === 'pendiente' },
+            { clave: 'firm', texto: 'Firmados', cumple: (p) => envioDe(p.id, cals.find((x) => x.personas.includes(p.id)))?.estado === 'firmado' }]}
+          columnas={[
+            { clave: 'nombre', titulo: 'Operario', valor: (p) => p.nombre },
+            { clave: 'cal', titulo: 'Calendario', valor: (p) => cals.find((c) => c.personas.includes(p.id))?.nombre ?? <span className="naranja">Sin calendario de {anio}</span>,
+              orden: (p) => cals.find((c) => c.personas.includes(p.id))?.nombre ?? '' },
+            { clave: 'horas', titulo: 'Horas', numero: true, valor: (p) => { const h = horas.find((x) => x.persona_id === p.id); return h ? `${fmtH(h.horas)} h` : ''; },
+              orden: (p) => horas.find((x) => x.persona_id === p.id)?.horas ?? null },
+            { clave: 'obj', titulo: 'Debe hacer', numero: true, valor: (p) => { const h = horas.find((x) => x.persona_id === p.id); return h?.objetivo != null ? `${fmtH(h.objetivo)} h` : ''; },
+              orden: (p) => horas.find((x) => x.persona_id === p.id)?.objetivo ?? null },
+            { clave: 'estado', titulo: 'Estado', valor: (p) => { const [t, c] = estadoDe(p.id, cals.find((x) => x.personas.includes(p.id))); return <span className={'chapa ' + c}>{t}</span>; },
+              orden: (p) => estadoDe(p.id, cals.find((x) => x.personas.includes(p.id)))[0] },
+            ...(puedeEnviar ? [{ clave: 'acc', titulo: '', valor: (p: Persona) => { const cal = cals.find((c) => c.personas.includes(p.id));
+              return cal && difDe(p.id) === 0 && !envioDe(p.id, cal)
+                ? <button type="button" className="boton txt peq" disabled={enviando} onClick={() => enviar([p.id])}>Enviar a firmar</button> : ''; } }] : []),
+          ]} />
+      ) : <div className="lista">
         {personas.map((p) => {
           const cal = cals.find((c) => c.personas.includes(p.id));
           const h = horas.find((x) => x.persona_id === p.id);
@@ -103,7 +135,7 @@ export function PorOperario({ anio, cals, recargar }: { anio: number; cals: CalA
             </div>
           );
         })}
-      </div>
+      </div>}
       {editable && elegidos.size > 0 && (
         <div className="barra-abajo no-imprimir">
           <span><b>{elegidos.size}</b> {elegidos.size === 1 ? 'operario' : 'operarios'}</span>

@@ -2,6 +2,7 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react
 import { nucleo } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { personal, textoError } from './calendario';
 import { CABECERA_MES, csv, dec, filaExcel, finDeMes, resumenMes, sumaDias, type DiaHoras, type FilaMes } from './horas';
 
@@ -142,6 +143,7 @@ function HorasDia() {
 
 function HorasMes() {
   const { empresa } = useSesion();
+  const ordenador = useOrdenador();
   const [mes, setMes] = useState(hoy().slice(0, 7));
   const [bolsaInicio, recargarBolsa] = useBolsaInicio();
   const [dias, setDias] = useState<DiaHoras[] | null>(null);
@@ -187,10 +189,30 @@ function HorasMes() {
             <button type="button" className="boton sec peq" onClick={excelMes}>Excel del mes</button>
             <button type="button" className="boton sec peq" onClick={excelDetalle}>Detalle de extras y fuera de presupuesto</button>
           </div>
-          <div className="lista">{filas.map((f) => <FilaResumen key={f.persona_id} f={f} />)}</div>
+          {ordenador ? <TablaMes filas={filas} /> : <div className="lista">{filas.map((f) => <FilaResumen key={f.persona_id} f={f} />)}</div>}
         </>
       )}
     </>
+  );
+}
+
+/** Horas del mes en el ordenador: una columna por dato (h = horas; los días de falta, en días). */
+function TablaMes({ filas }: { filas: FilaMes[] }) {
+  const h = (x: number | null) => (x ? dec(x) : '');
+  const extras = (f: FilaMes) => (f.extraSemana ?? 0) + (f.extraSabado ?? 0) + (f.extraFestivo ?? 0);
+  const n = (c: string, t: string, v: (f: FilaMes) => number | null) => ({ clave: c, titulo: t, numero: true, valor: (f: FilaMes) => h(v(f)), orden: v });
+  return (
+    <Tabla filas={filas} clave={(f) => f.persona_id} etiquetaBuscar="Buscar persona"
+      filtros={[{ clave: 'extra', texto: 'Con extras', cumple: (f) => extras(f) > 0 }, { clave: 'fuera', texto: 'Fuera de presupuesto', cumple: (f) => f.fuera > 0 },
+        { clave: 'falta', texto: 'Con faltas', cumple: (f) => f.baja + f.vacaciones + f.permiso + f.otra > 0 }, { clave: 'bolsa', texto: 'Bolsa en negativo', cumple: (f) => (f.bolsaFin ?? 0) < 0 }]}
+      columnas={[
+        { clave: 'nombre', titulo: 'Persona', valor: (f) => f.nombre },
+        { clave: 'jornada', titulo: 'Jornada', valor: (f) => `${f.jornada}${f.contrato != null ? ` · ${dec(f.contrato)} h/sem` : ''}` },
+        n('trab', 'Trabajadas (h)', (f) => f.trabajadas), n('extra', 'Extra (h)', extras), n('fuera', 'Fuera de presupuesto (h)', (f) => f.fuera),
+        n('baja', 'Baja (días)', (f) => f.baja), n('vac', 'Vacaciones (días)', (f) => f.vacaciones), n('perm', 'Permiso (días)', (f) => f.permiso), n('otra', 'Otra falta (días)', (f) => f.otra),
+        { clave: 'bolsa', titulo: 'Bolsa (h)', numero: true, orden: (f) => f.bolsaFin, valor: (f) => (f.bolsaFin == null ? '' : (
+          <span className={'chapa ' + (f.bolsaFin < 0 ? 'sin-cuadrar' : 'firmado')} title={`Empezó el mes con ${dec(f.bolsaInicio)} h y ha cambiado ${dec(f.bolsaVariacion)} h`}>{dec(f.bolsaFin)}</span>)) },
+      ]} />
   );
 }
 

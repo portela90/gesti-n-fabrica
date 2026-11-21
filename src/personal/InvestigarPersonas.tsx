@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSesion } from '../nucleo/sesion';
 import { aviso } from '../componentes/basicos';
+import { Tabla, useOrdenador } from '../componentes/Tabla';
 import { bajarArchivo } from '../componentes/informes';
 import { dec, type DiaHoras } from './horas';
 import { leerDias } from './Horas';
@@ -136,6 +137,21 @@ function FichaPersona({ f }: { f: Ficha }) {
 
 function Todos({ F, orden, setOrden }: { F: Ficha[]; orden: Orden; setOrden: (o: Orden) => void }) {
   const L = ordenar(F, orden);
+  const ordenador = useOrdenador();
+  if (ordenador) {
+    const n = (c: string, t: string, v: (f: Ficha) => number, txt = (x: number) => (x ? dec(x) : '')) => ({ clave: c, titulo: t, numero: true, valor: (f: Ficha) => txt(v(f)), orden: v });
+    const dias = (x: number) => (x ? String(x) : '');
+    return <Tabla filas={L} clave={(f) => f.persona_id} etiquetaBuscar="Buscar persona"
+      filtros={[{ clave: 'baja', texto: 'Con bajas', cumple: (f) => f.faltas.baja > 0 }, { clave: 'extra', texto: 'Con extras', cumple: (f) => f.extra > 0 },
+        { clave: 'fuera', texto: 'Fuera de presupuesto', cumple: (f) => f.fuera > 0 }]}
+      columnas={[
+        { clave: 'nombre', titulo: 'Persona', valor: (f) => f.nombre },
+        n('dias', 'Días trabajados', (f) => f.diasTrab, dias), n('horas', 'Horas', (f) => f.horas), n('extra', 'Extra (h)', (f) => f.extra), n('fuera', 'Fuera (h)', (f) => f.fuera),
+        { clave: 'baja', titulo: 'Baja (días)', numero: true, orden: (f) => f.faltas.baja, valor: (f) => { const b = f.periodos.filter((p) => p.motivo === 'baja').length;
+          return f.faltas.baja ? <span className="res-mal">{f.faltas.baja}{b ? ` (${b} ${b === 1 ? 'baja' : 'bajas'})` : ''}</span> : ''; } },
+        n('vac', 'Vacaciones (días)', (f) => f.faltas.vacaciones, dias), n('perm', 'Permiso (días)', (f) => f.faltas.permiso, dias), n('otro', 'Otra falta (días)', (f) => f.faltas.otro, dias),
+      ]} />;
+  }
   return (
     <>
       <label className="campo"><span>Ordenar por</span>
@@ -154,6 +170,22 @@ function Todos({ F, orden, setOrden }: { F: Ficha[]; orden: Orden; setOrden: (o:
 
 function MesAMes({ M }: { M: ReturnType<typeof mesAMes> }) {
   const max = Math.max(1, ...M.map((m) => m.horas));
+  const ordenador = useOrdenador();
+  if (ordenador) {
+    type Fm = (typeof M)[number];
+    const n = (c: string, t: string, v: (m: Fm) => number, txt = (x: number) => (x ? dec(x) : '')) => ({ clave: c, titulo: t, numero: true, valor: (m: Fm) => txt(v(m)), orden: v });
+    const dias = (x: number) => (x ? String(x) : '');
+    return <Tabla filas={M} clave={(m) => m.mes} sinBuscador
+      columnas={[
+        { clave: 'mes', titulo: 'Mes', valor: (m) => nombreMes(m.mes), orden: (m) => m.mes },
+        n('dias', 'Días trabajados', (m) => m.diasTrab, dias),
+        { clave: 'horas', titulo: 'Horas', numero: true, orden: (m) => m.horas, valor: (m) => <span className="res-celda-barra">{dec(m.horas)}
+          <span className="res-barra" aria-hidden="true"><i style={{ width: `${Math.round((m.horas * 100) / max)}%` }} /></span></span> },
+        n('extra', 'Extra (h)', (m) => m.extra), n('fuera', 'Fuera (h)', (m) => m.fuera),
+        { clave: 'baja', titulo: 'Baja (días)', numero: true, orden: (m) => m.baja, valor: (m) => (m.baja ? <span className="res-mal">{m.baja}{m.bajas ? ` (${m.bajas} ${m.bajas === 1 ? 'nueva' : 'nuevas'})` : ''}</span> : '') },
+        n('vac', 'Vacaciones (días)', (m) => m.vacaciones, dias), n('perm', 'Permisos y otras (días)', (m) => m.permiso + m.otro, dias),
+      ]} />;
+  }
   return (
     <div className="lista">{M.map((m) => (
       <div key={m.mes} className="fila fija"><span className="fila-txt"><b>{nombreMes(m.mes)}</b>
