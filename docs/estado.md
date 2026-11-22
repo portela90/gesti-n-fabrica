@@ -563,6 +563,13 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   hornos: **solo avisos**. Comparado 22/11: igual salvo «Basuras Nave 2», que en la nueva tenía domingo y «pruebas» (de sus pruebas del 14/11).
   **1.ª copia PEGADA 22/11 y comprobada**: «Basuras Nave 2» vuelve a lunes, miércoles y viernes con su operario; 35 tareas activas, todas con origen de la vieja.
   Aviso que salió: «Prueba Encargado» (trabajador de prueba de la vieja, 29/10) no está en la nueva: correcto. Desde ahí el aviso dice el nombre.
+- **Prevención** (22/11): receta `prevencion.sql` (+ `leer-vieja-prevencion.sql`, ~550.000 letras por las imágenes), prueba
+  `80-copia-semanal-prevencion.sql` (14, también que la 2.ª vez no duplica). Toolbox (`prl_toolbox` → `charlas`, por año y mes), sesiones
+  (`prl_sesion`, mismo id; una cerrada en la nueva no se toca), firmas de charlas (`prl_firma` → `nucleo.firmas` con `imagen` + `asistencias`;
+  solo se añaden; huella del documento = sha256 de «limpieza-cie:prl_firma:<id>»), entregas de EPI (`prl_doc`) y formaciones
+  (`prl_formacion` → `documentos` tipo formacion, con evaluación): se crean sin firmar y se firman con `prevencion.firmando = si`;
+  certificados (`prl_cert` → `cursos`, sin archivo: 3 archivos en `prl_cert_arch`, «N archivos en la app vieja»); fichas (`prl_trab`, sin
+  `rm_*`: el reconocimiento médico no se migra). Se apaga el disparador `stock` de `documentos` (no descuenta EPI) y se vuelve a encender.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
