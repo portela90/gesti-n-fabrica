@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { direccionApp, supabase } from '../nucleo/supabase';
 import { aviso } from '../componentes/basicos';
-import { avisarOlvido, darDeAlta, entrarConPin, movilGuardado, olvidarMovil } from '../nucleo/pin';
+import { avisarOlvido, darDeAlta, elegirMovil, entrarConPin, movilesGuardados, movilGuardado, olvidarMovil, type MovilPin } from '../nucleo/pin';
 
 type Modo = 'clave' | 'enlace' | 'olvido';
 
@@ -18,10 +18,10 @@ const quitarCodigoDeLaDireccion = () => { if (codigoDeLaDireccion()) history.rep
 
 /** Pantalla de entrar: los operarios con su PIN (o con su código de alta la primera vez); los demás, con su correo. */
 export function Entrar() {
-  const [vista, setVista] = useState<'pin' | 'alta' | 'correo'>(() => (codigoDeLaDireccion() ? 'alta' : movilGuardado() ? 'pin' : 'correo'));
+  const [vista, setVista] = useState<'pin' | 'alta' | 'correo'>(() => (codigoDeLaDireccion() ? 'alta' : movilesGuardados().length ? 'pin' : 'correo'));
   if (vista === 'pin') return <EntrarPin alCorreo={() => setVista('correo')} alAlta={() => setVista('alta')} />;
-  if (vista === 'alta') return <AltaMovil alVolver={() => { quitarCodigoDeLaDireccion(); setVista(movilGuardado() ? 'pin' : 'correo'); }} />;
-  return <EntrarCorreo alPin={movilGuardado() ? () => setVista('pin') : undefined} alAlta={() => setVista('alta')} />;
+  if (vista === 'alta') return <AltaMovil alVolver={() => { quitarCodigoDeLaDireccion(); setVista(movilesGuardados().length ? 'pin' : 'correo'); }} />;
+  return <EntrarCorreo alPin={movilesGuardados().length ? () => setVista('pin') : undefined} alAlta={() => setVista('alta')} />;
 }
 
 /** Entrar con correo y contraseña, o con un enlace que llega al correo (cada uno elige). */
@@ -137,13 +137,15 @@ function TecladoPin({ titulo, alCompletar, ocupado, error }: { titulo: string; a
   );
 }
 
-/** Un operario con su móvil ya dado de alta: solo su PIN. */
+/** Un operario con su móvil ya dado de alta: solo su PIN. Si en este móvil hay varias personas, primero «¿Quién eres?». */
 function EntrarPin({ alCorreo, alAlta }: { alCorreo: () => void; alAlta: () => void }) {
-  const m = movilGuardado();
+  const [quien, setQuien] = useState<MovilPin | null>(movilGuardado);
+  const [lista, setLista] = useState(movilesGuardados);
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [perdido, setPerdido] = useState(false);
   const [avisado, setAvisado] = useState<string | null>(null);
+  const elegir = (m: MovilPin | null) => { elegirMovil(m?.movil ?? null); setQuien(m); setError(null); setPerdido(false); setAvisado(null); };
   async function olvido() {
     if (!confirm('¿Avisar a tu administrador de que has olvidado el PIN? Te dará un código nuevo para volver a elegirlo.')) return;
     const r = await avisarOlvido();
@@ -153,19 +155,41 @@ function EntrarPin({ alCorreo, alAlta }: { alCorreo: () => void; alAlta: () => v
     setOcupado(true); setError(null);
     const r = await entrarConPin(pin);
     setOcupado(false);
-    if (r.error) { setError(r.error); if (r.olvidar) { olvidarMovil(); setPerdido(true); } }
+    if (r.error) { setError(r.error); if (r.olvidar) { olvidarMovil(quien?.movil); setLista(movilesGuardados()); setPerdido(true); } }
+  }
+  const icono = <img src={`${import.meta.env.BASE_URL}icono.svg`} alt="" width={56} height={56} />;
+  if (!quien) {
+    return (
+      <main className="entrar">
+        <div className="entrar-caja">
+          {icono}
+          <h1>¿Quién eres?</h1>
+          <div className="lista" role="group" aria-label="Personas de este móvil">
+            {lista.map((m) => (
+              <button key={m.movil} type="button" className="fila" onClick={() => elegir(m)}>
+                <span className="fila-txt"><b>{m.nombre}</b></span><span className="fila-flecha" aria-hidden="true">›</span>
+              </button>))}
+          </div>
+          <div className="entrar-otro">
+            <button type="button" className="boton sec ancho" onClick={alAlta}>Añadir otra persona en este móvil</button>
+            <button type="button" className="boton txt ancho" onClick={alCorreo}>Entrar con correo</button>
+          </div>
+        </div>
+      </main>
+    );
   }
   return (
     <main className="entrar">
       <div className="entrar-caja">
-        <img src={`${import.meta.env.BASE_URL}icono.svg`} alt="" width={56} height={56} />
-        <h1>Hola{m ? `, ${m.nombre.split(' ')[0]}` : ''}</h1>
+        {icono}
+        <h1>Hola, {quien.nombre.split(' ')[0]}</h1>
         {perdido ? <p className="error" role="alert">{error}</p>
           : <TecladoPin titulo="Pon tu PIN" alCompletar={probar} ocupado={ocupado} error={error} />}
         {avisado && <p className="entrar-ok" role="status">{avisado}</p>}
         <div className="entrar-otro">
           {!perdido && !avisado && <button type="button" className="boton sec ancho" onClick={olvido}>He olvidado mi PIN: avisar al administrador</button>}
-          <button type="button" className="boton txt ancho" onClick={alAlta}>Tengo un código de alta nuevo</button>
+          <button type="button" className="boton txt ancho" onClick={() => elegir(null)}>{lista.length > 1 || perdido ? 'Cambiar de usuario' : 'No soy yo: cambiar de usuario'}</button>
+          <button type="button" className="boton txt ancho" onClick={alAlta}>Tengo un código de alta (nuevo o de otra persona)</button>
           <button type="button" className="boton txt ancho" onClick={alCorreo}>Entrar con correo</button>
         </div>
       </div>

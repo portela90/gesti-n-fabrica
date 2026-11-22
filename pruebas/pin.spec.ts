@@ -76,8 +76,8 @@ test('el operario da de alta su móvil con el QR y elige su PIN (no uno fácil, 
   expect(pedido).toMatchObject({ accion: 'alta', codigo: 'K7P29QXM', pin: '2580' });
   expect(String(pedido!.llave)).toMatch(/^[0-9a-f]{64}$/);
   expect(sim.find((l) => l.ruta.startsWith('/auth/v1/verify'))!.cuerpo).toMatchObject({ token_hash: 'vale-1', type: 'email' });
-  const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem('gf-movil-pin') ?? '{}'));
-  expect(guardado).toEqual({ movil: 'm-1', llave: pedido!.llave, nombre: 'Oli Prueba' });   // el PIN no se guarda
+  const guardado = await page.evaluate(() => JSON.parse(localStorage.getItem('gf-moviles-pin') ?? '[]'));
+  expect(guardado).toEqual([{ movil: 'm-1', llave: pedido!.llave, nombre: 'Oli Prueba' }]);   // el PIN no se guarda
   expect(page.url()).not.toContain('K7P2');   // el código se quita de la dirección
   expect(errores).toEqual([]);
 });
@@ -121,8 +121,8 @@ test('móvil bloqueado o dado de baja: lo explica y deja usar un código nuevo',
   await page.goto('./');
   await teclear(page, '2580');
   await expect(page.getByRole('alert')).toContainText('ya no está dado de alta');
-  expect(await page.evaluate(() => localStorage.getItem('gf-movil-pin'))).toBeNull();
-  await page.getByRole('button', { name: 'Tengo un código de alta nuevo' }).click();
+  expect(await page.evaluate(() => localStorage.getItem('gf-moviles-pin'))).toBe('[]');
+  await page.getByRole('button', { name: /Tengo un código de alta/ }).click();
   await expect(page.locator('#codigo-alta')).toBeVisible();
 });
 
@@ -165,5 +165,25 @@ test('«He olvidado mi PIN»: avisa al administrador desde el móvil', async ({ 
   await expect(page.getByRole('status').filter({ hasText: 'Aviso enviado' })).toBeVisible();
   expect(pedidos[0]).toEqual({ accion: 'olvido', movil: 'm-1', llave: MOVIL.llave });
   await expect(page.getByRole('button', { name: 'He olvidado mi PIN: avisar al administrador' })).toHaveCount(0);
+  expect(errores).toEqual([]);
+});
+
+test('cambiar de usuario: en el móvil salen solo las personas dadas de alta en él, cada una con su PIN', async ({ page }) => {
+  const errores = vigilar(page);
+  const pedidos: Record<string, unknown>[] = [];
+  await page.addInitScript((l) => { if (!localStorage.getItem('gf-moviles-pin')) localStorage.setItem('gf-moviles-pin', JSON.stringify(l)); },
+    [MOVIL, { movil: 'm-2', llave: 'b'.repeat(64), nombre: 'Pepa Prueba' }]);
+  await simular(page, { sesion: operario, funciones: { pin: (b) => { pedidos.push(b); return [200, { token_hash: 'vale' }]; } } });
+  await page.goto('./');
+  await expect(page.getByRole('heading', { name: '¿Quién eres?' })).toBeVisible();
+  await expect(page.getByRole('group', { name: 'Personas de este móvil' }).getByRole('button')).toHaveText([/^Oli Prueba/, /^Pepa Prueba/]);
+  await page.getByRole('button', { name: 'Pepa Prueba' }).click();
+  await expect(page.getByRole('heading', { name: 'Hola, Pepa' })).toBeVisible();
+  await page.getByRole('button', { name: 'Cambiar de usuario' }).click();
+  await page.getByRole('button', { name: 'Oli Prueba' }).click();
+  await teclear(page, '2580');
+  await expect(page.getByText('Pon tu PIN')).toHaveCount(0);
+  expect(pedidos.at(-1)).toMatchObject({ accion: 'entrar', movil: 'm-1', llave: MOVIL.llave });
+  expect(await page.evaluate(() => localStorage.getItem('gf-movil-pin-actual'))).toBe('m-1');   // la próxima vez, directo a Oli
   expect(errores).toEqual([]);
 });

@@ -524,6 +524,10 @@ cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto
   (2) **«He olvidado mi PIN: avisar al administrador»** en la pantalla del PIN: `pin_olvido(móvil, llave)` (función de servidor
   «pin», acción «olvido») avisa a quien tiene `nucleo.usuario.editar` (campana y móvil; un aviso cada 30 minutos por móvil; dice si
   está bloqueado). Pruebas: `76-nucleo-pin-arreglos.sql` (14) y una más en `pin.spec.ts`.
+- **Cambiar de usuario (22/11, pedido por Cristian para sus pruebas):** un móvil puede tener varias personas dadas de alta (cada una con
+  su código la primera vez en ese móvil). Si hay más de una: «¿Quién eres?» con **solo** los nombres dados de alta en ese móvil; en la
+  pantalla del PIN, «Cambiar de usuario» y «Tengo un código de alta (nuevo o de otra persona)». Se guarda en `gf-moviles-pin` (lista) y
+  `gf-movil-pin-actual`; lo de antes (`gf-movil-pin`) se pasa solo a la lista. Sin migración ni cambios en el portero.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

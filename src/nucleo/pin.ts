@@ -3,16 +3,39 @@
 // el que se abre la sesión (sin correo). Ver supabase/functions/pin y la migración 0035.
 import { supabase } from './supabase';
 
-const CLAVE = 'gf-movil-pin';
+// Un móvil puede tener varias personas dadas de alta (cada una con su código la primera vez): así se puede cambiar de usuario
+// (decidido por Cristian el 22/11, para sus pruebas). Solo salen los nombres dados de alta EN ESTE móvil, nunca todos.
+const CLAVE = 'gf-moviles-pin';          // [{ movil, llave, nombre }]
+const ACTUAL = 'gf-movil-pin-actual';    // el movil de quien entró la última vez
+const VIEJA = 'gf-movil-pin';            // cuando solo cabía una persona
 export interface MovilPin { movil: string; llave: string; nombre: string }
 
-export function movilGuardado(): MovilPin | null {
+const leer = (k: string) => { try { return localStorage.getItem(k); } catch { return null; } };
+const guardar = (k: string, v: string | null) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch { /* sin almacenamiento */ } };
+
+/** Las personas dadas de alta en este móvil. */
+export function movilesGuardados(): MovilPin[] {
   try {
-    const m = JSON.parse(localStorage.getItem(CLAVE) ?? 'null') as MovilPin | null;
-    return m?.movil && m.llave ? m : null;
-  } catch { return null; }
+    const vieja = JSON.parse(leer(VIEJA) ?? 'null') as MovilPin | null;
+    if (vieja?.movil) {   // pasar lo de antes a la lista
+      const l = (JSON.parse(leer(CLAVE) ?? '[]') as MovilPin[]).filter((x) => x.movil !== vieja.movil);
+      guardar(CLAVE, JSON.stringify([...l, vieja])); guardar(ACTUAL, vieja.movil); guardar(VIEJA, null);
+    }
+    return (JSON.parse(leer(CLAVE) ?? '[]') as MovilPin[]).filter((m) => m?.movil && m.llave);
+  } catch { return []; }
 }
-export function olvidarMovil() { try { localStorage.removeItem(CLAVE); } catch { /* sin almacenamiento */ } }
+/** Quien entró la última vez en este móvil (o el único). */
+export function movilGuardado(): MovilPin | null {
+  const L = movilesGuardados();
+  return L.find((m) => m.movil === leer(ACTUAL)) ?? (L.length === 1 ? L[0] : null);
+}
+export function elegirMovil(movil: string | null) { guardar(ACTUAL, movil); }
+/** Quitar una persona de este móvil (por ejemplo, porque se le dio un código nuevo). */
+export function olvidarMovil(movil?: string) {
+  const quitar = movil ?? leer(ACTUAL);
+  guardar(CLAVE, JSON.stringify(movilesGuardados().filter((m) => m.movil !== quitar)));
+  if (leer(ACTUAL) === quitar) guardar(ACTUAL, null);
+}
 
 const llaveNueva = () => Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -54,7 +77,9 @@ export async function darDeAlta(codigo: string, pin: string): Promise<{ error?: 
   const r = await llamar({ accion: 'alta', codigo, pin, llave });
   if (r.error) return { error: textoErrorPin(r.error) };
   const d = r.datos as { movil: string; nombre: string; token_hash: string };
-  try { localStorage.setItem(CLAVE, JSON.stringify({ movil: d.movil, llave, nombre: d.nombre })); } catch { /* sin almacenamiento */ }
+  // si esa persona ya estaba en este móvil (con un alta anterior), se cambia por la nueva
+  guardar(CLAVE, JSON.stringify([...movilesGuardados().filter((m) => m.nombre !== d.nombre), { movil: d.movil, llave, nombre: d.nombre }]));
+  guardar(ACTUAL, d.movil);
   const e = await abrirSesion(d.token_hash);
   return e ? { error: 'Alta hecha, pero no se ha podido entrar. Pon tu PIN para entrar.' } : {};
 }
