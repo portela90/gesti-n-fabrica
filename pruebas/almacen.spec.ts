@@ -191,9 +191,23 @@ test('lista de pedido por proveedor, para copiar o mandar por WhatsApp', async (
 test('movimientos: el mes, con quién se lo llevó (texto de la vieja); solo lectura no apunta ni corrige', async ({ page }) => {
   await abrir(page, 'movimientos', LECTURA);
   await expect(page.locator('.lista .fila', { hasText: 'Se lo llevó: KEPA' })).toBeVisible();
-  await expect(page.getByRole('button', { name: /Apuntar un movimiento/ })).toHaveCount(0);
-  await expect(page.getByRole('button', { name: 'Corregir' })).toHaveCount(0);
+  await page.locator('.lista .fila', { hasText: 'KEPA' }).click({ force: true });
+  await expect(page.getByRole('dialog', { name: 'Corregir movimiento' })).toHaveCount(0);   // solo lectura: tocarlo no abre nada
   await expect(page.locator('.lateral-nav button', { hasText: 'Apuntar' })).toHaveCount(0);
+});
+
+test('movimientos: tocar uno lo abre para corregirlo, con «Borrar» dentro; filtros en «⋯ Más»', async ({ page }) => {
+  const ll = await abrir(page, 'movimientos');
+  await page.getByRole('button', { name: /Más/ }).click();
+  await page.getByLabel('Qué').selectOption('perdida');
+  await expect(page.locator('.lista .fila')).toHaveCount(0);
+  await page.getByLabel('Qué').selectOption('');
+  await page.locator('.lista .fila', { hasText: 'KEPA' }).click();
+  const v = page.getByRole('dialog', { name: 'Corregir movimiento' });
+  page.once('dialog', (d) => d.accept());
+  await v.getByRole('button', { name: 'Borrar' }).click();
+  await expect(v).toBeHidden();
+  expect(ll.some((l) => l.metodo === 'DELETE' && l.ruta.startsWith('/rest/v1/movimientos'))).toBe(true);
 });
 
 test('ordenador: stock y movimientos en tabla', async ({ page }) => {

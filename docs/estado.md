@@ -661,6 +661,14 @@ Decidido por Cristian (22/11):
   `almacen.dotacion.editar`, dado al encargado). Migración **0040** (`poner_minimos`, `guardar_ajuste` de `origen_reposicion` y
   `prevision`, tabla `almacen.bajar`). Pruebas: BD 86; `almacen.spec.ts` (14) y `reponer.spec.ts`. Lo que necesita pistones, ejes,
   aceites o averías se añade a «Hoy» en los trozos 2–4.
+- **Repaso de pantallas con Cristian (22/11, «que no se vea tan saturada»):** decidido pantalla a pantalla.
+  Hoy: sin las cuatro cifras; «lo urgente», una línea por aviso que lleva a su sitio; apuntado hoy y este mes, plegados en «Más…».
+  Apuntar: primero el cuadro de escribir/dictar; los formularios, en una fila pequeña; «lo que sueles apuntar» y «apuntado hoy», en «Más…».
+  Stock: pedidos en curso y para pedir, plegados con su número; buscador a la vista y lo demás (familia, almacén, lista de pedido,
+  inventario, Excel) en «⋯ Más»; debajo de cada artículo solo su stock por almacén. Reponer: Reponer, Dotación, Previsión y Falta y
+  sobra, cada uno en el menú lateral; los botones de cada artículo (Consumo, Cambiar, Quitar, Repuesto) detrás de «⋯».
+  Movimientos: mes y buscar a la vista, lo demás en «⋯ Más»; corregir y borrar, al tocar el movimiento.
+  Siguiente repaso, cuando él quiera: Limpieza y el resto de la app.
 - Lo hecho en 1a: migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
   gestores, sinónimos, equivalencias; vista `almacen.stock`; precios solo el administrador) y la copia `scripts/copia-semanal/almacen.sql`
   (sin datos: lee `public.docs` del mismo Supabase; se pega tal cual en colada-mapri; se puede repetir). «Quién se lo lleva» de los

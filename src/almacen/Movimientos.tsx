@@ -60,8 +60,8 @@ export function ElegirArticulo({ c, valor, alCambiar, etiqueta = 'Artículo' }: 
 }
 
 /** Formulario de un movimiento (nuevo o para corregir uno). */
-export function FormMovimiento({ c, inicial, editar, alCerrar, alGuardar, soloSalida }: {
-  c: Catalogo; inicial?: Inicial; editar?: Mov; alCerrar: () => void; alGuardar: () => void; soloSalida?: boolean;
+export function FormMovimiento({ c, inicial, editar, alCerrar, alGuardar, soloSalida, alBorrar }: {
+  c: Catalogo; inicial?: Inicial; editar?: Mov; alCerrar: () => void; alGuardar: () => void; soloSalida?: boolean; alBorrar?: () => void;
 }) {
   const { empresa, estado } = useSesion();
   const base = editar ?? inicial ?? {};
@@ -153,7 +153,8 @@ export function FormMovimiento({ c, inicial, editar, alCerrar, alGuardar, soloSa
 
   return (
     <Ventana titulo={editar ? 'Corregir movimiento' : soloSalida ? 'Apuntar un consumo' : 'Apuntar un movimiento'} alCerrar={alCerrar}
-      pie={<button type="button" className="boton" disabled={ocupado} onClick={guardar}>{avisado ? 'Guardar de todas formas' : 'Guardar'}</button>}>
+      pie={<>{alBorrar && <button type="button" className="boton sec" disabled={ocupado} onClick={alBorrar}>Borrar</button>}
+        <button type="button" className="boton" disabled={ocupado} onClick={guardar}>{avisado ? 'Guardar de todas formas' : 'Guardar'}</button></>}>
       {!soloSalida && !editar && (
         <div className="segmentos" role="group" aria-label="Qué es">
           {(['entrada', 'salida', 'traslado', 'ajuste'] as const).map((t) => (
@@ -241,7 +242,8 @@ export function Movimientos({ c, recargar }: { c: Catalogo; recargar: () => void
   const [q, setQ] = useState('');
   const [abierto, setAbierto] = useState<Mov | 'nuevo' | null>(null);
   const [vez, setVez] = useState(0);
-  const corrige = puede('almacen.movimiento.corregir'), apunta = puede('almacen.movimiento.apuntar');
+  const [mas, setMas] = useState(false);
+  const corrige = puede('almacen.movimiento.corregir');
   const meses = useMemo(() => { const out: string[] = []; const d = new Date(); for (let i = 0; i < 24; i++) { out.push(new Date(d.getFullYear(), d.getMonth() - i, 15).toLocaleDateString('sv-SE').slice(0, 7)); } return out; }, []);
 
   useEffect(() => {
@@ -271,52 +273,53 @@ export function Movimientos({ c, recargar }: { c: Catalogo; recargar: () => void
     bajarArchivo(await libro([{ nombre: 'Movimientos', filas, anchos: [11, 10, 40, 10, 8, 26, 60] }]), `Movimientos almacén ${mes}.xlsx`);
   }
 
-  const botones = (m: Mov) => corrige && (
-    <span className="botones-fila">
-      <button type="button" className="boton sec peq" onClick={() => setAbierto(m)}>Corregir</button>
-      <button type="button" className="boton sec peq" onClick={() => borrar(m)}>Borrar</button>
-    </span>);
+  // repaso con Cristian del 22/11: Mes y Buscar a la vista; lo demás en «⋯ Más»; corregir y borrar, al tocar el movimiento
+  const filtrando = !!tipo || !!almacen;
+  const botonMas = <button type="button" className={'boton sec peq' + (filtrando ? ' con-marca' : '')} aria-expanded={mas} onClick={() => setMas((x) => !x)}>⋯ Más{filtrando ? ' (filtrado)' : ''}</button>;
+  const abrir = corrige ? (m: Mov) => setAbierto(m) : undefined;
 
   return (
     <>
-      <div className="acciones-cal">
-        {apunta && <button type="button" className="boton peq" onClick={() => setAbierto('nuevo')}>+ Apuntar un movimiento</button>}
-        <button type="button" className="boton sec peq" disabled={!vistos.length} onClick={excel}>Excel</button>
+      <div className="buscar-mas">
+        <select aria-label="Mes" value={mes} onChange={(e) => setMes(e.target.value)}>{meses.map((m) => <option key={m} value={m}>{nomMes(m)}</option>)}</select>
+        {!ordenador && <input aria-label="Buscar en los movimientos" value={q} placeholder="Buscar…" onChange={(e) => setQ(e.target.value)} />}
+        {botonMas}
       </div>
-      <div className="filtros">
-        <label className="campo"><span>Mes</span><select value={mes} onChange={(e) => setMes(e.target.value)}>{meses.map((m) => <option key={m} value={m}>{nomMes(m)}</option>)}</select></label>
-        <label className="campo"><span>Qué</span><select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)}>
-          <option value="">Todo</option>{(['entrada', 'salida', 'traslado', 'ajuste'] as const).map((t) => <option key={t} value={t}>{TIPOS[t]}</option>)}<option value="perdida">Pérdidas</option></select></label>
-        <label className="campo"><span>Almacén</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
-          <option value="">Todos</option>{c.almacenes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
-        {!ordenador && <label className="campo ancho"><span>Buscar</span><input value={q} placeholder="Artículo, persona, máquina, nota…" onChange={(e) => setQ(e.target.value)} /></label>}
-      </div>
+      {mas && (
+        <div className="panel-mas" role="group" aria-label="Más opciones de movimientos">
+          <div className="filtros">
+            <label className="campo"><span>Qué</span><select value={tipo} onChange={(e) => setTipo(e.target.value as typeof tipo)}>
+              <option value="">Todo</option>{(['entrada', 'salida', 'traslado', 'ajuste'] as const).map((t) => <option key={t} value={t}>{TIPOS[t]}</option>)}<option value="perdida">Pérdidas</option></select></label>
+            <label className="campo"><span>Almacén</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
+              <option value="">Todos</option>{c.almacenes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
+          </div>
+          <div className="acciones-cal"><button type="button" className="boton sec peq" disabled={!vistos.length} onClick={excel}>Excel</button></div>
+        </div>)}
       {L === null ? <p className="nota">Cargando…</p> : ordenador ? (
         <Tabla filas={vistos} clave={(m) => m.id} etiquetaBuscar="Buscar en los movimientos" pistaBuscar="Artículo, persona, máquina, nota…"
           buscarEn={(m) => `${nombreDe(c.articulos, m.articulo_id)} ${detallesMov(c, m)} ${dondeMov(c, m)}`} vacio={<p>No hay movimientos en {nomMes(mes)}{tipo || almacen ? ' con esos filtros' : ''}.</p>}
-          ordenInicial={{ clave: 'fecha', asc: false }} claseFila={(m) => (m.perdida ? 'naranja' : '')}
+          alAbrir={abrir} ordenInicial={{ clave: 'fecha', asc: false }} claseFila={(m) => (m.perdida ? 'naranja' : '')}
           columnas={[
             { clave: 'fecha', titulo: 'Fecha', valor: (m) => fCorta(m.fecha), orden: (m) => m.fecha + m.creado },
             { clave: 'tipo', titulo: 'Qué', valor: (m) => TIPOS[m.tipo] },
             { clave: 'art', titulo: 'Artículo', valor: (m) => <><b>{nombreDe(c.articulos, m.articulo_id)}</b>{detallesMov(c, m) && <small className="suave"> · {detallesMov(c, m)}</small>}</> , orden: (m) => nombreDe(c.articulos, m.articulo_id) },
             { clave: 'cant', titulo: 'Cantidad', numero: true, valor: cantTxt, orden: (m) => signo(m) },
             { clave: 'donde', titulo: 'Dónde', valor: (m) => dondeMov(c, m) },
-            ...(corrige ? [{ clave: 'acc', titulo: '', valor: (m: Mov) => botones(m), orden: () => null }] : []),
           ]} />
       ) : !vistos.length ? <div className="vacio"><p>No hay movimientos en {nomMes(mes)}{tipo || almacen || q ? ' con esos filtros' : ''}.</p></div> : (
         <div className="lista">
           {vistos.map((m) => (
-            <div key={m.id} className={'fila' + (m.perdida ? ' naranja' : '')}>
+            <button key={m.id} type="button" className={'fila' + (m.perdida ? ' naranja' : '')} disabled={!abrir} onClick={() => abrir?.(m)}>
               <span className="fila-txt"><b>{nombreDe(c.articulos, m.articulo_id)}</b>
                 <small>{fCorta(m.fecha)} · {TIPOS[m.tipo]} · {dondeMov(c, m)}</small>
-                {detallesMov(c, m) && <small>{detallesMov(c, m)}</small>}
-                {botones(m)}</span>
+                {detallesMov(c, m) && <small>{detallesMov(c, m)}</small>}</span>
               <span className="fila-cifra">{cantTxt(m)}</span>
-            </div>))}
+            </button>))}
         </div>
       )}
       <p className="nota">{vistos.length} de {(L ?? []).length} movimientos de {nomMes(mes)}.</p>
-      {abierto && <FormMovimiento c={c} editar={abierto === 'nuevo' ? undefined : abierto} alCerrar={() => setAbierto(null)} alGuardar={listo} />}
+      {abierto && <FormMovimiento c={c} editar={abierto === 'nuevo' ? undefined : abierto} alCerrar={() => setAbierto(null)} alGuardar={listo}
+        alBorrar={abierto !== 'nuevo' ? () => borrar(abierto) : undefined} />}
     </>
   );
 }

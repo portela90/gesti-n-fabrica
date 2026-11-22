@@ -665,3 +665,5 @@ div.fila { cursor: default; }
 .buscar-mas input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
 .plegable > summary > span { margin-left: .3em; }
 .boton-mas-fila { width: 36px; height: 36px; font-size: 18px; line-height: 1; }
+.buscar-mas select { flex: none; max-width: 42%; min-height: 44px; border-radius: 12px; border: 1px solid var(--linea); background: var(--sup); padding: 0 8px; font-size: 15px; }
+.fila:disabled { cursor: default; opacity: 1; color: inherit; }
