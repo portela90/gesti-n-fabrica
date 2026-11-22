@@ -556,6 +556,11 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   **1.ª copia PEGADA 22/11 por Cristian y comprobada**: 801 trabajos desde el 5/10 (730 hechos; 340 fijas, 73 habituales, 388 sueltos;
   413 con tarea, 59 con máquina; todas las tareas y máquinas existían), 53.152 minutos hechos igual que en la vieja; 23 fijas sacadas
   solas cambiadas; ningún aviso ni incidencia; disparadores encendidos; los 5 trabajos hechos en la nueva siguen.
+- **Limpieza, tareas y equipos** (22/11): receta `limpieza-tareas.sql` (+ `leer-vieja-limpieza-tareas.sql`), prueba `79-copia-semanal-tareas.sql` (9).
+  Tareas fijas y habituales: la vieja manda en lo suyo (título, descripción, días —«todos» = lunes a viernes, o sábado y domingo en Finde—,
+  equipo, turno, quién, minutos, «solo para», sitio, grupo de las habituales, activa); lo que solo tiene la nueva (grupo de las fijas,
+  máquina o zona) no se toca; las inactivas que nunca se copiaron no se crean. Equipos de cada trabajador, habilidades y responsable de
+  hornos: **solo avisos**. Comparado 22/11: igual salvo «Basuras Nave 2», que en la nueva tenía domingo y «pruebas» (de sus pruebas del 14/11).
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

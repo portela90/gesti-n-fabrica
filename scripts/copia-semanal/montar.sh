@@ -44,4 +44,24 @@ EOF
   receta personal.sql
   echo ') as "Copia esta casilla y pégala en colada-mapri";'
 } > "$D/leer-vieja-personal.sql"
-echo "Montados: $D/leer-vieja-limpieza.sql y $D/leer-vieja-personal.sql"
+{ cat <<'EOF'
+-- PEGAR EN LA APP VIEJA (limpieza-cie). Solo lee. Copia la casilla que sale y pégala en el SQL Editor de colada-mapri.
+-- Copia semanal de Limpieza · tareas y equipos (generado por scripts/copia-semanal/montar.sh; no editar a mano).
+select concat(
+ 'create temp table v_tf (id uuid, titulo text, descripcion text, dias text[], equipo text, turno text, asignados uuid[], todo_equipo boolean, minutos_est int, vivo boolean);', E'\n',
+ 'insert into v_tf values ', (select string_agg(format('(%L,%L,%L,%L,%L,%L,%L,%L,%L,%L)', id, titulo, descripcion, dias, equipo, turno, asignados, todo_equipo,
+    minutos_est, coalesce(activo, true) and not coalesce(borrado, false)), E',\n' order by id) from tareas_fijas), ';', E'\n',
+ 'create temp table v_th (id uuid, titulo text, descripcion text, lugar text, minutos_est int, vivo boolean, solo_para uuid[], grupo text);', E'\n',
+ 'insert into v_th values ', (select string_agg(format('(%L,%L,%L,%L,%L,%L,%L,%L)', id, titulo, descripcion, lugar, minutos_est,
+    coalesce(activo, true) and not coalesce(borrado, false), solo_para, grupo), E',\n' order by id) from tareas_habituales), ';', E'\n',
+ 'create temp table v_trab (id uuid, equipos text[], activo boolean);', E'\n',
+ 'insert into v_trab values ', (select string_agg(format('(%L,%L,%L)', id, equipos, coalesce(activo, true)), E',\n' order by id) from trabajadores), ';', E'\n',
+ 'create temp table v_hab (trabajador uuid, habilidad text, activo boolean);', E'\n',
+ coalesce('insert into v_hab values ' || (select string_agg(format('(%L,%L,%L)', trabajador, habilidad, coalesce(activo, true)), E',\n') from limp_habilidad) || ';', ''), E'\n',
+ 'create temp table v_resp (resp uuid, operario uuid, activo boolean);', E'\n',
+ coalesce('insert into v_resp values ' || (select string_agg(format('(%L,%L,%L)', resp, operario, coalesce(activo, true)), E',\n') from limp_resp_hornos_op) || ';', ''), E'\n',
+EOF
+  receta limpieza-tareas.sql
+  echo ') as "Copia esta casilla y pégala en colada-mapri";'
+} > "$D/leer-vieja-limpieza-tareas.sql"
+echo "Montados: leer-vieja-personal.sql, leer-vieja-limpieza.sql y leer-vieja-limpieza-tareas.sql en $D"
