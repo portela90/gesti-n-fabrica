@@ -529,6 +529,17 @@ cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto
   pantalla del PIN, «Cambiar de usuario» y «Tengo un código de alta (nuevo o de otra persona)». Se guarda en `gf-moviles-pin` (lista) y
   `gf-movil-pin-actual`; lo de antes (`gf-movil-pin`) se pasa solo a la lista. Sin migración ni cambios en el portero.
 
+### 8.2 Copia semanal de la app vieja a la nueva (22/11) — EN CURSO
+Decidido por Cristian (22/11): en paralelo **solo apunta en la vieja**; **una vez por semana** se copia a la nueva y él comprueba que
+enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**, **Limpieza (tareas y equipos)** y **Prevención**, en ese orden.
+- Receta sin datos en `scripts/copia-semanal/` (`LEEME.md`: cómo leer la vieja, montar el archivo de la semana, ensayar y comprobar
+  con huellas). Los archivos de cada semana llevan nombres y notas: **fuera del repositorio**.
+- **Personal** (`personal.sql`): horas del día (sin las 316 jornadas de vacaciones, que son `cal_vac`; sin motivo → «(sin motivo en la
+  app vieja)»), vacaciones (mismo id) y calendario («Semana AAAA» / «Fin de semana AAAA»: pone o cambia, no borra; avisa). Nunca
+  toca lo hecho en la app nueva. Resumen al final. Prueba `supabase/pruebas/77-copia-semanal-personal.sql` (16, datos inventados).
+- Comparado 22/11 antes de la primera copia: vacaciones y calendario iguales; horas: faltan 4 días en la nueva (21/11 y 22/11 de
+  fin de semana con extra; 4/11 y 13/11 con horas fuera de presupuesto).
+
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera
