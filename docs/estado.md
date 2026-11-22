@@ -622,6 +622,14 @@ Decidido por Cristian (22/11):
 - **Quién entra:** como ahora, oficina y almacén (con correo); los operarios no entran: se elige de una lista (fichas de la Fábrica).
 - **Apuntar:** lector **gratis por reglas** (cantidades, artículos por nombre/código/sinónimos que se enseñan, máquinas, naves, personas;
   pregunta lo que no entiende). Nada de IA de pago (Anthropic).
+- **Pedidos:** como ahora (previsión y marca de «pedido» con fecha y cantidad); los pedidos de verdad, más adelante si hace falta.
+- **Cambio:** igual que Limpieza (en paralelo con la vieja, copias para comparar, un día de cambio). La vieja y la nueva están en el
+  mismo Supabase: la copia lee `public.docs` y escribe en `almacen.*` sin tocar la vieja.
+- **Operarios y gestores** (14 + 6 en la vieja, casi todos solo con número): pasan a **fichas de trabajador de la Fábrica**
+  («Operario 37» si no tienen nombre); los gestores, marcados como gestores de relevo. Se crea la **Nave 2** de la Fábrica.
+- Datos de la vieja (22/11): familias barra 18, consumible 41, pistón 9, horno 43; unidades ud, kg, l, m; 25 artículos sin código;
+  637 movimientos (ago–nov); stock = entrada + / salida − / ajuste ± / traslado −origen +destino (`stockMap` de la vieja).
+- Trozo 1 en pasos: 1a base de datos + copia + pruebas; 1b pantallas Stock, Movimientos y Apuntar; 1c Hoy y Reponer.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
