@@ -1,7 +1,8 @@
-// Almacén → Hoy (como la app vieja, con lo que ya existe en la nueva): cuatro cifras, «lo urgente» con su botón,
-// lo apuntado hoy y este mes. Los avisos de pistones, ejes, aceites y averías llegan con sus trozos (2 a 4).
+// Almacén → Hoy: «lo urgente», una línea por aviso que lleva a su sitio; lo apuntado hoy y este mes, plegados detrás de «Más…»
+// (repaso con Cristian del 22/11: sin las cuatro cifras, que repetían lo mismo). Los avisos de pistones, ejes, aceites y averías llegan con sus trozos (2 a 4).
 import { useEffect, useState } from 'react';
 import { useSesion } from '../nucleo/sesion';
+import { Icono, ICONOS } from '../componentes/basicos';
 import { alm, cantPedir, fCorta, fmt, hoy, llegaEl, MESES, nivel, nombreDe, almCorto, signo, TIPOS, type Catalogo } from './datos';
 import { paraBajar, prevision } from './reponer';
 import { FormMovimiento, type Inicial } from './Movimientos';
@@ -61,34 +62,28 @@ export function Hoy({ c, recargar, ir }: { c: Catalogo; recargar: () => void; ir
 
   return (
     <>
-      <div className="cifras-hoy">
-        <button type="button" className={'cifra-hoy' + (bajoMin.length ? ' mal' : pedir.length ? ' ojo' : '')} onClick={() => ir('/m/almacen/stock')}>
-          <b>{pedir.length}</b><span>para pedir{bajoMin.length ? ` · ${bajoMin.length} bajo mínimo` : ''}</span></button>
-        <button type="button" className={'cifra-hoy' + (nBajar ? ' ojo' : '')} onClick={() => ir('/m/almacen/reponer')}><b>{nBajar}</b><span>para bajar a planta</span></button>
-        <button type="button" className={'cifra-hoy' + (negativos.length ? ' mal' : '')} onClick={() => negativos[0] && setMov({ tipo: 'ajuste', articulo_id: negativos[0].art, almacen_id: negativos[0].alm })}>
-          <b>{negativos.length}</b><span>no cuadran</span></button>
-        <button type="button" className={'cifra-hoy' + (retrasados.length ? ' ojo' : '')} onClick={() => ir('/m/almacen/stock')}><b>{retrasados.length}</b><span>pedidos retrasados</span></button>
-      </div>
+      <section aria-label="Lo urgente">
+        <h2 className="titulo-ir">Lo urgente <small className="suave">· {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small></h2>
+        {!visibles.length ? <div className="vacio"><p>Todo en orden. No hay nada urgente.</p></div> : (
+          <div className="lista">{visibles.slice(0, todos ? undefined : tope).map((a) => (
+            <div key={a.clave} className={'linea-aviso aviso-' + a.nivel}>
+              <button type="button" className="linea-aviso-ir" title={a.detalle} onClick={a.accion}><span>{a.texto}</span><span className="fila-flecha" aria-hidden="true">›</span></button>
+              {a.nivel === 'info' && <button type="button" className="linea-aviso-x" aria-label={`Ocultar: ${a.texto}`} onClick={() => ocultar(a.clave)}><Icono d={ICONOS.cerrar} tam={16} /></button>}
+            </div>))}</div>)}
+        {visibles.length > tope && <button type="button" className="enlace" onClick={() => setTodos((x) => !x)}>{todos ? 'Ver menos' : `Ver ${visibles.length - tope} avisos más`}</button>}
+        {nOcultos > 0 && <p className="nota"><button type="button" className="enlace" onClick={mostrarOcultos}>Ver {nOcultos} aviso{nOcultos > 1 ? 's' : ''} oculto{nOcultos > 1 ? 's' : ''}</button></p>}
+      </section>
 
-      <div className="hoy-columnas">
-        <section aria-label="Lo urgente">
-          <h2 className="titulo-ir">Lo urgente <small className="suave">· {new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</small></h2>
-          {!visibles.length ? <div className="vacio"><p>Todo en orden. No hay nada urgente.</p></div> : (
-            <div className="lista">{visibles.slice(0, todos ? undefined : tope).map((a) => (
-              <div key={a.clave} className={'fila aviso-' + a.nivel}>
-                <span className="fila-txt"><b>{a.texto}</b>{a.detalle && <small>{a.detalle}</small>}
-                  <span className="botones-fila"><button type="button" className="boton sec peq" onClick={a.accion}>{a.boton}</button>
-                    {a.nivel === 'info' && <button type="button" className="boton sec peq" aria-label={`Ocultar: ${a.texto}`} onClick={() => ocultar(a.clave)}>Ocultar</button>}</span></span>
-              </div>))}</div>)}
-          {visibles.length > tope && <button type="button" className="enlace" onClick={() => setTodos((x) => !x)}>{todos ? 'Ver menos' : `Ver ${visibles.length - tope} avisos más`}</button>}
-          {nOcultos > 0 && <p className="nota"><button type="button" className="enlace" onClick={mostrarOcultos}>Ver {nOcultos} aviso{nOcultos > 1 ? 's' : ''} oculto{nOcultos > 1 ? 's' : ''}</button></p>}
-        </section>
-
+      {/* «Apuntado hoy» y «Este mes», plegados (decidido por Cristian el 22/11: la pantalla, solo con lo urgente) */}
+      <details className="mas-hoy">
+        <summary>Más… (apuntado hoy y este mes)</summary>
         <section aria-label="Apuntado hoy">
           <h2 className="titulo-ir">Apuntado hoy ({deHoy.length}) {apunta && <button type="button" className="boton sec peq" onClick={() => ir('/m/almacen/apuntar')}>+ Apuntar</button>}</h2>
           {deHoy.length ? <ul className="lista-simple">{deHoy.slice(0, 12).map((m) => (
             <li key={m.id}>{TIPOS[m.tipo]} <b>{(signo(m) > 0 ? '+' : '') + fmt(signo(m))}</b> {nombreDe(c.articulos, m.articulo_id)} · {almCorto(c, m.almacen_id)}</li>))}</ul>
             : <p className="nota">Todavía nada hoy.</p>}
+        </section>
+        <section aria-label="Este mes">
           <h2 className="titulo-ir">Este mes ({MESES[Number(mes.slice(5)) - 1]})</h2>
           <dl className="datos-ficha">
             <dt>Consumos</dt><dd>{delMes.filter((m) => m.tipo === 'salida' && !m.perdida).length}</dd>
@@ -97,7 +92,7 @@ export function Hoy({ c, recargar, ir }: { c: Catalogo; recargar: () => void; ir
             <dt>Artículos en rojo</dt><dd>{bajoMin.length} bajo mínimo · {pedir.length - bajoMin.length} para pedir</dd>
           </dl>
         </section>
-      </div>
+      </details>
       {mov && <FormMovimiento c={c} inicial={mov} alCerrar={() => setMov(null)} alGuardar={() => { setMov(null); recargar(); }} />}
     </>
   );

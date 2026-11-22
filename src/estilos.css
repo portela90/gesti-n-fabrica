@@ -640,3 +640,16 @@ div.fila { cursor: default; }
 .cant-reponer input { width: 4.5em; text-align: right; }
 .cant-reponer small { color: var(--tinta2); font-size: 12px; }
 .tabla-scroll { overflow-x: auto; max-width: 100%; }
+.linea-aviso { display: flex; align-items: stretch; border-top: 1px solid var(--linea); }
+.linea-aviso:first-child { border-top: 0; }
+.linea-aviso-ir { flex: 1; min-width: 0; display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: 52px; padding: 10px 14px;
+  border: 0; background: none; color: inherit; font: inherit; font-weight: 600; text-align: left; cursor: pointer; overflow-wrap: anywhere; }
+.linea-aviso-x { flex: none; width: 44px; border: 0; background: none; color: var(--tinta2); cursor: pointer; }
+.linea-aviso.aviso-bad { box-shadow: inset 4px 0 0 var(--mal); }
+.linea-aviso.aviso-warn { box-shadow: inset 4px 0 0 #d97706; }
+.linea-aviso.aviso-info { box-shadow: inset 4px 0 0 var(--linea); }
+.linea-aviso.aviso-info .linea-aviso-ir { font-weight: 500; }
+.mas-hoy { margin: 18px 0 0; }
+.mas-hoy > summary { cursor: pointer; font-weight: 600; color: var(--tinta2); min-height: 44px; display: flex; align-items: center; }
+.fila-atajos { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 18px; }
+.fila-atajos .boton { min-height: 36px; padding: 4px 12px; font-size: 14px; }

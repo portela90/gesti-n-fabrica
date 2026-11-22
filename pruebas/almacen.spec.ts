@@ -128,7 +128,7 @@ test('consumo a mano: máquina, nave, quién se lo lleva y gestor; avisa una vez
 test('apuntar escribiendo: el lector hace las tarjetas, se elige lo que no conoce y aprende la palabra', async ({ page }) => {
   const err = vigilar(page);
   const ll = await abrir(page, 'apuntar');
-  await page.getByLabel('O escríbelo (o díctalo) como lo dirías').fill('ayer 2 guantes para la F27 el 37 y 10 litros de aceite en N2. Llegaron 5 kg de mopas al general');
+  await page.getByLabel('¿Qué ha pasado? Escríbelo o díctalo como lo dirías').fill('ayer 2 guantes para la F27 el 37 y 10 litros de aceite en N2. Llegaron 5 kg de mopas al general');
   await page.getByRole('button', { name: 'Entender' }).click();
   const t = page.locator('.tarjeta-apunte');
   await expect(t).toHaveCount(3);
@@ -155,7 +155,7 @@ test('apuntar escribiendo: el lector hace las tarjetas, se elige lo que no conoc
 
 test('notas pendientes: se guarda lo escrito y luego se procesa y se borra', async ({ page }) => {
   const ll = await abrir(page, 'apuntar');
-  await page.getByLabel('O escríbelo (o díctalo) como lo dirías').fill('3 guantes para la F30');
+  await page.getByLabel('¿Qué ha pasado? Escríbelo o díctalo como lo dirías').fill('3 guantes para la F30');
   await page.getByRole('button', { name: 'Guardar como nota' }).click();
   await expect(page.getByRole('region', { name: 'Notas pendientes' })).toContainText('3 guantes para la F30');
   await page.getByRole('button', { name: 'Procesar todas' }).click();
@@ -210,7 +210,7 @@ test('Almacén en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.getByLabel('Para (máquina o nave, si se sabe)').selectOption('varias');
   expect(await desbordes(page), 'consumo').toEqual([]);
   await page.goto('./#/m/almacen/apuntar');
-  await page.getByLabel('O escríbelo (o díctalo) como lo dirías').fill('2 guantes para la F27 y 3 cosas raras');
+  await page.getByLabel('¿Qué ha pasado? Escríbelo o díctalo como lo dirías').fill('2 guantes para la F27 y 3 cosas raras');
   await page.getByRole('button', { name: 'Entender' }).click();
   await expect(page.locator('.tarjeta-apunte')).toHaveCount(2);
   expect(await desbordes(page), 'apuntar').toEqual([]);
@@ -219,17 +219,18 @@ test('Almacén en el móvil más estrecho: nada se aplasta ni se sale', async ({
   expect(await desbordes(page), 'movimientos').toEqual([]);
 });
 
-test('hoy: las cuatro cifras y lo urgente, cada aviso con su botón', async ({ page }) => {
+test('hoy: solo «lo urgente», una línea por aviso que lleva a su sitio; lo demás, plegado en «Más…»', async ({ page }) => {
   const err = vigilar(page);
   await simular(page, { dentro: true, sesion: sesion(ENCARGADO), tablas: tablas(), rpc });
   await page.goto('./#/m/almacen');
-  await expect(page.locator('.cifra-hoy', { hasText: 'para pedir' })).toContainText('1');
-  await expect(page.locator('.cifra-hoy', { hasText: 'para bajar a planta' })).toContainText('1');
-  await expect(page.locator('.cifra-hoy', { hasText: 'pedidos retrasados' })).toContainText('1');
+  await expect(page.locator('.cifra-hoy')).toHaveCount(0);
   const urgente = page.getByRole('region', { name: 'Lo urgente' });
-  await expect(urgente.locator('.fila').first()).toContainText('1 artículo para pedir (1 bajo mínimo)');
+  await expect(urgente.locator('.linea-aviso').first()).toContainText('1 artículo para pedir (1 bajo mínimo)');
   await expect(urgente).toContainText('1 pedido retrasado');
-  await urgente.locator('.fila', { hasText: 'Bajar 1 artículo a planta' }).getByRole('button', { name: 'Reponer' }).click();
+  await expect(page.getByRole('region', { name: 'Este mes' })).toBeHidden();
+  await page.getByText('Más… (apuntado hoy y este mes)').click();
+  await expect(page.getByRole('region', { name: 'Este mes' })).toContainText('Consumos');
+  await urgente.getByRole('button', { name: /Bajar 1 artículo a planta/ }).click();
   await expect(page.getByRole('region', { name: 'Hoja de carga' })).toBeVisible();
   expect(err).toEqual([]);
 });

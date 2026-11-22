@@ -97,22 +97,21 @@ export function Apuntar({ c, recargar }: { c: Catalogo; recargar: () => void }) 
 
   return (
     <>
-      <h2 className="titulo-ir">¿Qué quieres apuntar?</h2>
-      <div className="acciones-cal">
-        <button type="button" className="boton peq" onClick={() => setForm({ tipo: 'salida' })}>Consumo</button>
-        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'entrada' })}>Entrada</button>
-        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'traslado' })}>Traslado</button>
-        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'ajuste' })}>Recuento</button>
-        <button type="button" className="boton sec peq" onClick={() => setEscaner(true)}>Escanear código</button>
-      </div>
-
-      <label className="campo"><span>O escríbelo (o díctalo) como lo dirías</span>
+      {/* repaso con Cristian del 22/11: primero escribir o dictar; los formularios, en una fila pequeña debajo */}
+      <label className="campo"><span>¿Qué ha pasado? Escríbelo o díctalo como lo dirías</span>
         <textarea rows={3} value={texto} maxLength={2000} placeholder="Ej.: 2 guantes para la F27 y 10 l de aceite en N2. Ayer llegaron 20 cajas de trapos, albarán 1234"
           onChange={(e) => setTexto(e.target.value)} /></label>
       <div className="acciones-cal">
         <button type="button" className="boton" onClick={() => entender()} disabled={!texto.trim()}>Entender</button>
         <button type="button" className="boton sec" onClick={dictar} disabled={oyendo}>{oyendo ? 'Escuchando…' : 'Dictar'}</button>
         <button type="button" className="boton sec" onClick={guardarNota} disabled={!texto.trim()}>Guardar como nota</button>
+      </div>
+      <div className="fila-atajos" role="group" aria-label="O apunta con el formulario">
+        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'salida' })}>Consumo</button>
+        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'entrada' })}>Entrada</button>
+        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'traslado' })}>Traslado</button>
+        <button type="button" className="boton sec peq" onClick={() => setForm({ tipo: 'ajuste' })}>Recuento</button>
+        <button type="button" className="boton sec peq" onClick={() => setEscaner(true)}>Escanear</button>
       </div>
 
       {props && (
@@ -130,29 +129,31 @@ export function Apuntar({ c, recargar }: { c: Catalogo; recargar: () => void }) 
         <section aria-label="Notas pendientes">
           <h2 className="titulo-ir">Notas pendientes ({notas.length})</h2>
           <div className="lista">{notas.map((n) => (
-            <div key={n.id} className="fila"><span className="fila-txt"><b>{n.texto}</b><small>{new Date(n.creado).toLocaleString('es-ES', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</small>
+            <div key={n.id} className="fila"><span className="fila-txt"><b>{n.texto}</b>{n.creado && !Number.isNaN(Date.parse(n.creado)) && <small>{new Date(n.creado).toLocaleString('es-ES', { weekday: 'short', hour: '2-digit', minute: '2-digit' })}</small>}
               <span className="botones-fila"><button type="button" className="boton sec peq" onClick={() => entender(n.texto, [n.id])}>Procesar</button>
                 <button type="button" className="boton sec peq" onClick={async () => { await alm().from('notas').delete().eq('id', n.id); setVez((v) => v + 1); }}>Borrar</button></span></span></div>))}
           </div>
           <button type="button" className="boton sec peq" onClick={() => entender(notas.map((n) => n.texto).join('.\n'), notas.map((n) => n.id))}>Procesar todas</button>
         </section>)}
 
-      {sueles.length > 0 && (
-        <section aria-label="Lo que sueles apuntar">
-          <h2 className="titulo-ir">Lo que sueles apuntar</h2>
-          <div className="mosaicos-cortos">{sueles.map(({ m, cant }) => (
-            <button key={m.articulo_id + m.almacen_id + m.activos.join()} type="button" className="boton sec peq"
-              onClick={() => setForm({ tipo: 'salida', articulo_id: m.articulo_id, almacen_id: m.almacen_id, activos: m.activos, centro_id: m.centro_id ?? undefined, cantidad: cant })}>
-              {fmt(cant)} {nombreDe(c.articulos, m.articulo_id)}{m.activos.length ? ` · ${m.activos.map((x) => codMaq(c, x)).join(', ')}` : ''} · {almCorto(c, m.almacen_id)}</button>))}
-          </div>
-        </section>)}
-
-      <section aria-label="Apuntado hoy">
-        <h2 className="titulo-ir">Apuntado hoy ({deHoy.length})</h2>
-        {deHoy.length ? <ul className="lista-simple">{deHoy.map((m) => (
-          <li key={m.id}>{new Date(m.creado).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · {TIPOS[m.tipo]} <b>{m.tipo === 'traslado' ? fmt(m.cantidad) : (signo(m) > 0 ? '+' : '') + fmt(signo(m))}</b> {nombreDe(c.articulos, m.articulo_id)} · {almCorto(c, m.almacen_id)}</li>))}</ul>
-          : <p className="nota">Todavía nada hoy.</p>}
-      </section>
+      <details className="mas-hoy">
+        <summary>Más… (lo que sueles apuntar y apuntado hoy)</summary>
+        {sueles.length > 0 && (
+          <section aria-label="Lo que sueles apuntar">
+            <h2 className="titulo-ir">Lo que sueles apuntar</h2>
+            <div className="mosaicos-cortos">{sueles.map(({ m, cant }) => (
+              <button key={m.articulo_id + m.almacen_id + m.activos.join()} type="button" className="boton sec peq"
+                onClick={() => setForm({ tipo: 'salida', articulo_id: m.articulo_id, almacen_id: m.almacen_id, activos: m.activos, centro_id: m.centro_id ?? undefined, cantidad: cant })}>
+                {fmt(cant)} {nombreDe(c.articulos, m.articulo_id)}{m.activos.length ? ` · ${m.activos.map((x) => codMaq(c, x)).join(', ')}` : ''} · {almCorto(c, m.almacen_id)}</button>))}
+            </div>
+          </section>)}
+        <section aria-label="Apuntado hoy">
+          <h2 className="titulo-ir">Apuntado hoy ({deHoy.length})</h2>
+          {deHoy.length ? <ul className="lista-simple">{deHoy.map((m) => (
+            <li key={m.id}>{new Date(m.creado).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })} · {TIPOS[m.tipo]} <b>{m.tipo === 'traslado' ? fmt(m.cantidad) : (signo(m) > 0 ? '+' : '') + fmt(signo(m))}</b> {nombreDe(c.articulos, m.articulo_id)} · {almCorto(c, m.almacen_id)}</li>))}</ul>
+            : <p className="nota">Todavía nada hoy.</p>}
+        </section>
+      </details>
 
       {form && <FormMovimiento c={c} inicial={form} alCerrar={() => setForm(null)} alGuardar={() => { setForm(null); setVez((v) => v + 1); recargar(); }} />}
       {escaner && <Escaner c={c} alCerrar={() => setEscaner(false)} alElegir={(a, que) => { setEscaner(false); if (que === 'ficha') setFicha(a); else setForm({ tipo: que, articulo_id: a.id }); }} />}
