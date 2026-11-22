@@ -653,6 +653,14 @@ Decidido por Cristian (22/11):
   común `FormMovimiento` (avisos de «cantidad rara» y «quién se lo lleva» una vez). Migración **0039** (permiso `almacen.pedido.apuntar`,
   `marcar_pedido`/`anular_pedido`, la entrada de lo pedido quita la marca, `almacen.notas`). Pruebas: BD 85; pantallas `almacen.spec.ts`
   y `lector.spec.ts`. Pistones/ejes/averías: trozo 2; Hoy y Reponer: 1c.
+- **1c hecho (22/11), falta pegar 0040:** apartados **Hoy** (cuatro cifras, «lo urgente» con su botón —para pedir, no cuadran,
+  retrasados, bajar a planta, pedido previsto, notas—, apuntado hoy, este mes) y **Reponer** (reponer hoy con hoja de carga, casillas,
+  cantidades, «Cambiar» solo para hoy, «Quitar», «Repuesto»/«Reponer marcados» → un traslado por artículo sin pasar de lo que hay en el
+  origen; qué va en cada almacén; previsión con «Aplicar lo sugerido» y ajustes; falta y sobra). Cuentas en `src/almacen/reponer.ts`
+  (las de la vieja). **Decidido:** la dotación, los mínimos y los ajustes los cambian el encargado y el administrador (permiso nuevo
+  `almacen.dotacion.editar`, dado al encargado). Migración **0040** (`poner_minimos`, `guardar_ajuste` de `origen_reposicion` y
+  `prevision`, tabla `almacen.bajar`). Pruebas: BD 86; `almacen.spec.ts` (14) y `reponer.spec.ts`. Lo que necesita pistones, ejes,
+  aceites o averías se añade a «Hoy» en los trozos 2–4.
 - Lo hecho en 1a: migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
   gestores, sinónimos, equivalencias; vista `almacen.stock`; precios solo el administrador) y la copia `scripts/copia-semanal/almacen.sql`
   (sin datos: lee `public.docs` del mismo Supabase; se pega tal cual en colada-mapri; se puede repetir). «Quién se lo lleva» de los

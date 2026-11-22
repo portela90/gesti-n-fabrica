@@ -1,4 +1,4 @@
-// Módulo Almacén (Fábrica, Fase 3, trozo 1b; decidido por Cristian el 22/11): Stock, Movimientos y Apuntar.
+// Módulo Almacén (Fábrica, Fase 3, trozo 1; decidido por Cristian el 22/11): Hoy, Apuntar, Stock, Reponer y Movimientos.
 // Lo ve quien tiene «almacen.stock.ver»; Apuntar, quien además puede apuntar movimientos.
 import { useSesion } from '../nucleo/sesion';
 import { Tablon } from '../nucleo/Tablon';
@@ -6,16 +6,19 @@ import { useCatalogo } from './datos';
 import { Stock } from './Stock';
 import { Movimientos } from './Movimientos';
 import { Apuntar } from './Apuntar';
+import { Hoy } from './Hoy';
+import { Reponer } from './Reponer';
 
-type Pestana = 'stock' | 'apuntar' | 'movimientos';
+type Pestana = 'hoy' | 'stock' | 'apuntar' | 'reponer' | 'movimientos';
 
 export function apartadosAlmacen(puede: (p: string) => boolean): [Pestana, string][] {
   const ve = puede('almacen.stock.ver');
-  return ([['stock', 'Stock', ve], ['apuntar', 'Apuntar', ve && puede('almacen.movimiento.apuntar')], ['movimientos', 'Movimientos', ve]] as [Pestana, string, boolean][])
+  return ([['hoy', 'Hoy', ve], ['apuntar', 'Apuntar', ve && puede('almacen.movimiento.apuntar')], ['stock', 'Stock', ve], ['reponer', 'Reponer', ve],
+    ['movimientos', 'Movimientos', ve]] as [Pestana, string, boolean][])
     .filter((p) => p[2]).map(([c, n]) => [c, n]);
 }
 
-export function Almacen({ ruta }: { ruta: string; ir?: (r: string) => void }) {
+export function Almacen({ ruta, ir }: { ruta: string; ir: (r: string) => void }) {
   const { puede } = useSesion();
   const pestanas = apartadosAlmacen(puede);
   const pedida = (ruta.split('/')[3] ?? '') as Pestana;
@@ -29,7 +32,9 @@ export function Almacen({ ruta }: { ruta: string; ir?: (r: string) => void }) {
           <button type="button" className="boton" onClick={cargar}>Reintentar</button></div>
         : !cat ? <p className="cargando" aria-busy="true">Cargando…</p>
         : <>
+          {actual === 'hoy' && <Hoy c={cat} recargar={cargar} ir={ir} />}
           {actual === 'stock' && <Stock c={cat} recargar={cargar} />}
+          {actual === 'reponer' && <Reponer c={cat} recargar={cargar} />}
           {actual === 'apuntar' && <Apuntar c={cat} recargar={cargar} />}
           {actual === 'movimientos' && <Movimientos c={cat} recargar={cargar} />}
         </>}

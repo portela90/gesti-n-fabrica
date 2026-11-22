@@ -10,7 +10,7 @@ const GUANTE = 'a1a1a1a1-0000-0000-0000-0000000000d1', ACEITE = 'a1a1a1a1-0000-0
 const F27 = 'a1a1a1a1-0000-0000-0000-0000000000e1', F30 = 'a1a1a1a1-0000-0000-0000-0000000000e2';
 const OP37 = 'a1a1a1a1-0000-0000-0000-0000000000f1', GEST = 'a1a1a1a1-0000-0000-0000-0000000000f2';
 const PROV = 'a1a1a1a1-0000-0000-0000-0000000000b1';
-const ENCARGADO = ['nucleo.persona.ver', 'almacen.stock.ver', 'almacen.movimiento.apuntar', 'almacen.movimiento.corregir', 'almacen.pedido.apuntar'];
+const ENCARGADO = ['nucleo.persona.ver', 'almacen.stock.ver', 'almacen.movimiento.apuntar', 'almacen.movimiento.corregir', 'almacen.pedido.apuntar', 'almacen.dotacion.editar'];
 const LECTURA = ['almacen.stock.ver'];
 const hoy = () => new Date().toLocaleDateString('sv-SE');
 const antes = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toLocaleDateString('sv-SE'); };
@@ -48,6 +48,12 @@ const tablas = () => ({
   ],
   'almacen.sinonimos': [],
   'almacen.notas': [],
+  'almacen.dotacion': [
+    { empresa_id: U, almacen_id: PN2, articulo_id: GUANTE, cantidad: 10 },   // hay 4: faltan 6
+    { empresa_id: U, almacen_id: PN2, articulo_id: ACEITE, cantidad: 20 },   // hay 30: completo
+  ],
+  'almacen.bajar': [],
+  ajustes: [],
   'almacen.stock': [
     { empresa_id: U, articulo_id: GUANTE, almacen_id: GEN, cantidad: 10 }, { empresa_id: U, articulo_id: GUANTE, almacen_id: PN2, cantidad: 4 },
     { empresa_id: U, articulo_id: ACEITE, almacen_id: PN2, cantidad: 30 }, { empresa_id: U, articulo_id: TRAPO, almacen_id: GEN, cantidad: 12 },
@@ -60,6 +66,8 @@ const tablas = () => ({
 });
 const rpc = {
   marcar_pedido: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => { const f = t['almacen.fichas'].find((x) => x.articulo_id === b.p_articulo); if (f) { f.pedido_en = hoy(); f.pedido_cantidad = b.p_cantidad; } return null; },
+  poner_minimos: (b: Record<string, unknown>) => (b.p_minimos as unknown[]).length,
+  guardar_ajuste: () => null,
   anular_pedido: (b: Record<string, unknown>, t: Record<string, Record<string, unknown>[]>) => { const f = t['almacen.fichas'].find((x) => x.articulo_id === b.p_articulo); if (f) f.pedido_en = null; return null; },
 };
 const posts = (ll: { metodo: string; ruta: string; cuerpo: unknown }[], ruta: string) => ll.filter((l) => l.metodo === 'POST' && l.ruta.startsWith(ruta)).map((l) => l.cuerpo);
@@ -209,4 +217,80 @@ test('Almacén en el móvil más estrecho: nada se aplasta ni se sale', async ({
   await page.goto('./#/m/almacen/movimientos');
   await expect(page.locator('.lista .fila').first()).toBeVisible();
   expect(await desbordes(page), 'movimientos').toEqual([]);
+});
+
+test('hoy: las cuatro cifras y lo urgente, cada aviso con su botón', async ({ page }) => {
+  const err = vigilar(page);
+  await simular(page, { dentro: true, sesion: sesion(ENCARGADO), tablas: tablas(), rpc });
+  await page.goto('./#/m/almacen');
+  await expect(page.locator('.cifra-hoy', { hasText: 'para pedir' })).toContainText('1');
+  await expect(page.locator('.cifra-hoy', { hasText: 'para bajar a planta' })).toContainText('1');
+  await expect(page.locator('.cifra-hoy', { hasText: 'pedidos retrasados' })).toContainText('1');
+  const urgente = page.getByRole('region', { name: 'Lo urgente' });
+  await expect(urgente.locator('.fila').first()).toContainText('1 artículo para pedir (1 bajo mínimo)');
+  await expect(urgente).toContainText('1 pedido retrasado');
+  await urgente.locator('.fila', { hasText: 'Bajar 1 artículo a planta' }).getByRole('button', { name: 'Reponer' }).click();
+  await expect(page.getByRole('region', { name: 'Hoja de carga' })).toBeVisible();
+  expect(err).toEqual([]);
+});
+
+test('reponer hoy: hoja de carga, cambiar cuánto y reponer crea el traslado (sin pasar de lo que hay en el origen)', async ({ page }) => {
+  const err = vigilar(page);
+  const ll = await abrir(page, 'reponer');
+  const carga = page.getByRole('region', { name: 'Hoja de carga' });
+  await expect(carga.locator('.fila', { hasText: 'Guantes de nitrilo' })).toContainText('6 ud');
+  await expect(carga).toContainText('Desde Almacén general');
+  const n2 = page.getByRole('region', { name: 'Almacén producción N2' });
+  await expect(n2).toContainText('faltan 1');
+  await expect(n2.locator('details')).toContainText('1 completos');
+  await n2.getByLabel('Cuánto bajar de Guantes de nitrilo a Almacén producción N2').fill('20');   // en el general solo hay 10
+  await n2.getByRole('button', { name: /Reponer marcados/ }).click();
+  await expect(page.locator('.aviso')).toContainText('Faltó');
+  expect(posts(ll, '/rest/v1/movimientos')[0]).toEqual([expect.objectContaining({ tipo: 'traslado', articulo_id: GUANTE, almacen_id: GEN, destino_id: PN2, cantidad: 10, nota: 'Reposición Almacén producción N2' })]);
+  expect(err).toEqual([]);
+});
+
+test('reponer: quitar una fila y la dotación de un almacén', async ({ page }) => {
+  const ll = await abrir(page, 'reponer');
+  const n2 = page.getByRole('region', { name: 'Almacén producción N2' });
+  await n2.getByRole('button', { name: 'Quitar' }).click();
+  expect(posts(ll, '/rest/v1/bajar')[0]).toMatchObject({ almacen_id: PN2, articulo_id: GUANTE, quitado_stock: 4 });
+  await expect(page.getByText('Hoy no hay nada que bajar')).toBeVisible();   // ya no sale: no se ha gastado nada desde que se quitó
+  await page.getByRole('button', { name: 'Volver a mostrar' }).click();
+  await expect(page.getByRole('region', { name: 'Hoja de carga' })).toBeVisible();
+  await page.getByRole('region', { name: 'Almacén producción N2' }).getByRole('button', { name: 'Dotación' }).click();
+  const v = page.getByRole('dialog', { name: 'Dotación de Almacén producción N2' });
+  await v.getByLabel('Debe haber de Guantes de nitrilo').fill('8');
+  await v.getByRole('button', { name: 'Guardar' }).click();
+  expect(posts(ll, '/rest/v1/dotacion')[0]).toEqual([expect.objectContaining({ almacen_id: PN2, articulo_id: GUANTE, cantidad: 8 })]);
+});
+
+test('previsión y falta y sobra; solo lectura no cambia la dotación', async ({ page }) => {
+  const ll = await abrir(page, 'reponer');
+  await page.getByRole('button', { name: 'Previsión' }).click();
+  await expect(page.locator('.cifras-ficha')).toContainText('Artículos a pedir');
+  await expect(page.getByText('menos de 90 días')).toBeVisible();
+  await expect(page.locator('.lista .fila', { hasText: 'Guantes de nitrilo' })).toContainText('al día');
+  await page.getByRole('button', { name: 'Aplicar lo sugerido' }).click();
+  await page.getByRole('dialog', { name: 'Aplicar lo sugerido' }).getByRole('button', { name: 'Aplicar' }).click();
+  expect(posts(ll, '/rest/v1/rpc/poner_minimos')[0]).toMatchObject({ p_empresa: U });
+  await page.getByRole('button', { name: 'Falta y sobra' }).click();
+  await expect(page.locator('.cifras-ficha')).toContainText('Faltan');
+  await expect(page.locator('.lista .fila', { hasText: 'Trapos de algodón' }).locator('.chapa')).toHaveText('Sin datos');
+  await page.getByRole('button', { name: 'Qué va en cada almacén' }).click();
+  await expect(page.getByLabel('Dotación de Guantes de nitrilo en Almacén producción N2')).toHaveValue('10');
+});
+
+test('Hoy y Reponer en el móvil más estrecho: nada se aplasta ni se sale', async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await abrir(page, 'hoy');
+  await expect(page.getByRole('region', { name: 'Lo urgente' })).toBeVisible();
+  expect(await desbordes(page), 'hoy').toEqual([]);
+  await page.goto('./#/m/almacen/reponer');
+  await expect(page.getByRole('region', { name: 'Hoja de carga' })).toBeVisible();
+  expect(await desbordes(page), 'reponer').toEqual([]);
+  for (const p of ['Qué va en cada almacén', 'Previsión', 'Falta y sobra']) {
+    await page.getByRole('button', { name: p }).click();
+    expect(await desbordes(page), p).toEqual([]);
+  }
 });

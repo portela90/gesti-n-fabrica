@@ -30,6 +30,7 @@ export interface Proveedor { id: string; codigo: string; nombre: string; contact
 export interface Maquina { id: string; codigo: string; nombre: string | null; centro_id: string | null; baja: string | null }
 export interface Centro { id: string; codigo: string; nombre: string; baja: string | null }
 export interface Persona { id: string; nombre: string; baja: string | null }
+export interface Bajar { almacen_id: string; articulo_id: string; quitado_stock: number | null; quitado_en: string | null; hoy_cantidad: number | null; hoy_dia: string | null }
 export interface Sinonimo { id: string; palabra: string; articulo_id: string }
 export interface Mov {
   id: string; empresa_id: string; fecha: string; tipo: 'entrada' | 'salida' | 'traslado' | 'ajuste'; articulo_id: string; almacen_id: string; destino_id: string | null;
@@ -42,6 +43,11 @@ export interface Catalogo {
   maquinas: Maquina[]; centros: Centro[]; personas: Persona[]; gestores: Set<string>; sinonimos: Sinonimo[];
   /** stock[articulo][almacen] */
   stock: Map<string, Map<string, number>>;
+  /** dotacion[almacen][articulo]: lo que debe haber en cada almacén (de producción). */
+  dotacion: Map<string, Map<string, number>>;
+  /** Filas de «bajar a planta» quitadas o con cantidad cambiada para un día. */
+  bajar: Bajar[];
+  ajustes: { origen: string | null; prevision: { nivel: 90 | 95 | 99; plazo: number; cobertura: number } };
   /** Movimientos de los últimos 13 meses (para consumos, «lo que sueles apuntar» y la ficha). */
   movs: Mov[];
 }
@@ -60,7 +66,7 @@ export async function todas<T>(consulta: (desde: number, hasta: number) => Promi
 
 export async function cargarCatalogo(emp: string): Promise<Catalogo> {
   const desde = sumarDias(hoy(), -400);
-  const [fa, ar, al, fi, pr, ma, ce, pe, ge, si, st, mv] = await Promise.all([
+  const [fa, ar, al, fi, pr, ma, ce, pe, ge, si, st, mv, dt, bj, aj] = await Promise.all([
     nucleo().from('familias').select('id, codigo, nombre, orden').eq('empresa_id', emp).is('baja', null),
     todas<Articulo>((a, b) => nucleo().from('articulos').select('id, codigo, nombre, unidad, minimo, familia_id, baja').eq('empresa_id', emp).order('nombre').range(a, b)),
     nucleo().from('almacenes').select('id, codigo, nombre, tipo, centro_id, orden, baja').eq('empresa_id', emp).order('orden').order('nombre'),
@@ -73,8 +79,15 @@ export async function cargarCatalogo(emp: string): Promise<Catalogo> {
     alm().from('sinonimos').select('id, palabra, articulo_id').eq('empresa_id', emp),
     todas<{ articulo_id: string; almacen_id: string; cantidad: number }>((a, b) => alm().from('stock').select('articulo_id, almacen_id, cantidad').eq('empresa_id', emp).range(a, b)),
     todas<Mov>((a, b) => alm().from('movimientos').select('*').eq('empresa_id', emp).gte('fecha', desde).order('fecha').order('creado').range(a, b)),
+    todas<{ almacen_id: string; articulo_id: string; cantidad: number }>((a, b) => alm().from('dotacion').select('almacen_id, articulo_id, cantidad').eq('empresa_id', emp).range(a, b)),
+    alm().from('bajar').select('almacen_id, articulo_id, quitado_stock, quitado_en, hoy_cantidad, hoy_dia').eq('empresa_id', emp),
+    nucleo().from('ajustes').select('clave, valor').eq('empresa_id', emp).eq('modulo', 'almacen').is('centro_id', null),
   ]);
-  for (const r of [fa, al, pr, ma, ce, pe, ge, si]) if (r.error) throw new Error(r.error.message);
+  for (const r of [fa, al, pr, ma, ce, pe, ge, si, bj, aj]) if (r.error) throw new Error(r.error.message);
+  const dotacion = new Map<string, Map<string, number>>();
+  for (const d of dt) { if (!dotacion.has(d.almacen_id)) dotacion.set(d.almacen_id, new Map()); dotacion.get(d.almacen_id)!.set(d.articulo_id, Number(d.cantidad)); }
+  const ajs = new Map(((aj.data ?? []) as { clave: string; valor: unknown }[]).map((x) => [x.clave, x.valor]));
+  const pv = (ajs.get('prevision') ?? {}) as Record<string, number>;
   const stock = new Map<string, Map<string, number>>();
   for (const s of st) {
     if (!stock.has(s.articulo_id)) stock.set(s.articulo_id, new Map());
@@ -86,7 +99,10 @@ export async function cargarCatalogo(emp: string): Promise<Catalogo> {
     almacenes: (al.data ?? []) as Almacen[], fichas: new Map(fi.map((f) => [f.articulo_id, f])), proveedores: (pr.data ?? []) as Proveedor[],
     maquinas: (ma.data ?? []) as Maquina[], centros: (ce.data ?? []) as Centro[], personas: (pe.data ?? []) as Persona[],
     gestores: new Set(((ge.data ?? []) as { persona_id: string }[]).map((g) => g.persona_id)), sinonimos: (si.data ?? []) as Sinonimo[],
-    stock, movs: mv.map((m) => ({ ...m, cantidad: Number(m.cantidad) })),
+    stock, movs: mv.map((m) => ({ ...m, cantidad: Number(m.cantidad) })), dotacion,
+    bajar: ((bj.data ?? []) as Bajar[]).map((b) => ({ ...b, quitado_stock: b.quitado_stock == null ? null : Number(b.quitado_stock), hoy_cantidad: b.hoy_cantidad == null ? null : Number(b.hoy_cantidad) })),
+    ajustes: { origen: typeof ajs.get('origen_reposicion') === 'string' ? (ajs.get('origen_reposicion') as string) : null,
+      prevision: { nivel: ([90, 95, 99].includes(Number(pv.nivel)) ? Number(pv.nivel) : 95) as 90 | 95 | 99, plazo: Number(pv.plazo ?? 7), cobertura: Number(pv.cobertura ?? 7) } },
   };
 }
 

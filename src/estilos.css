@@ -620,3 +620,23 @@ div.fila { cursor: default; }
 .video-escaner { width: 100%; max-height: 50vh; background: #000; border-radius: 10px; }
 .filtros .campo.ancho { flex: 1 1 100%; grid-column: 1 / -1; }
 .fila-txt button.enlace { align-self: flex-start; text-align: left; }
+.segmentos.cuatro { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.segmentos.cuatro button { font-size: 14px; line-height: 1.2; }
+@media (max-width: 520px) { .segmentos.cuatro { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.cifras-hoy { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 140px), 1fr)); gap: 10px; margin: 0 0 18px; }
+.cifra-hoy { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 14px; border: 1px solid var(--linea); border-radius: 12px; background: var(--sup); text-align: left; cursor: pointer; color: inherit; }
+.cifra-hoy b { font-size: 26px; font-variant-numeric: tabular-nums; }
+.cifra-hoy span { font-size: 13px; color: var(--tinta2); }
+.cifra-hoy.mal { border-color: var(--mal); } .cifra-hoy.mal b { color: var(--mal); }
+.cifra-hoy.ojo { border-color: #d97706; } .cifra-hoy.ojo b { color: #b45309; }
+.hoy-columnas { display: grid; gap: 18px; }
+@media (min-width: 900px) { .hoy-columnas { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); align-items: start; } }
+.fila.aviso-bad { box-shadow: inset 4px 0 0 var(--mal); }
+.fila.aviso-warn { box-shadow: inset 4px 0 0 #d97706; }
+.fila.aviso-info { box-shadow: inset 4px 0 0 var(--linea); }
+.resumen-reponer { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 0 0 14px; }
+.resumen-reponer b { flex: 1 1 100%; }
+.cant-reponer { flex: none; display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.cant-reponer input { width: 4.5em; text-align: right; }
+.cant-reponer small { color: var(--tinta2); font-size: 12px; }
+.tabla-scroll { overflow-x: auto; max-width: 100%; }
