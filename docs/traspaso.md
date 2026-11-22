@@ -56,6 +56,8 @@ Decidido: en paralelo **solo usa la nueva Cristian**; los operarios cambian una 
 Decidido 22/11: en paralelo solo apunta en la vieja y **una vez por semana se copia a la nueva** (Personal, Limpieza lo hecho,
 Limpieza tareas y equipos, Prevención). Receta en `scripts/copia-semanal/` (ver `docs/estado.md` 8.2). **Las cuatro partes hechas y la 1.ª copia pegada y comprobada el 22/11.**
 Cada semana: Cristian pega los cuatro `leer-vieja-*.sql` en la vieja y la casilla de cada uno en colada-mapri; luego se comprueba.
+**Día del cambio preparado (22/11)**: `docs/dia-del-cambio.md` (lista paso a paso), hoja de códigos en Usuarios y borrado de pruebas
+(`scripts/dia-del-cambio/`). Falta decidir qué hacer con la app vieja después (lo decide él más adelante).
 
 ## Decisiones de Cristian que conviene recordar
 - Pantallas: se dice **«unidad de trabajo»**, nunca «empresa». Fábrica (MAPRI) y Limpieza (CIE).

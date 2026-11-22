@@ -588,7 +588,14 @@ cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a ma
   móvil ni entran con correo, saca sus códigos (`codigo_alta`, rol Operario por defecto) y hace un PDF A4 con 8 tarjetas para recortar
   (nombre en una línea, código, QR, 3 pasos y el aviso del iPhone; `src/configuracion/hojaCodigos.ts`). Los códigos caducan a los 7 días:
   se hace el mismo día del cambio. Prueba en `pin.spec.ts`.
-- Falta: archivo para borrar los datos de prueba (primero enseña la lista) y la lista paso a paso del día.
+- **Borrar los datos de prueba** (`scripts/dia-del-cambio/`, montados con `montar.sh`): `ver-pruebas.sql` (solo mira; también los archivos
+  del Storage a quitar a mano) y `borrar-pruebas.sql` (todo o nada; apaga y vuelve a encender las protecciones de lo firmado).
+  Reglas en `objetivos.sql`, sin nombres reales: fichas «pruebas» y «Pruebas 2» con todo lo suyo; del superadmin, documentos y certificados
+  hechos en la nueva y sus envíos de calendario de antes del 23/11; trabajos hechos en la nueva antes del 17/11; charlas hechas en la nueva
+  antes del 23/11. **Decidido 22/11**: sus vacaciones se quedan; la incidencia de la Karcher es de verdad (copiada de la vieja) y se queda.
+  Lista vista el 22/11 en colada-mapri: 2 fichas, 4 usuarios, 5 documentos, 1 certificado, 1 charla con 2 asistencias, 1 calendario,
+  2 envíos, 9 firmas, 5 trabajos. Prueba `81-dia-del-cambio-borrar.sql` (12). Las cuentas de Supabase (auth) no se tocan.
+- **Lista paso a paso**: `docs/dia-del-cambio.md`.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
