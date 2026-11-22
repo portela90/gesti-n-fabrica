@@ -54,7 +54,8 @@ Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del camb
 Decidido: en paralelo **solo usa la nueva Cristian**; los operarios cambian una vez, el día del cambio. Trozo 1, entrar con
 **código de alta + PIN** (8.1): hecho, aplicado (0035), función «pin» instalada y publicado el 22/11; falta que lo pruebe con «pruebas».
 Decidido 22/11: en paralelo solo apunta en la vieja y **una vez por semana se copia a la nueva** (Personal, Limpieza lo hecho,
-Limpieza tareas y equipos, Prevención). Receta en `scripts/copia-semanal/` (ver `docs/estado.md` 8.2). Personal hecho; faltan los demás.
+Limpieza tareas y equipos, Prevención). Receta en `scripts/copia-semanal/` (ver `docs/estado.md` 8.2). **Las cuatro partes hechas y la 1.ª copia pegada y comprobada el 22/11.**
+Cada semana: Cristian pega los cuatro `leer-vieja-*.sql` en la vieja y la casilla de cada uno en colada-mapri; luego se comprueba.
 
 ## Decisiones de Cristian que conviene recordar
 - Pantallas: se dice **«unidad de trabajo»**, nunca «empresa». Fábrica (MAPRI) y Limpieza (CIE).

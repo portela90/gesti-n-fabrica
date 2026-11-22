@@ -573,6 +573,12 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   Arreglos tras los dos primeros intentos de Cristian (22/11, no se guardó nada): la imagen de la charla en la vieja es un archivo
   (`img/toolbox/…`) → se deja la de la nueva; texto vacío en la vieja = nada en la nueva (si no, «cambiaba» todos los meses); una charla
   con firmas o cerrada en la nueva no se cambia nunca (aviso); una charla del mismo mes hecha en la nueva no se pisa (aviso). Prueba: 18.
+  **1.ª copia PEGADA 22/11 (3.er intento) y comprobada**, igual que en la vieja: 4 sesiones, 16 firmas de charlas, 10 documentos (10 firmados),
+  4 certificados, 9 fichas (la 10.ª es «Prueba Encargado», que no está en la nueva); 26 firmas con imagen; ningún movimiento de stock ni
+  aviso; disparadores encendidos.
+- **Rutina semanal (desde el 22/11):** Cristian pega en la vieja `leer-vieja-personal.sql`, `leer-vieja-limpieza.sql`,
+  `leer-vieja-limpieza-tareas.sql` y `leer-vieja-prevencion.sql` (uno a uno) y la casilla de cada uno en colada-mapri; Claude comprueba.
+  Pendiente para el día del cambio: fotos de trabajos (865) y archivos de certificados (3), que están en el Storage / base de la vieja.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
