@@ -610,6 +610,19 @@ cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a ma
   y `limpieza._tiene_palabra`; `investigar` la usa en «detalles». Calculado el 22/11 sobre los datos de verdad: 647 de 806 trabajos con nave
   (409 Nave 1, 238 Nave 2; antes 60). Prueba `82-limpieza-nave-trabajo.sql` (12). **APLICADO 22/11 (pegado por Cristian; comprobado: 647 de 806).**
 
+## Fase 3: Almacén y Mantenimiento (Fábrica) — EN CURSO (empezada el 22/11)
+Estudio de la app vieja (repo `portela90/colada`, solo lectura; datos en colada-mapri `public.docs`, colecciones `alm_*`): todo el
+catálogo en un solo JSON (`alm_cat`: 111 artículos, 6 almacenes, 14 proveedores, 33 máquinas, 19 modelos de eje, 89 contenedores,
+14 operarios…), movimientos por mes (`alm_mov`), pistones, ejes (145), reparaciones, contadores, inventario, incidencias, averías;
+stock = suma de movimientos; avisos push (`avisos-almacen`); Limpieza descuenta piezas de horno entre dos Supabase (pg_net).
+Decidido por Cristian (22/11):
+- **Se usa todo**; se hace en 4 trozos: 1) base del almacén (catálogo, movimientos, apuntar y escáner, Hoy, Reponer, previsión,
+  copia de datos); 2) piezas (pistones, ejes y reparaciones, contenedores, barras, tolvas + descuento de Limpieza en el mismo Supabase);
+  3) aceites y contadores; 4) averías y gestión (consultas, desviaciones, ABC, presupuesto, aprobaciones, reglas, informes).
+- **Quién entra:** como ahora, oficina y almacén (con correo); los operarios no entran: se elige de una lista (fichas de la Fábrica).
+- **Apuntar:** lector **gratis por reglas** (cantidades, artículos por nombre/código/sinónimos que se enseñan, máquinas, naves, personas;
+  pregunta lo que no entiende). Nada de IA de pago (Anthropic).
+
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera

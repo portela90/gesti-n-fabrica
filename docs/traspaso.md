@@ -59,6 +59,9 @@ Cada semana: Cristian pega los cuatro `leer-vieja-*.sql` en la vieja y la casill
 **Día del cambio preparado (22/11)**: `docs/dia-del-cambio.md` (lista paso a paso), hoja de códigos en Usuarios y borrado de pruebas
 (`scripts/dia-del-cambio/`). Falta decidir qué hacer con la app vieja después (lo decide él más adelante).
 
+**Fase 3 (Almacén y Mantenimiento de la Fábrica): empezada el 22/11** — decisiones en `docs/estado.md` «Fase 3». Preguntando una a una
+antes del trozo 1.
+
 ## Decisiones de Cristian que conviene recordar
 - Pantallas: se dice **«unidad de trabajo»**, nunca «empresa». Fábrica (MAPRI) y Limpieza (CIE).
 - Encargados: «Encargado hornos» (reparte solo a su equipo: lo ve todo de su equipo, mueve, crea y puede «dejar sin
