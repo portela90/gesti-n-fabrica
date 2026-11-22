@@ -43,7 +43,7 @@ test('el menú solo trae los módulos que la base de datos permite y que la pers
   await expect(menu.getByRole('button', { name: 'Mantenimiento' })).toHaveCount(0);     // encendido, pero sin ningún permiso
   await menu.getByRole('button', { name: 'Almacén' }).click();
   await expect(page.locator('.cabecera')).toContainText('Almacén');
-  await expect(page.getByText('Este módulo llega en la Fase 3')).toBeVisible();
+  await expect(page.getByText('No se ha podido cargar el almacén')).toBeVisible();   // el simulador no tiene sus tablas: basta con que se abra
   // un módulo sin permiso, aunque se escriba la dirección a mano
   await page.goto('./#/m/coladas');
   await expect(page.getByText('No tienes acceso a esta pantalla.')).toBeVisible();
@@ -68,7 +68,7 @@ test('con dos unidades de trabajo, un solo menú con las dos: al tocar algo de l
   await expect(page.locator('.cabecera')).toContainText('Unidad B');
   // un enlace a un módulo de la otra unidad: se pone sola en ella
   await page.goto('./#/m/almacen');
-  await expect(page.getByText('Este módulo llega en la Fase 3')).toBeVisible();
+  await expect(page.getByText('No se ha podido cargar el almacén')).toBeVisible();   // el simulador no tiene sus tablas: basta con que se abra
   await expect(page.locator('.cabecera')).toContainText('Unidad A');
   await page.getByRole('button', { name: 'Menú' }).click();
   await page.getByRole('button', { name: /Tu cuenta/ }).click();

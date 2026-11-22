@@ -576,3 +576,47 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
 .qr-alta { display: block; margin: 0 auto; width: 220px; height: 220px; background: #fff; padding: 8px; border-radius: 8px; }
 .aviso-iphone { text-align: left; border: 1px solid var(--linea); border-radius: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--acento) 6%, var(--sup)); }
 .aviso-iphone p { margin: 0 0 8px; } .aviso-iphone ol { margin: 0 0 8px; padding-left: 20px; } .aviso-iphone li { margin-bottom: 6px; }
+
+/* ---------- Almacén (trozo 1b) ---------- */
+.chapa.mal { background: color-mix(in srgb, var(--mal) 14%, transparent); color: var(--mal); }
+.fila-txt .botones-fila { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: flex-start; margin-top: 6px; }
+.fila-cifra { flex: none; display: flex; align-items: center; gap: 8px; font-variant-numeric: tabular-nums; font-weight: 700; text-align: right; }
+div.fila { cursor: default; }
+.tarjeta-seccion { margin: 0 0 20px; }
+.tarjeta-seccion .lista, .tarjetas-apuntar { margin-bottom: 8px; }
+.grupo-lista { margin: 14px 14px 4px; font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--tinta2); }
+.fila.nivel-bad { box-shadow: inset 4px 0 0 var(--mal); }
+.fila.nivel-warn { box-shadow: inset 4px 0 0 #d97706; }
+.fila.nivel-ok { box-shadow: inset 4px 0 0 var(--bien); }
+.calculo { margin: 0 0 12px; padding: 8px 12px; border-radius: 10px; background: var(--fondo); font-size: 14px; overflow-wrap: anywhere; }
+.fila-campos { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr)); gap: 0 12px; align-items: end; }
+.cifras-ficha { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin: 8px 0 14px; }
+.cifras-ficha div { padding: 8px 10px; border: 1px solid var(--linea); border-radius: 10px; }
+.cifras-ficha dt { font-size: 12px; color: var(--tinta2); }
+.cifras-ficha dd { margin: 0; font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.datos-ficha { display: grid; grid-template-columns: minmax(0, 11em) minmax(0, 1fr); gap: 4px 12px; margin: 0 0 14px; }
+.datos-ficha dt { color: var(--tinta2); }
+.datos-ficha dd { margin: 0; overflow-wrap: anywhere; }
+.lista-simple { margin: 0 0 14px; padding-left: 18px; }
+.lista-simple li { margin: 0 0 4px; overflow-wrap: anywhere; }
+.barras-mes { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 3px; height: 140px; align-items: end; margin: 0 0 14px; }
+.barra-mes { display: flex; flex-direction: column-reverse; align-items: center; height: 100%; min-width: 0; }
+.barra-mes span { width: 100%; background: var(--area, var(--acento)); border-radius: 3px 3px 0 0; min-height: 1px; }
+.barra-mes small { font-size: 10px; color: var(--tinta2); }
+.barra-mes b { font-size: 10px; }
+.texto-pedido { white-space: pre-wrap; overflow-wrap: anywhere; font: inherit; font-size: 14px; background: var(--fondo); padding: 10px; border-radius: 10px; }
+.tabla-inventario { width: 100%; border-collapse: collapse; font-size: 14px; }
+.tabla-inventario th, .tabla-inventario td { padding: 6px 4px; border-bottom: 1px solid var(--linea); text-align: left; overflow-wrap: anywhere; }
+.tabla-inventario .num { text-align: right; font-variant-numeric: tabular-nums; }
+.tabla-inventario input { width: 5.5em; max-width: 100%; text-align: right; }
+.maquinas-varias { display: grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: 0 8px; border: 1px solid var(--linea); border-radius: 10px; margin: 0 0 12px; }
+.tarjeta-apunte { padding: 12px; margin: 0 0 12px; border: 1px solid var(--linea); border-radius: 12px; background: var(--sup); }
+.tarjeta-apunte.con-faltas { border-color: #d97706; }
+.tarjeta-apunte > p.suave { margin: 0 0 8px; font-style: italic; overflow-wrap: anywhere; }
+.pie-tarjeta { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.pie-apuntar { position: sticky; bottom: 0; display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 0; background: var(--fondo); }
+.mosaicos-cortos { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 16px; }
+.mosaicos-cortos .boton { max-width: 100%; white-space: normal; text-align: left; overflow-wrap: anywhere; }
+.video-escaner { width: 100%; max-height: 50vh; background: #000; border-radius: 10px; }
+.filtros .campo.ancho { flex: 1 1 100%; grid-column: 1 / -1; }
+.fila-txt button.enlace { align-self: flex-start; text-align: left; }

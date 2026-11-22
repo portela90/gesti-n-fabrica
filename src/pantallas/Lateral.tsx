@@ -7,15 +7,17 @@ import type { EmpresaSesion } from '../nucleo/tipos';
 import { MODULOS } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
 import { apartadosLimpieza } from '../limpieza/Limpieza';
+import { apartadosAlmacen } from '../almacen/Almacen';
 import { apartadosPersonal } from '../personal/Personal';
 import { apartadosPrevencion } from '../prevencion/Prevencion';
 
 const APARTADOS: Record<string, (puede: (p: string) => boolean) => [string, string][]> = {
-  limpieza: apartadosLimpieza, personal: apartadosPersonal, prevencion: apartadosPrevencion,
+  limpieza: apartadosLimpieza, personal: apartadosPersonal, prevencion: apartadosPrevencion, almacen: apartadosAlmacen,
 };
 /** El apartado que abre cada módulo si la ruta no dice ninguno (lo mismo que hace cada módulo). */
 const INICIAL: Record<string, (aps: [string, string][]) => string | undefined> = {
   limpieza: (aps) => aps[0]?.[0],
+  almacen: (aps) => aps[0]?.[0],
   personal: (aps) => (aps.some(([c]) => c === 'calendario') ? 'calendario' : 'mio'),
   prevencion: (aps) => (aps.length > 1 ? 'charlas' : 'mias'),
 };

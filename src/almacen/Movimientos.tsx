@@ -68,8 +68,10 @@ export function FormMovimiento({ c, inicial, editar, alCerrar, alGuardar, soloSa
   const [tipo, setTipo] = useState<Mov['tipo']>(base.tipo ?? 'salida');
   const [fecha, setFecha] = useState(base.fecha ?? hoy());
   const [art, setArt] = useState(base.articulo_id ?? '');
-  const [desde, setDesde] = useState(base.almacen_id ?? '');
-  const [hasta, setHasta] = useState(base.destino_id ?? '');
+  // si viene el artículo sin almacén (desde la ficha, «Ha llegado»…), el almacén de siempre
+  const [porDefecto] = useState(() => (!editar && base.articulo_id && !base.almacen_id ? almacenPorDefecto(c, base.tipo ?? 'salida', base.articulo_id, null) : null));
+  const [desde, setDesde] = useState(base.almacen_id ?? porDefecto?.desde ?? '');
+  const [hasta, setHasta] = useState(base.destino_id ?? porDefecto?.hasta ?? '');
   const [cant, setCant] = useState(editar ? String(editar.tipo === 'ajuste' ? editar.contado ?? '' : editar.cantidad) : base.cantidad != null ? String(base.cantidad) : '');
   const [para, setPara] = useState(() => {
     const a = base.activos ?? [];
@@ -287,7 +289,7 @@ export function Movimientos({ c, recargar }: { c: Catalogo; recargar: () => void
           <option value="">Todo</option>{(['entrada', 'salida', 'traslado', 'ajuste'] as const).map((t) => <option key={t} value={t}>{TIPOS[t]}</option>)}<option value="perdida">Pérdidas</option></select></label>
         <label className="campo"><span>Almacén</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
           <option value="">Todos</option>{c.almacenes.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
-        {!ordenador && <label className="campo"><span>Buscar</span><input value={q} placeholder="Artículo, persona, máquina, nota…" onChange={(e) => setQ(e.target.value)} /></label>}
+        {!ordenador && <label className="campo ancho"><span>Buscar</span><input value={q} placeholder="Artículo, persona, máquina, nota…" onChange={(e) => setQ(e.target.value)} /></label>}
       </div>
       {L === null ? <p className="nota">Cargando…</p> : ordenador ? (
         <Tabla filas={vistos} clave={(m) => m.id} etiquetaBuscar="Buscar en los movimientos" pistaBuscar="Artículo, persona, máquina, nota…"

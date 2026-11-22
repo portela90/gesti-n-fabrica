@@ -117,7 +117,7 @@ export function Stock({ c, recargar }: { c: Catalogo; recargar: () => void }) {
           <option value="">Todas</option>{c.familias.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></label>
         <label className="campo"><span>Cifra de</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
           <option value="">Todos los almacenes</option>{c.almacenes.filter((x) => !x.baja).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
-        {!ordenador && <label className="campo"><span>Buscar</span><input value={q} placeholder="Artículo, código, máquina, ubicación…" onChange={(e) => setQ(e.target.value)} /></label>}
+        {!ordenador && <label className="campo ancho"><span>Buscar</span><input value={q} placeholder="Artículo, código, máquina, ubicación…" onChange={(e) => setQ(e.target.value)} /></label>}
       </div>
       {ordenador ? (
         <Tabla filas={lista} clave={(a) => a.id} alAbrir={setFicha} etiquetaBuscar="Buscar artículo" pistaBuscar="Artículo, código, máquina, ubicación…" buscarEn={textoBusca}
@@ -181,8 +181,8 @@ export function FichaArticulo({ c, a, alCerrar, alApuntar }: { c: Catalogo; a: A
         <div><dt>Dura</dt><dd className={dura !== null && dura < 14 ? 'error' : ''}>{dura === null ? '—' : dura > 365 ? '+1 año' : `${Math.floor(dura)} días`}</dd></div>
         <div><dt>Pedir ahora</dt><dd>{fmt(cantPedir(c, a)) || '—'}</dd></div>
       </dl>
-      <div className="segmentos" role="group" aria-label="Qué ver">
-        {([['general', 'General'], ['movs', `Movimientos (${movs.length})`], ['consumo', 'Consumo']] as const).map(([k, t]) =>
+      <div className="segmentos tres" role="group" aria-label="Qué ver">
+        {([['general', 'General'], ['movs', `Movimientos (${movs.length})`], ['consumo', 'Por meses']] as const).map(([k, t]) =>
           <button key={k} type="button" className={'segmento' + (pest === k ? ' activo' : '')} aria-pressed={pest === k} onClick={() => setPest(k)}>{t}</button>)}
       </div>
       {pest === 'general' && <>

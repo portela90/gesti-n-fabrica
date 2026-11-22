@@ -645,6 +645,14 @@ Decidido por Cristian (22/11):
   mantenimiento con `almacen.movimiento.apuntar`); copia: 637 movimientos, 111 artículos (111 fichas, 28 precios), 33 máquinas,
   6 almacenes, 14 proveedores, 20 fichas de trabajador (6 gestores), dotación 24; **stock igual que en la vieja en las 134
   parejas artículo-almacén** (total 8646). Falta exponer `almacen` en «Exposed schemas» (cuando lleguen las pantallas, 1b).
+- **1b hecho (22/11), falta 0039 y exponer `almacen`:** apartados **Stock** (pedidos en curso con «Ha llegado» y «Anular», para pedir con
+  «Marcar pedido», existencias por familia, ficha del artículo con cifras/datos/movimientos/consumo por meses, **lista de pedido** por
+  proveedor con WhatsApp, **inventario** por almacén, Excel), **Movimientos** (mes a mes con filtros, corregir y borrar con permiso, Excel)
+  y **Apuntar** (botones, **lector por reglas** `src/almacen/lector.ts` que **aprende palabras** en `almacen.sinonimos`, dictado,
+  **notas pendientes**, lo que sueles apuntar, apuntado hoy y **escáner**: BarcodeDetector o `@zxing/browser` 0.1.5, MIT). Formulario
+  común `FormMovimiento` (avisos de «cantidad rara» y «quién se lo lleva» una vez). Migración **0039** (permiso `almacen.pedido.apuntar`,
+  `marcar_pedido`/`anular_pedido`, la entrada de lo pedido quita la marca, `almacen.notas`). Pruebas: BD 85; pantallas `almacen.spec.ts`
+  y `lector.spec.ts`. Pistones/ejes/averías: trozo 2; Hoy y Reponer: 1c.
 - Lo hecho en 1a: migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
   gestores, sinónimos, equivalencias; vista `almacen.stock`; precios solo el administrador) y la copia `scripts/copia-semanal/almacen.sql`
   (sin datos: lee `public.docs` del mismo Supabase; se pega tal cual en colada-mapri; se puede repetir). «Quién se lo lleva» de los
