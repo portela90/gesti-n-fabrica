@@ -82,9 +82,9 @@ Lo siguiente: decidir qué apunta él en la nueva esas semanas y qué se compara
 - **Costes de limpieza:** decidido dejarlos para más adelante (ver la app vieja `07-fichaje-y-costes.js`).
 - **Sesión:** salir de la app nueva ya solo cierra ese dispositivo (`signOut({ scope: 'local' })`), pero si se sale en
   otra herramienta con la misma cuenta, cierra todas las sesiones. Si «dar acceso» dice que la sesión se cerró: salir y entrar.
-- **PIN para los operarios:** hecho (parte 8.1); falta aplicarlo y probarlo con el usuario «pruebas».
+- **PIN para los operarios:** hecho y publicado (parte 8.1). La ficha «pruebas» entra con correo, así que se prueba con una ficha nueva «Prueba PIN».
 - **La ficha de pruebas tiene dos usuarios** («Pruebas» y «prueba»).
-- **Limpieza de datos de prueba el día del cambio:** persona y usuarios de pruebas, documentos y firmas de prueba,
+- **Limpieza de datos de prueba el día del cambio:** persona y usuarios de pruebas, la ficha «Prueba PIN» (si se creó para probar el PIN) y su móvil, documentos y firmas de prueba,
   EPI y formación de prueba de Cristian, el diploma subido en Storage, la firma de prueba de «Semana 2027».
 - **El día del cambio:** volver a copiar de las apps viejas lo que haya cambiado.
 - **Correo automático a prevención** (necesita un secreto de Gmail): pendiente.
