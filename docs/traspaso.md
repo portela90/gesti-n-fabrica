@@ -91,6 +91,11 @@ Cada semana: Cristian pega los cuatro `leer-vieja-*.sql` en la vieja y la casill
 - **Limpieza de datos de prueba el día del cambio:** persona y usuarios de pruebas, la ficha «Prueba PIN» (si se creó para probar el PIN) y su móvil, documentos y firmas de prueba,
   EPI y formación de prueba de Cristian, el diploma subido en Storage, la firma de prueba de «Semana 2027».
 - **El día del cambio:** volver a copiar de las apps viejas lo que haya cambiado.
-- **Correo automático a prevención** (necesita un secreto de Gmail): pendiente.
+- **Correo automático a prevención**: decidido 22/11 que se mande **solo al cerrar el mes** (si falla, botón para reintentar) y desde
+  la **cuenta de empresa de Cristian, que es Microsoft 365 (Outlook)**. Con Outlook no vale usuario + contraseña por SMTP (Supabase
+  seguramente bloquea el puerto 587 en sus funciones y Microsoft apaga por defecto el SMTP AUTH con contraseña a finales de diciembre
+  de 2026): la forma buena es **Microsoft Graph** (registrar una app en Entra ID con permiso Mail.Send y consentimiento del
+  administrador de su empresa; la clave la guarda él en Supabase). **Decidido 22/11: se deja como está** (lo manda él desde su correo
+  con lo que le prepara la app) hasta que sepa si su empresa puede dar ese permiso.
 - Calendario 2027 del fin de semana: lo mete Cristian más adelante desde la app; luego comprobar con el Excel (ver `docs/estado.md`).
 - El revisor de Supabase avisa de funciones de las apps viejas que se pueden llamar sin entrar: no tocado (son de COLADA).
