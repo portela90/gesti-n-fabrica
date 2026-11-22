@@ -641,7 +641,11 @@ Decidido por Cristian (22/11):
 - Datos de la vieja (22/11): familias barra 18, consumible 41, pistón 9, horno 43; unidades ud, kg, l, m; 25 artículos sin código;
   637 movimientos (ago–nov); stock = entrada + / salida − / ajuste ± / traslado −origen +destino (`stockMap` de la vieja).
 - Trozo 1 en pasos: 1a base de datos + copia + pruebas; 1b pantallas Stock, Movimientos y Apuntar; 1c Hoy y Reponer.
-- **1a hecho (22/11), SIN APLICAR:** migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
+- **1a hecho, APLICADO y COMPROBADO (22/11; 1.ª copia pegada):** 0038 pegada (operarios sin apuntar en almacén; técnico de
+  mantenimiento con `almacen.movimiento.apuntar`); copia: 637 movimientos, 111 artículos (111 fichas, 28 precios), 33 máquinas,
+  6 almacenes, 14 proveedores, 20 fichas de trabajador (6 gestores), dotación 24; **stock igual que en la vieja en las 134
+  parejas artículo-almacén** (total 8646). Falta exponer `almacen` en «Exposed schemas» (cuando lleguen las pantallas, 1b).
+- Lo hecho en 1a: migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
   gestores, sinónimos, equivalencias; vista `almacen.stock`; precios solo el administrador) y la copia `scripts/copia-semanal/almacen.sql`
   (sin datos: lee `public.docs` del mismo Supabase; se pega tal cual en colada-mapri; se puede repetir). «Quién se lo lleva» de los
   movimientos viejos va como texto en `extra.se_lo_llevo`; Nave 1A/1B = NAVE 1 (la de la vieja en `extra.nave`); `inc` = pérdida.
