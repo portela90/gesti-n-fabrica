@@ -551,6 +551,11 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   equipo por nombre (Finde → finde); turno por nombre (Mañana finde no existe → vacío); checklist `{"punto": "OK"}` → `[{texto, tipo, valor}]`;
   minutos = fin − inicio − pausado (mínimo 1). **Al copiar hay que apagar los disparadores `notificar`, `incidencias`, `caso` y `soltar`
   de `limpieza.trabajos`** (si no, cientos de avisos e incidencias) y volver a encenderlos; el historial se deja.
+  Receta `scripts/copia-semanal/limpieza-trabajos.sql` y prueba `78-copia-semanal-limpieza.sql` (14). Como son ~800 trabajos (340.000
+  letras), Cristian pega `leer-vieja-limpieza.sql` en la vieja y la casilla que sale en colada-mapri (`montar.sh`; ver `LEEME.md`).
+  **1.ª copia PEGADA 22/11 por Cristian y comprobada**: 801 trabajos desde el 5/10 (730 hechos; 340 fijas, 73 habituales, 388 sueltos;
+  413 con tarea, 59 con máquina; todas las tareas y máquinas existían), 53.152 minutos hechos igual que en la vieja; 23 fijas sacadas
+  solas cambiadas; ningún aviso ni incidencia; disparadores encendidos; los 5 trabajos hechos en la nueva siguen.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
