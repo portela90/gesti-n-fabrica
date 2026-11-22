@@ -561,6 +561,7 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   equipo, turno, quién, minutos, «solo para», sitio, grupo de las habituales, activa); lo que solo tiene la nueva (grupo de las fijas,
   máquina o zona) no se toca; las inactivas que nunca se copiaron no se crean. Equipos de cada trabajador, habilidades y responsable de
   hornos: **solo avisos**. Comparado 22/11: igual salvo «Basuras Nave 2», que en la nueva tenía domingo y «pruebas» (de sus pruebas del 14/11).
+  **1.ª copia PEGADA 22/11 y comprobada**: «Basuras Nave 2» vuelve a lunes, miércoles y viernes con su operario; 35 tareas activas, todas con origen de la vieja.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
