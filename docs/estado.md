@@ -570,6 +570,9 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   (`prl_formacion` → `documentos` tipo formacion, con evaluación): se crean sin firmar y se firman con `prevencion.firmando = si`;
   certificados (`prl_cert` → `cursos`, sin archivo: 3 archivos en `prl_cert_arch`, «N archivos en la app vieja»); fichas (`prl_trab`, sin
   `rm_*`: el reconocimiento médico no se migra). Se apaga el disparador `stock` de `documentos` (no descuenta EPI) y se vuelve a encender.
+  Arreglos tras los dos primeros intentos de Cristian (22/11, no se guardó nada): la imagen de la charla en la vieja es un archivo
+  (`img/toolbox/…`) → se deja la de la nueva; texto vacío en la vieja = nada en la nueva (si no, «cambiaba» todos los meses); una charla
+  con firmas o cerrada en la nueva no se cambia nunca (aviso); una charla del mismo mes hecha en la nueva no se pisa (aviso). Prueba: 18.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

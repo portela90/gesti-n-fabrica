@@ -12,10 +12,20 @@ insert into nucleo.personas (id, empresa_id, nombre) values
 
 create temp table v_toolbox (anio int, mes int, compromiso text, cuerpo text, puntos jsonb, tema text, tema_intro text, tema_puntos jsonb, imagen text, codigo text);
 insert into v_toolbox values (2026, 10, 'Si veo algo, lo digo', 'Texto', '[]', 'Riesgo eléctrico', null, '["No tocar"]', null, 'COD-1'),
-  (2026, 1, 'Compromiso', 'Texto de enero', '[]', 'Frío', null, '[]', 'img/toolbox/2026-01.jpg', 'COD-1');
+  (2026, 1, 'Compromiso', 'Texto de enero', '[]', 'Frío', '', '[]', 'img/toolbox/2026-01.jpg', 'COD-1'),
+  (2026, 9, 'Compromiso', 'Texto de septiembre cambiado en la vieja', '[]', 'Calor', '', '[]', null, 'COD-1');
 -- en la nueva, enero ya estaba copiado con su imagen dentro
 insert into prevencion.charlas (empresa_id, anio, mes, codigo, compromiso, cuerpo, tema, imagen, origen) values
   ('e1e1e1e1-0000-0000-0000-000000000001', 2026, 1, 'COD-1', 'Compromiso', 'Texto viejo', 'Frío', 'data:image/jpeg;base64,/9j/4AAQ', 'limpieza-cie:prl_toolbox:2026-01');
+-- septiembre: hecho y firmado en la app nueva
+insert into prevencion.charlas (id, empresa_id, anio, mes, codigo, compromiso, cuerpo, tema, origen) values
+  ('e1e1e1e1-0000-0000-0000-000000000c09', 'e1e1e1e1-0000-0000-0000-000000000001', 2026, 9, 'COD-1', 'Compromiso', 'Texto de septiembre', 'Calor', 'limpieza-cie:prl_toolbox:2026-09');
+insert into prevencion.sesiones (id, empresa_id, charla_id, previstos) values ('e1e1e1e1-0000-0000-0000-000000000509', 'e1e1e1e1-0000-0000-0000-000000000001',
+  'e1e1e1e1-0000-0000-0000-000000000c09', '{e1e1e1e1-0000-0000-0000-0000000000f1}');
+insert into nucleo.firmas (id, empresa_id, modulo, documento, documento_id, persona_id, sha256_documento) values ('e1e1e1e1-0000-0000-0000-000000000f09',
+  'e1e1e1e1-0000-0000-0000-000000000001', 'prevencion', 'charla', 'e1e1e1e1-0000-0000-0000-000000000509', 'e1e1e1e1-0000-0000-0000-0000000000f1', repeat('a', 64));
+insert into prevencion.asistencias (empresa_id, sesion_id, persona_id, nombre, firma_id) values ('e1e1e1e1-0000-0000-0000-000000000001',
+  'e1e1e1e1-0000-0000-0000-000000000509', 'e1e1e1e1-0000-0000-0000-0000000000f1', 'Ana Prueba', 'e1e1e1e1-0000-0000-0000-000000000f09');
 create temp table v_sesion (id uuid, anio int, mes int, denominacion text, fecha date, centro text, duracion int, formador text, observaciones text,
   previstos uuid[], enviada_en timestamptz, estado text, cerrada_en timestamptz, creado timestamptz, prev_enviado_en timestamptz, prev_destino text);
 insert into v_sesion values ('e1e1e1e1-0000-0000-0000-000000000501', 2026, 10, 'Toolbox Octubre', '2026-10-05', 'Planta', 15, 'Formador Prueba', null,
@@ -46,6 +56,9 @@ create temp table stock_antes as select count(*) n from prevencion.stock_mov;
 select pruebas.ok((select count(*) = 1 from prevencion.charlas where empresa_id = 'e1e1e1e1-0000-0000-0000-000000000001' and tema = 'Riesgo eléctrico'), 'el texto del Toolbox se copia');
 select pruebas.ok((select cuerpo = 'Texto de enero' and imagen = 'data:image/jpeg;base64,/9j/4AAQ' from prevencion.charlas where mes = 1 and empresa_id = 'e1e1e1e1-0000-0000-0000-000000000001'),
   'la imagen que en la vieja es un archivo no pisa la de la nueva (el texto sí se cambia)');
+select pruebas.ok((select cuerpo = 'Texto de septiembre' from prevencion.charlas where id = 'e1e1e1e1-0000-0000-0000-000000000c09'), 'una charla ya firmada no se cambia');
+select pruebas.ok((select cuantos = 1 from r_resumen where orden = 12), 'y se avisa');
+select pruebas.ok((select tema_intro is null from prevencion.charlas where mes = 1 and empresa_id = 'e1e1e1e1-0000-0000-0000-000000000001'), 'texto vacío = nada');
 select pruebas.ok((select cerrada_en is not null and previstos = '{e1e1e1e1-0000-0000-0000-0000000000f1,e1e1e1e1-0000-0000-0000-0000000000f2}'
   from prevencion.sesiones where id = 'e1e1e1e1-0000-0000-0000-000000000501'), 'la sesión se copia cerrada (sin la persona que no existe)');
 select pruebas.ok((select f.imagen like 'data:image/png;base64,%' and f.documento = 'charla' from prevencion.asistencias a join nucleo.firmas f on f.id = a.firma_id
@@ -61,10 +74,10 @@ select pruebas.ok((select dni = '00000000T' and tallas = '{"bota": "42"}' from p
 -- otra vez (la semana siguiente): no duplica nada; la formación ya firmada en la vieja se firma
 update v_doc set firma = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==', firmado_en = '2026-11-01 10:00+01'
  where id = 'e1e1e1e1-0000-0000-0000-000000000702';
-drop table r_resumen;
+drop table r_resumen, r_tb;
 \ir ../../scripts/copia-semanal/prevencion.sql
 select pruebas.ok((select count(*) = 1 from prevencion.asistencias where origen like 'limpieza-cie:%'), 'la segunda vez no repite firmas');
 select pruebas.ok((select count(*) = 2 from prevencion.documentos where origen like 'limpieza-cie:%'), 'ni documentos');
 select pruebas.ok((select firma_id is not null from prevencion.documentos where id = 'e1e1e1e1-0000-0000-0000-000000000702'), 'la formación firmada después se firma');
-select pruebas.ok((select count(*) = 0 from r_resumen where orden in (1, 2, 3, 7, 9) and cuantos > 0), 'lo que no cambió no sale en el resumen');
+select pruebas.ok((select count(*) = 0 from r_resumen where orden in (1, 2, 3, 7, 9) and cuantos > 0), 'lo que no cambió no sale en el resumen (tampoco enero: texto vacío = nada)');
 rollback;

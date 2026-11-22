@@ -20,20 +20,34 @@ begin
   perform set_config('prevencion.firmando', 'si', true);   -- para poder poner la firma a los documentos copiados
 
   -- ---------- textos del Toolbox (charla de cada mes) ----------
+  -- un texto vacío en la vieja = nada en la nueva; una charla con firmas o cerrada no se cambia nunca (solo se avisa)
+  create temp table r_tb as
+  select t.anio, t.mes, nullif(trim(t.codigo), '') codigo, nullif(trim(t.compromiso), '') compromiso, nullif(trim(t.cuerpo), '') cuerpo,
+         coalesce(t.puntos, '[]') puntos, nullif(trim(t.tema), '') tema, nullif(trim(t.tema_intro), '') tema_intro, coalesce(t.tema_puntos, '[]') tema_puntos,
+         case when t.imagen ~ '^data:image/(png|jpeg);base64,' then t.imagen end imagen,   -- en la vieja suele ser el nombre de un archivo: se deja la de la nueva
+         'limpieza-cie:prl_toolbox:' || t.anio || '-' || lpad(t.mes::text, 2, '0') origen_n,
+         c.id charla, c.origen origen_actual,
+         exists (select 1 from prevencion.sesiones s where s.charla_id = c.id and (s.cerrada_en is not null
+                   or exists (select 1 from prevencion.asistencias a where a.sesion_id = s.id and a.anulada is null))) bloqueada,
+         c.id is not null and (c.codigo, c.compromiso, c.cuerpo, c.puntos, c.tema, c.tema_intro, c.tema_puntos)
+           is distinct from (nullif(trim(t.codigo), ''), nullif(trim(t.compromiso), ''), nullif(trim(t.cuerpo), ''), coalesce(t.puntos, '[]'),
+                             nullif(trim(t.tema), ''), nullif(trim(t.tema_intro), ''), coalesce(t.tema_puntos, '[]'))
+           or (c.id is not null and t.imagen ~ '^data:image/(png|jpeg);base64,' and c.imagen is distinct from t.imagen) distinta
+  from v_toolbox t left join prevencion.charlas c on c.empresa_id = v_emp and c.anio = t.anio and c.mes = t.mes;
+
   with q as (
     insert into prevencion.charlas (empresa_id, anio, mes, codigo, compromiso, cuerpo, puntos, tema, tema_intro, tema_puntos, imagen, origen)
-    select v_emp, t.anio, t.mes, t.codigo, t.compromiso, t.cuerpo, coalesce(t.puntos, '[]'), t.tema, t.tema_intro, coalesce(t.tema_puntos, '[]'),
-           case when t.imagen ~ '^data:image/(png|jpeg);base64,' then t.imagen end,   -- en la vieja suele ser el nombre de un archivo: se deja la de la nueva
-           'limpieza-cie:prl_toolbox:' || t.anio || '-' || lpad(t.mes::text, 2, '0')
-      from v_toolbox t
-    on conflict (empresa_id, anio, mes) do update set codigo = excluded.codigo, compromiso = excluded.compromiso, cuerpo = excluded.cuerpo, puntos = excluded.puntos,
-      tema = excluded.tema, tema_intro = excluded.tema_intro, tema_puntos = excluded.tema_puntos, imagen = coalesce(excluded.imagen, prevencion.charlas.imagen)
-      where prevencion.charlas.origen like 'limpieza-cie:%'
-        and (prevencion.charlas.codigo, prevencion.charlas.compromiso, prevencion.charlas.cuerpo, prevencion.charlas.puntos, prevencion.charlas.tema,
-             prevencion.charlas.tema_intro, prevencion.charlas.tema_puntos, prevencion.charlas.imagen)
-            is distinct from (excluded.codigo, excluded.compromiso, excluded.cuerpo, excluded.puntos, excluded.tema, excluded.tema_intro, excluded.tema_puntos, coalesce(excluded.imagen, prevencion.charlas.imagen))
+    select v_emp, anio, mes, codigo, compromiso, cuerpo, puntos, tema, tema_intro, tema_puntos, imagen, origen_n from r_tb where charla is null
     returning anio, mes)
-  insert into r_resumen select 1, 'Toolbox: textos nuevos o cambiados', count(*), string_agg(mes || '/' || anio, ', ' order by anio, mes) from q;
+  insert into r_resumen select 1, 'Toolbox: textos nuevos', count(*), string_agg(mes || '/' || anio, ', ' order by anio, mes) from q;
+  with q as (
+    update prevencion.charlas c set codigo = tb.codigo, compromiso = tb.compromiso, cuerpo = tb.cuerpo, puntos = tb.puntos, tema = tb.tema,
+      tema_intro = tb.tema_intro, tema_puntos = tb.tema_puntos, imagen = coalesce(tb.imagen, c.imagen)
+    from r_tb tb where c.id = tb.charla and tb.distinta and not tb.bloqueada and tb.origen_actual like 'limpieza-cie:%'
+    returning c.anio, c.mes)
+  insert into r_resumen select 1, 'Toolbox: textos cambiados', count(*), string_agg(mes || '/' || anio, ', ' order by anio, mes) from q;
+  insert into r_resumen select 12, 'Aviso: texto del Toolbox cambiado en la vieja en un mes ya firmado o cerrado en la nueva (no se cambia)', count(*),
+         string_agg(mes || '/' || anio, ', ') from r_tb where distinta and bloqueada;
 
   -- ---------- sesiones (la charla de cada mes con sus datos) ----------
   with q as (
