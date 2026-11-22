@@ -4,7 +4,12 @@ Decidido por Cristian (22/11): durante las semanas en paralelo **solo apunta en 
 a la nueva lo de la vieja y él comprueba que la nueva enseña lo mismo. Estos archivos son la «receta» (sin datos).
 Los datos de cada semana van en un archivo aparte **fuera del repositorio** (llevan nombres y notas).
 
-## Cómo se hace cada semana (Personal)
+## Lo más fácil: «leer-vieja-*.sql» (desde el 22/11)
+`montar.sh` junta la lectura de la vieja y la receta en un solo archivo por parte (`leer-vieja-personal.sql`, `leer-vieja-limpieza.sql`).
+Cristian lo pega en el SQL Editor de la **vieja** (limpieza-cie; solo lee), copia la casilla que sale y la pega en el SQL Editor de
+**colada-mapri**. Los datos van de una app a la otra sin pasar por Claude. Si se cambia una receta: volver a ejecutar `montar.sh`.
+
+## Cómo se hace cada semana (Personal), a mano
 1. Leer la vieja (limpieza-cie, solo lectura) con la consulta de abajo: devuelve el principio del archivo
    (crea `v_horas`, `v_vac` y `v_dias` y los llena).
 2. Archivo de la semana = ese principio + `scripts/copia-semanal/personal.sql`. Guardarlo en el scratchpad.
