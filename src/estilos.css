@@ -661,3 +661,6 @@ div.fila { cursor: default; }
 .buscar-mas input { flex: 1; min-width: 0; }
 .panel-mas { padding: 12px; margin: 0 0 12px; border: 1px solid var(--linea); border-radius: 12px; background: var(--sup); }
 .boton.con-marca { border-color: var(--acento); }
+.buscar-mas input { min-height: 44px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--linea); background: var(--sup); font-size: 16px; }
+.buscar-mas input:focus { outline: 2px solid var(--acento); outline-offset: 1px; }
+.plegable > summary > span { margin-left: .3em; }
