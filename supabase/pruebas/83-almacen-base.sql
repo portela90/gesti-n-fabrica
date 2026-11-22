@@ -94,4 +94,9 @@ select pruebas.ok((select count(*) = 0 from almacen.precios), 'solo lectura no v
 select pruebas.ok((select count(*) = 1 from almacen.dotacion), 'pero sí la dotación');
 reset role;
 select pruebas.ok((select count(*) > 0 from nucleo.historial where tabla = 'movimientos' and modulo = 'almacen' and accion = 'cambiar'), 'la corrección queda en el historial');
+-- roles de partida: el operario ya no tiene «*.*.apuntar» (no apunta en el almacén) y el técnico de mantenimiento sí apunta salidas
+select pruebas.ok(not exists (select 1 from nucleo.rol_permisos rp join nucleo.roles r on r.id = rp.rol_id where r.codigo = 'operario' and rp.permiso like '*.%'
+                                                                                                       and rp.permiso <> '*.tarea.ver'), 'operario sin comodín de apuntar');
+select pruebas.ok(exists (select 1 from nucleo.rol_permisos rp join nucleo.roles r on r.id = rp.rol_id where r.codigo = 'operario' and rp.permiso = 'limpieza.*.apuntar'), 'operario apunta en Limpieza');
+select pruebas.ok(exists (select 1 from nucleo.rol_permisos rp join nucleo.roles r on r.id = rp.rol_id where r.codigo = 'tecnico_mant' and rp.permiso = 'almacen.movimiento.apuntar'), 'técnico apunta salidas');
 rollback;

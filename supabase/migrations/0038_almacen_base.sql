@@ -21,6 +21,21 @@ insert into nucleo.permisos (codigo, modulo, descripcion) values
   ('almacen.precio.editar',      'almacen', 'Ver y cambiar los precios de los artículos (de partida, solo el administrador)')
 on conflict (codigo) do nothing;
 
+-- roles de partida. Los operarios no entran en el Almacén (decidido por Cristian el 22/11: «como ahora, oficina y almacén»):
+-- su «*.*.apuntar» pasa a ser módulo a módulo, sin el almacén. El técnico de mantenimiento apunta lo que gasta (salidas).
+delete from nucleo.rol_permisos where permiso = '*.*.apuntar'
+   and rol_id in (select id from nucleo.roles where codigo = 'operario' and empresa_id is null);
+insert into nucleo.rol_permisos (rol_id, permiso)
+select r.id, p from nucleo.roles r,
+       unnest(array['coladas.*.apuntar', 'mantenimiento.*.apuntar', 'limpieza.*.apuntar', 'personal.*.apuntar', 'prevencion.*.apuntar']) p
+ where r.codigo = 'operario' and r.empresa_id is null
+on conflict do nothing;
+delete from nucleo.rol_permisos where permiso = 'almacen.consumo.apuntar'
+   and rol_id in (select id from nucleo.roles where codigo = 'tecnico_mant' and empresa_id is null);
+insert into nucleo.rol_permisos (rol_id, permiso)
+select id, 'almacen.movimiento.apuntar' from nucleo.roles where codigo = 'tecnico_mant' and empresa_id is null
+on conflict do nothing;
+
 -- ---------- fichas ----------
 create table almacen.fichas (
   articulo_id          uuid primary key,

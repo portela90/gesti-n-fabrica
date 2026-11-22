@@ -24,7 +24,8 @@ insert into nucleo.empresa_modulos (empresa_id, modulo) values
   ('aaaaaaaa-0000-0000-0000-000000000001', 'coladas'), ('aaaaaaaa-0000-0000-0000-000000000001', 'almacen'),
   ('bbbbbbbb-0000-0000-0000-000000000001', 'limpieza');
 insert into nucleo.permisos (codigo, modulo, descripcion) values
-  ('coladas.lote.ver', 'coladas', 'prueba'), ('almacen.stock.ver', 'almacen', 'prueba'), ('limpieza.tarea.apuntar', 'limpieza', 'prueba');
+  ('coladas.lote.ver', 'coladas', 'prueba'), ('almacen.stock.ver', 'almacen', 'prueba'), ('limpieza.tarea.apuntar', 'limpieza', 'prueba')
+on conflict (codigo) do nothing;
 insert into nucleo.centros (id, empresa_id, codigo, nombre) values
   ('aaaaaaaa-0000-0000-0000-0000000000c1', 'aaaaaaaa-0000-0000-0000-000000000001', 'n1', 'Nave 1'),
   ('aaaaaaaa-0000-0000-0000-0000000000c2', 'aaaaaaaa-0000-0000-0000-000000000001', 'n2', 'Nave 2'),
