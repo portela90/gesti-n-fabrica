@@ -539,6 +539,8 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   toca lo hecho en la app nueva. Resumen al final. Prueba `supabase/pruebas/77-copia-semanal-personal.sql` (16, datos inventados).
 - Comparado 22/11 antes de la primera copia: vacaciones y calendario iguales; horas: faltan 4 días en la nueva (21/11 y 22/11 de
   fin de semana con extra; 4/11 y 13/11 con horas fuera de presupuesto).
+- **1.ª copia de Personal: PEGADA 22/11 por Cristian y comprobada** (4 días de horas nuevos; huellas iguales en las dos apps:
+  42 días de horas y 35 vacaciones).
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
