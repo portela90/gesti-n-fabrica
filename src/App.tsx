@@ -8,13 +8,13 @@ import { Avisos, Icono, ICONOS, useRuta, Ventana } from './componentes/basicos';
 import { Problema } from './componentes/Problema';
 import { Entrar, NuevaClave } from './pantallas/Entrar';
 import { ElegirEmpresa, Inicio, PantallaModulo } from './pantallas/Inicio';
-import { Lateral, nombreApartado } from './pantallas/Lateral';
+import { Lateral, modulosVisibles, nombreApartado } from './pantallas/Lateral';
 import { IndiceConfiguracion, ListaCatalogo, useConfigurable } from './configuracion/Configuracion';
 import { Usuarios } from './configuracion/Usuarios';
 import { Salud } from './configuracion/Salud';
 
 export function App() {
-  const { estado, empresa, salir, recargar, puede } = useSesion();
+  const { estado, empresa, salir, recargar, puede, elegirEmpresa } = useSesion();
   const [ruta, ir] = useRuta();
   const [menu, setMenu] = useState(false);          // «Tu cuenta»
   const [lateral, setLateral] = useState(false);    // el menú lateral en el móvil
@@ -23,6 +23,13 @@ export function App() {
   const configurable = useConfigurable();
 
   useEffect(() => { ponerEmpresaErrores(empresa?.id ?? null); }, [empresa]);
+  // un enlace (aviso, notificación…) a un módulo que es de otra unidad de trabajo: la app se pone sola en esa unidad
+  useEffect(() => {
+    const cod = (ruta.match(/^\/m\/([a-z]+)/) ?? [])[1];
+    if (!cod || estado.fase !== 'dentro' || !empresa || modulosVisibles(empresa).some((m) => m.codigo === cod)) return;
+    const otra = estado.sesion.empresas.find((e) => modulosVisibles(e).some((m) => m.codigo === cod));
+    if (otra) elegirEmpresa(otra.id);
+  }, [ruta, estado, empresa, elegirEmpresa]);
 
   let cuerpo;
   if (estado.fase === 'cargando') cuerpo = <main className="cargando" aria-busy="true">Cargando…</main>;

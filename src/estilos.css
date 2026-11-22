@@ -49,6 +49,9 @@ h1, h2 { margin: 0; line-height: 1.2; }
 .lateral-subitem { min-height: 36px; padding: 6px 10px; border: 0; border-radius: 8px; background: none; color: var(--menu-tinta); font-size: 14px; text-align: left; cursor: pointer; }
 .lateral-subitem:hover { background: var(--menu-hover); }
 .lateral-subitem.activo { color: #fff; font-weight: 600; background: var(--menu-hover); box-shadow: inset 3px 0 0 #3fb8ad; }
+.lateral-grupo + .lateral-grupo { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--menu-linea); }
+.lateral-grupo-nombre { padding: 4px 10px 4px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--menu-suave); }
+.lateral-grupo-nombre.aqui { color: #3fb8ad; }
 .lateral-pie { margin-top: auto; display: flex; flex-direction: column; gap: 2px; padding-top: 8px; border-top: 1px solid var(--menu-linea); }
 .lateral-quien { display: flex; flex-direction: column; min-width: 0; }
 .lateral-quien small { color: var(--menu-suave); font-size: 12px; font-weight: 400; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -492,6 +495,7 @@ details.res-tarjeta[open] > summary { margin-bottom: 8px; }
 .res-servido small { color: var(--tinta2); }
 
 /* ---------- panel de Inicio ---------- */
+.inicio-unidad { font-size: 13px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--tinta2); margin: 0 0 8px; }
 .panel { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 12px; margin: 0 0 22px; }
 .panel:empty { display: none; }
 .tarjeta-panel { display: flex; flex-direction: column; gap: 8px; min-width: 0; padding: 14px 16px; text-align: left; background: var(--sup); color: var(--tinta);

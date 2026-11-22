@@ -32,37 +32,49 @@ test('entrar con un enlace al correo: no crea usuarios nuevos', async ({ page })
   expect(otp?.cuerpo).toMatchObject({ email: 'jefe@ejemplo.com', create_user: false });
 });
 
-test('el menú solo trae los módulos que la base de datos permite (Unidad A: Almacén y Mantenimiento, sin Coladas)', async ({ page }) => {
+test('el menú solo trae los módulos que la base de datos permite y que la persona puede usar (Unidad A: Almacén; sin Mantenimiento ni Coladas)', async ({ page }) => {
   const err = vigilar(page);
   await simular(page, { dentro: true });
   await page.goto('./');
   await expect(page.locator('.mosaico')).toHaveCount(0);   // los módulos ya no se repiten en Inicio: están en el menú
   await abrirMenu(page);
   const menu = page.getByRole('navigation', { name: 'Módulos' });
-  await expect(menu.getByRole('button', { name: 'Almacén' })).toBeVisible();
-  await expect(menu.getByRole('button', { name: 'Coladas' })).toHaveCount(0);
-  await menu.getByRole('button', { name: 'Mantenimiento' }).click();
-  await expect(page.locator('.cabecera')).toContainText('Mantenimiento');
+  await expect(menu.getByRole('button', { name: 'Coladas' })).toHaveCount(0);           // no está encendido en la unidad
+  await expect(menu.getByRole('button', { name: 'Mantenimiento' })).toHaveCount(0);     // encendido, pero sin ningún permiso
+  await menu.getByRole('button', { name: 'Almacén' }).click();
+  await expect(page.locator('.cabecera')).toContainText('Almacén');
   await expect(page.getByText('Este módulo llega en la Fase 3')).toBeVisible();
   // un módulo sin permiso, aunque se escriba la dirección a mano
   await page.goto('./#/m/coladas');
   await expect(page.getByText('No tienes acceso a esta pantalla.')).toBeVisible();
+  await page.goto('./#/m/mantenimiento');
+  await expect(page.getByText('No tienes acceso a esta pantalla.')).toBeVisible();
   expect(err).toEqual([]);
 });
 
-test('con dos unidades de trabajo pregunta en cuál trabajar y la recuerda', async ({ page }) => {
+test('con dos unidades de trabajo, un solo menú con las dos: al tocar algo de la otra, la app se pone en ella y lo recuerda', async ({ page }) => {
+  const err = vigilar(page);
   await simular(page, { dentro: true, sesion: { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: true, empresa_actual: null }, empresas: [EMPRESA_A, EMPRESA_B] } });
   await page.goto('./');
-  await expect(page.getByRole('heading', { name: '¿En qué unidad de trabajo vas a trabajar?' })).toBeVisible();
-  await page.locator('.fila', { hasText: 'Unidad B' }).click();
-  await expect(page.locator('.lateral-nav button', { hasText: 'Limpieza' })).toBeAttached();
+  await expect(page.getByRole('heading', { name: 'Hola, Ana' })).toBeVisible();   // ya no pregunta en cuál trabajar
+  await abrirMenu(page);
+  const a = page.getByRole('group', { name: 'Unidad A' }), b = page.getByRole('group', { name: 'Unidad B' });
+  await expect(a.getByRole('button', { name: 'Almacén' })).toBeVisible();
+  await expect(b.getByRole('button', { name: 'Personal' })).toBeVisible();
+  await expect(b.getByRole('button', { name: 'Limpieza' })).toHaveCount(0);   // en la B no tiene permisos de Limpieza
+  await b.getByRole('button', { name: 'Prevención' }).click();
+  await expect(page.locator('.cabecera')).toContainText('Unidad B');
   await page.reload();
   await expect(page.locator('.cabecera')).toContainText('Unidad B');
+  // un enlace a un módulo de la otra unidad: se pone sola en ella
+  await page.goto('./#/m/almacen');
+  await expect(page.getByText('Este módulo llega en la Fase 3')).toBeVisible();
+  await expect(page.locator('.cabecera')).toContainText('Unidad A');
   await page.getByRole('button', { name: 'Menú' }).click();
   await page.getByRole('button', { name: /Tu cuenta/ }).click();
   await expect(page.locator('.menu-quien')).toContainText('Superadministrador');
   await expect(page.locator('#version')).toContainText('Versión ');
-  await expect(page.locator('.fila', { hasText: 'Cambiar de unidad de trabajo' })).toBeVisible();
+  expect(err).toEqual([]);
 });
 
 test('quien entra pero no tiene usuario en la app ve un aviso claro', async ({ page }) => {

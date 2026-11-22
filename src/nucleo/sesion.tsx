@@ -58,17 +58,24 @@ export function ProveedorSesion({ children }: { children: ReactNode }) {
   const empresa = useMemo(() => {
     if (!empresas.length) return null;
     const pref = empresaId ?? (estado.fase === 'dentro' ? estado.sesion.usuario?.empresa_actual : null);
-    return empresas.find((e) => e.id === pref) ?? (empresas.length === 1 ? empresas[0] : null);
+    return empresas.find((e) => e.id === pref) ?? empresas[0];
   }, [empresas, empresaId, estado]);
 
-  const valor: Contexto = {
+  const valor: Contexto = useMemo(() => ({
     estado,
     empresa,
     elegirEmpresa: (id) => { guardar(CLAVE_EMPRESA, id); setEmpresaId(id); },
     puede: (p) => !!empresa && tienePermiso(empresa.permisos, p),
     recargar: async () => { const { data } = await supabase.auth.getSession(); await cargar(data.session); },
     salir: async () => { await supabase.auth.signOut({ scope: 'local' }); setEstado({ fase: 'fuera' }); },   // solo en este dispositivo
-  };
+  }), [estado, empresa, cargar]);
+  return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
+}
+
+/** Lo de dentro trabaja con otra unidad de trabajo (para el Inicio con todas las unidades: cada parte, con la suya). */
+export function ConEmpresa({ empresa, children }: { empresa: EmpresaSesion; children: ReactNode }) {
+  const base = useSesion();
+  const valor = useMemo<Contexto>(() => ({ ...base, empresa, puede: (p: string) => tienePermiso(empresa.permisos, p) }), [base, empresa]);
   return <Ctx.Provider value={valor}>{children}</Ctx.Provider>;
 }
 

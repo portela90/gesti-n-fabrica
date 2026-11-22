@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useSesion } from '../nucleo/sesion';
+import { ConEmpresa, useSesion } from '../nucleo/sesion';
+import type { EmpresaSesion } from '../nucleo/tipos';
+import { modulosVisibles } from './Lateral';
 import { nucleo } from '../nucleo/supabase';
 import { Tarjeta, type LineaPendiente } from '../componentes/Panel';
 import { TarjetasLimpieza } from '../limpieza/panel';
 import { pendientesPersonal } from '../personal/panel';
 import { pendientesPrevencion } from '../prevencion/panel';
-import { MODULOS, moduloPorCodigo } from '../nucleo/modulos';
+import { moduloPorCodigo } from '../nucleo/modulos';
 import { Icono, ICONOS } from '../componentes/basicos';
 import { Personal } from '../personal/Personal';
 import { Prevencion } from '../prevencion/Prevencion';
@@ -35,19 +37,24 @@ export function ElegirEmpresa() {
 
 /** Inicio: el panel de hoy, lo pendiente y los avisos. Los módulos están en el menú lateral. */
 export function Inicio({ ir, configurable }: { ir: (r: string) => void; configurable?: boolean }) {
-  const { estado, empresa } = useSesion();
+  const { estado, empresa, elegirEmpresa } = useSesion();
   if (estado.fase !== 'dentro' || !empresa) return null;
-  const mios = MODULOS.filter((m) => empresa.modulos.includes(m.codigo));
+  const mios = modulosVisibles(empresa);
+  // con varias unidades de trabajo, lo de hoy de cada una, por separado (y al tocar algo, la app se pone en esa unidad)
+  const unidades = estado.sesion.empresas.filter((e) => conPanel(e));
+  const varias = unidades.length > 1;
   const nombre = estado.sesion.usuario?.nombre.split(' ')[0] ?? '';
   return (
     <main className="contenido">
       <h1 className="titulo">Hola, {nombre}</h1>
       <Tablon />
       <MisNotificaciones ir={ir} />
-      <section className="panel" aria-label="Panel">
-        <TarjetasLimpieza ir={ir} />
-        <Pendientes ir={ir} />
-      </section>
+      {varias ? unidades.map((e) => (
+        <ConEmpresa key={e.id} empresa={e}>
+          <h2 className="inicio-unidad">{e.nombre}</h2>
+          <PanelUnidad ir={(r) => { if (e.id !== empresa.id) elegirEmpresa(e.id); ir(r); }} />
+        </ConEmpresa>
+      )) : <PanelUnidad ir={ir} />}
       {/* Para ir a cada módulo, el menú lateral (≡ en el móvil): aquí ya no se repiten (decidido por Cristian el 22/11). */}
       {mios.length === 0 && !configurable && (
         <div className="vacio">
@@ -61,6 +68,19 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
 }
 
 /** «Pendientes de firmar»: lo que aporta cada módulo (Personal y Prevención), según los permisos de cada uno. */
+const CON_PANEL = ['limpieza', 'personal', 'prevencion'];
+const conPanel = (e: EmpresaSesion) => modulosVisibles(e).some((m) => CON_PANEL.includes(m.codigo));
+
+/** Las tarjetas de hoy de la unidad de trabajo en la que se está (o la de ConEmpresa). */
+function PanelUnidad({ ir }: { ir: (r: string) => void }) {
+  return (
+    <section className="panel" aria-label="Panel">
+      <TarjetasLimpieza ir={ir} />
+      <Pendientes ir={ir} />
+    </section>
+  );
+}
+
 function Pendientes({ ir }: { ir: (r: string) => void }) {
   const { estado, empresa, puede } = useSesion();
   const [L, setL] = useState<LineaPendiente[] | null>(null);
@@ -87,7 +107,7 @@ function Pendientes({ ir }: { ir: (r: string) => void }) {
 export function PantallaModulo({ codigo, ruta, ir }: { codigo: string; ruta: string; ir: (r: string) => void }) {
   const { empresa } = useSesion();
   const m = moduloPorCodigo(codigo);
-  if (!m || !empresa?.modulos.includes(codigo)) {
+  if (!m || !empresa || !modulosVisibles(empresa).some((x) => x.codigo === codigo)) {
     return (
       <main className="contenido estrecho">
         <div className="vacio"><p><b>No tienes acceso a esta pantalla.</b></p>

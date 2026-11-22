@@ -148,7 +148,8 @@ test('el encargado ve tareas y checklists pero no puede cambiarlas', async ({ pa
 test('quien no tiene estos permisos no ve las listas', async ({ page }) => {
   await simular(page, { dentro: true, sesion: sesion(['limpieza.modulo.ver']), tablas: tablas() });
   await page.goto('./#/m/limpieza/tareas');
-  await expect(page.getByText('No tienes nada de Limpieza.')).toBeVisible();
+  await expect(page.getByText('No tienes acceso a esta pantalla.')).toBeVisible();   // ni sale en el menú
+  await expect(page.locator('.lateral-nav button', { hasText: 'Limpieza' })).toHaveCount(0);
   await expect(page.locator('.fila')).toHaveCount(0);
 });
 

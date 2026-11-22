@@ -610,6 +610,17 @@ cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a ma
   y `limpieza._tiene_palabra`; `investigar` la usa en «detalles». Calculado el 22/11 sobre los datos de verdad: 647 de 806 trabajos con nave
   (409 Nave 1, 238 Nave 2; antes 60). Prueba `82-limpieza-nave-trabajo.sql` (12). **APLICADO 22/11 (pegado por Cristian; comprobado: 647 de 806).**
 
+## Menú único y quién ve qué (22/11, pedido por Cristian)
+- **Un solo menú con todo lo de la persona, agrupado por unidad de trabajo** (FÁBRICA: Coladas, Almacén, Mantenimiento;
+  LIMPIEZA: Limpieza, Personal, Prevención). Al tocar algo de otra unidad, la app se pone sola en ella (y lo recuerda); un enlace
+  a un módulo de otra unidad, igual. Ya no pregunta «¿En qué unidad…?» al entrar (empieza en la última o en la primera).
+  El Inicio, si hay varias unidades con panel, enseña lo de hoy de cada una bajo su nombre (`ConEmpresa` en `sesion.tsx`).
+- **Nadie ve en el menú lo que no puede usar** (`modulosVisibles` en `Lateral.tsx`): el módulo tiene que estar encendido en la
+  unidad y tener algún apartado para esa persona; si no, ni sale ni se abre escribiendo la dirección.
+- **Operarios** (decidido): Limpieza + Mi calendario y Mis horas (Personal) + Mis charlas para firmar (Prevención); siempre solo
+  lo suyo. Es lo que ya da el rol «Operario» (`*.*.apuntar`, `*.tarea.ver`); los operarios solo tienen rol en Limpieza, así que
+  Almacén y Coladas (de la Fábrica) no los ven nunca (lo impide la base de datos).
+
 ## Fase 3: Almacén y Mantenimiento (Fábrica) — EN CURSO (empezada el 22/11)
 Estudio de la app vieja (repo `portela90/colada`, solo lectura; datos en colada-mapri `public.docs`, colecciones `alm_*`): todo el
 catálogo en un solo JSON (`alm_cat`: 111 artículos, 6 almacenes, 14 proveedores, 33 máquinas, 19 modelos de eje, 89 contenedores,
