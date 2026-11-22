@@ -645,7 +645,7 @@ Decidido por Cristian (22/11):
   mantenimiento con `almacen.movimiento.apuntar`); copia: 637 movimientos, 111 artículos (111 fichas, 28 precios), 33 máquinas,
   6 almacenes, 14 proveedores, 20 fichas de trabajador (6 gestores), dotación 24; **stock igual que en la vieja en las 134
   parejas artículo-almacén** (total 8646). Falta exponer `almacen` en «Exposed schemas» (cuando lleguen las pantallas, 1b).
-- **1b hecho (22/11), falta 0039 y exponer `almacen`:** apartados **Stock** (pedidos en curso con «Ha llegado» y «Anular», para pedir con
+- **1b hecho, 0039 APLICADA y `almacen` EXPUESTO (22/11; comprobado: `public` sigue de primero, `almacen` responde):** apartados **Stock** (pedidos en curso con «Ha llegado» y «Anular», para pedir con
   «Marcar pedido», existencias por familia, ficha del artículo con cifras/datos/movimientos/consumo por meses, **lista de pedido** por
   proveedor con WhatsApp, **inventario** por almacén, Excel), **Movimientos** (mes a mes con filtros, corregir y borrar con permiso, Excel)
   y **Apuntar** (botones, **lector por reglas** `src/almacen/lector.ts` que **aprende palabras** en `almacen.sinonimos`, dictado,
