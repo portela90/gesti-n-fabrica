@@ -27,6 +27,7 @@ export function Stock({ c, recargar }: { c: Catalogo; recargar: () => void }) {
   const [ficha, setFicha] = useState<Articulo | null>(null);
   const [mov, setMov] = useState<Inicial | null>(null);
   const [ventana, setVentana] = useState<'pedido' | 'inventario' | null>(null);
+  const [mas, setMas] = useState(false);
   const pide = puede('almacen.pedido.apuntar'), apunta = puede('almacen.movimiento.apuntar');
 
   const vivos = c.articulos.filter((a) => !a.baja);
@@ -60,24 +61,19 @@ export function Stock({ c, recargar }: { c: Catalogo; recargar: () => void }) {
   }
 
   const estado = (a: Articulo) => <span className={CHAPA[niv.get(a.id)!]}>{NIVEL[niv.get(a.id)!]}</span>;
-  const lineaArt = (a: Articulo) => {
-    const f = c.fichas.get(a.id);
-    return [a.codigo && /\d/.test(a.codigo) ? a.codigo : '', f?.envase, (f?.maquinas ?? []).length ? 'Iny. ' + f!.maquinas.map((m) => codMaq(c, m)).join(', ') : '', f?.ubicacion,
-      porAlmacen(c, a) || 'Sin existencias'].filter(Boolean).join(' · ');
-  };
+  // repaso con Cristian del 22/11: debajo del nombre, solo el stock de cada almacén (lo demás, en la ficha)
+  const lineaArt = (a: Articulo) => porAlmacen(c, a) || 'Sin existencias';
+  const retrasados = pedidos.filter((a) => { const l = llegaEl(c, a); return l && l < hoy(); }).length;
+  const filtrando = !!familia || !!almacen;
+  const botonMas = <button type="button" className={'boton sec peq' + (filtrando ? ' con-marca' : '')} aria-expanded={mas} onClick={() => setMas((x) => !x)}>⋯ Más{filtrando ? ' (filtrado)' : ''}</button>;
 
   return (
     <>
-      <div className="acciones-cal">
-        {pide && <button type="button" className="boton peq" onClick={() => setVentana('pedido')}>Lista de pedido{paraPedir.length ? ` · ${paraPedir.length}` : ''}</button>}
-        {apunta && <button type="button" className="boton sec peq" onClick={() => setVentana('inventario')}>Inventario</button>}
-        <button type="button" className="boton sec peq" onClick={excel}>Excel</button>
-      </div>
-
+      {/* pedidos en curso y para pedir, plegados con su número (repaso del 22/11) */}
       {pedidos.length > 0 && (
-        <section className="tarjeta-seccion" aria-label="Pedidos en curso">
-          <h2 className="titulo-ir">Pedidos en curso ({pedidos.length}){(() => { const r = pedidos.filter((a) => { const l = llegaEl(c, a); return l && l < hoy(); }).length; return r ? <span className="naranja"> · {r} retrasado{r > 1 ? 's' : ''}</span> : null; })()}</h2>
-          <div className="lista">
+        <details className="plegable">
+          <summary>Pedidos en curso ({pedidos.length}){retrasados ? <span className="naranja"> · {retrasados} retrasado{retrasados > 1 ? 's' : ''}</span> : null}</summary>
+          <section aria-label="Pedidos en curso" className="lista">
             {pedidos.map((a) => {
               const f = c.fichas.get(a.id)!, l = llegaEl(c, a), tarde = l && l < hoy() ? dias(l, hoy()) : 0;
               return (
@@ -91,13 +87,12 @@ export function Stock({ c, recargar }: { c: Catalogo; recargar: () => void }) {
                   <span className={tarde ? 'chapa mal' : l ? 'chapa firmado' : 'chapa sin'}>{tarde ? `Retrasado ${tarde} d` : l ? 'En plazo' : 'Pedido'}</span>
                 </div>);
             })}
-          </div>
-        </section>)}
-
+          </section>
+        </details>)}
       {paraPedir.length > 0 && (
-        <section className="tarjeta-seccion" aria-label="Para pedir">
-          <h2 className="titulo-ir">Para pedir ({paraPedir.length})</h2>
-          <div className="lista">
+        <details className="plegable">
+          <summary>Para pedir ({paraPedir.length}){paraPedir.some((a) => niv.get(a.id) === 'bad') ? <span className="error"> · {paraPedir.filter((a) => niv.get(a.id) === 'bad').length} bajo mínimo</span> : null}</summary>
+          <section aria-label="Para pedir" className="lista">
             {paraPedir.map((a) => {
               const f = c.fichas.get(a.id), cp = cantPedir(c, a);
               return (
@@ -108,19 +103,32 @@ export function Stock({ c, recargar }: { c: Catalogo; recargar: () => void }) {
                   <span className="fila-cifra">{fmt(stockDe(c, a.id))} {a.unidad} {estado(a)}</span>
                 </div>);
             })}
-          </div>
-        </section>)}
+          </section>
+        </details>)}
 
-      <h2 className="titulo-ir">Existencias{almacen ? ` · ${nombreDe(c.almacenes, almacen)}` : ''}</h2>
-      <div className="filtros">
-        <label className="campo"><span>Familia</span><select value={familia} onChange={(e) => setFamilia(e.target.value)}>
-          <option value="">Todas</option>{c.familias.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></label>
-        <label className="campo"><span>Cifra de</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
-          <option value="">Todos los almacenes</option>{c.almacenes.filter((x) => !x.baja).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
-        {!ordenador && <label className="campo ancho"><span>Buscar</span><input value={q} placeholder="Artículo, código, máquina, ubicación…" onChange={(e) => setQ(e.target.value)} /></label>}
-      </div>
+      {!ordenador && (
+        <div className="buscar-mas">
+          <input aria-label="Buscar artículo" value={q} placeholder="Buscar artículo, código, máquina…" onChange={(e) => setQ(e.target.value)} />
+          {botonMas}
+        </div>)}
+      {mas && (
+        <div className="panel-mas" role="group" aria-label="Más opciones del stock">
+          <div className="filtros">
+            <label className="campo"><span>Familia</span><select value={familia} onChange={(e) => setFamilia(e.target.value)}>
+              <option value="">Todas</option>{c.familias.map((f) => <option key={f.id} value={f.id}>{f.nombre}</option>)}</select></label>
+            <label className="campo"><span>Cifra de</span><select value={almacen} onChange={(e) => setAlmacen(e.target.value)}>
+              <option value="">Todos los almacenes</option>{c.almacenes.filter((x) => !x.baja).map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}</select></label>
+          </div>
+          <div className="acciones-cal">
+            {pide && <button type="button" className="boton sec peq" onClick={() => setVentana('pedido')}>Lista de pedido{paraPedir.length ? ` · ${paraPedir.length}` : ''}</button>}
+            {apunta && <button type="button" className="boton sec peq" onClick={() => setVentana('inventario')}>Inventario</button>}
+            <button type="button" className="boton sec peq" onClick={excel}>Excel</button>
+          </div>
+        </div>)}
+      {almacen && <p className="nota">Cifras de {nombreDe(c.almacenes, almacen)}.</p>}
       {ordenador ? (
         <Tabla filas={lista} clave={(a) => a.id} alAbrir={setFicha} etiquetaBuscar="Buscar artículo" pistaBuscar="Artículo, código, máquina, ubicación…" buscarEn={textoBusca}
+          acciones={botonMas}
           filtros={[{ clave: 'pedir', texto: 'Crítico o pedir', cumple: (a) => niv.get(a.id) === 'bad' || niv.get(a.id) === 'warn' },
             { clave: 'sin', texto: 'Sin existencias', cumple: (a) => stockDe(c, a.id) <= 0 }]}
           columnas={[

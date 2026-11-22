@@ -81,6 +81,8 @@ async function abrir(page: Page, apartado = 'stock', permisos = ENCARGADO) {
 test('stock: pedidos en curso, para pedir (y marcarlo), existencias y la ficha del artículo', async ({ page }) => {
   const err = vigilar(page);
   const ll = await abrir(page);
+  await page.getByText('Pedidos en curso (1)').click();
+  await page.getByText('Para pedir (1)').click();
   const enCurso = page.getByRole('region', { name: 'Pedidos en curso' });
   await expect(enCurso.locator('.fila', { hasText: 'Aceite hidráulico 46' })).toContainText('200 l');
   await expect(enCurso.locator('.chapa')).toContainText('Retrasado 10 d');   // pedido hace 20 días con 10 de plazo
@@ -89,6 +91,7 @@ test('stock: pedidos en curso, para pedir (y marcarlo), existencias y la ficha d
   await expect(pedir.locator('.chapa')).toHaveText('Crítico');
   await pedir.getByRole('button', { name: /Marcar pedido/ }).click();
   expect(posts(ll, '/rest/v1/rpc/marcar_pedido')[0]).toMatchObject({ p_articulo: GUANTE });
+  await expect(page.getByText('Pedidos en curso (2)')).toBeVisible();
   await expect(enCurso.locator('.fila', { hasText: 'Guantes de nitrilo' })).toBeVisible();
   // la ficha
   await page.locator('.lista .fila', { hasText: 'Trapos de algodón' }).click();
@@ -166,6 +169,7 @@ test('notas pendientes: se guarda lo escrito y luego se procesa y se borra', asy
 
 test('recuento: guarda la diferencia con lo que dice la app; inventario de un almacén', async ({ page }) => {
   const ll = await abrir(page, 'stock');
+  await page.getByRole('button', { name: /Más/ }).click();
   await page.getByRole('button', { name: 'Inventario' }).click();
   const v = page.getByRole('dialog', { name: 'Inventario' });
   await v.getByLabel('Contado de Guantes de nitrilo').fill('7');
@@ -176,6 +180,7 @@ test('recuento: guarda la diferencia con lo que dice la app; inventario de un al
 
 test('lista de pedido por proveedor, para copiar o mandar por WhatsApp', async ({ page }) => {
   await abrir(page, 'stock');
+  await page.getByRole('button', { name: /Más/ }).click();
   await page.getByRole('button', { name: /Lista de pedido/ }).click();
   const v = page.getByRole('dialog', { name: 'Lista de pedido' });
   await expect(v.locator('.texto-pedido')).toContainText('*Suministros Inventados*');
@@ -202,7 +207,9 @@ test('ordenador: stock y movimientos en tabla', async ({ page }) => {
 test('Almacén en el móvil más estrecho: nada se aplasta ni se sale', async ({ page }) => {
   await page.setViewportSize({ width: 320, height: 640 });
   await abrir(page, 'stock');
+  await page.getByText('Para pedir (1)').click();
   await expect(page.getByRole('region', { name: 'Para pedir' })).toBeVisible();
+  await page.getByRole('button', { name: /Más/ }).click();
   expect(await desbordes(page), 'stock').toEqual([]);
   await page.locator('.lista .fila', { hasText: 'Guantes de nitrilo' }).last().click();
   expect(await desbordes(page), 'ficha').toEqual([]);
