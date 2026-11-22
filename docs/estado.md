@@ -597,6 +597,15 @@ cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a ma
   2 envíos, 9 firmas, 5 trabajos. Prueba `81-dia-del-cambio-borrar.sql` (12). Las cuentas de Supabase (auth) no se tocan.
 - **Lista paso a paso**: `docs/dia-del-cambio.md`.
 
+### 8.4 Naves en máquinas, zonas y trabajos (22/11)
+- Datos (pegado por Cristian el 22/11, `naves_limpieza.sql` fuera del repositorio, comprobado): M3–M11, CHIRON A y B, 14024, los dos puntos
+  de consumo y la zona de aceites centralizados → Nave 2; MORIZ, OKUMA y Zona SW NUEVA → Nave 1. Ahora las 72 máquinas y las 12 zonas
+  de Limpieza tienen nave.
+- `0037_limpieza_nave_trabajo.sql` (decidido 22/11: «que la adivine del texto»): `limpieza._nave_trabajo` (su máquina o zona; si no, máquinas
+  o zonas nombradas en título/sitio/descripción, si todas son de la misma nave; si no, el nombre de una nave en el texto; dos naves = sin nave)
+  y `limpieza._tiene_palabra`; `investigar` la usa en «detalles». Calculado el 22/11 sobre los datos de verdad: 647 de 806 trabajos con nave
+  (409 Nave 1, 238 Nave 2; antes 60). Prueba `82-limpieza-nave-trabajo.sql` (12). Falta: que Cristian pegue 0037.
+
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera
