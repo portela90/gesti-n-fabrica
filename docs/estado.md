@@ -487,6 +487,10 @@ Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para 
   - Decidido (13/11): las vacaciones y los días entre semana del fin de semana **cambian según el año**, así que los
     pone Cristian desde la app nueva, no se dejan fijos: tipos de día «Trabaja» (un día fuera de los de su equipo) y
     «Descanso» (un día de su equipo que no trabaja), y «Vacaciones para todo el equipo» (luego se cambian sueltas).
+  - **22/11:** en la nueva, «Fin de semana 2027» tiene los 5 trabajadores y 12 festivos; faltan horas (día y año), fines de semana
+    sin trabajo, días entre semana, vacaciones. Cristian lo meterá él más adelante desde la app (se le explicó paso a paso: marcar a
+    los 5 → «Hacer su calendario» → horas al año → «Rellenar por días de la semana» S/D → tocar los días → Guardar; vacaciones desde
+    Personal → Vacaciones → «Vacaciones para todo…»). Cuando lo haga, comprobar contra la lista de arriba.
 
 ### A.4 Inicio sin «Ir a» (22/11, pedido por Cristian) — PUBLICADO 22/11
 Los recuadros de «Ir a» (un mosaico por módulo y Configuración) repetían el menú lateral: quitados. Inicio queda con el saludo, el

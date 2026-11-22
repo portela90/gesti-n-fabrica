@@ -92,5 +92,5 @@ Cada semana: Cristian pega los cuatro `leer-vieja-*.sql` en la vieja y la casill
   EPI y formación de prueba de Cristian, el diploma subido en Storage, la firma de prueba de «Semana 2027».
 - **El día del cambio:** volver a copiar de las apps viejas lo que haya cambiado.
 - **Correo automático a prevención** (necesita un secreto de Gmail): pendiente.
-- Calendario 2027 del fin de semana (ver `docs/estado.md`).
+- Calendario 2027 del fin de semana: lo mete Cristian más adelante desde la app; luego comprobar con el Excel (ver `docs/estado.md`).
 - El revisor de Supabase avisa de funciones de las apps viejas que se pueden llamar sin entrar: no tocado (son de COLADA).
