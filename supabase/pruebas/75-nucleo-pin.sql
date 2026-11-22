@@ -27,7 +27,8 @@ insert into nucleo.usuarios (id, nombre, email, persona_id) values
   ('00000000-0000-0000-0000-00000008a0e1', 'Encargado P', null, null);
 insert into nucleo.asignaciones (usuario_id, rol_id, empresa_id)
 select x.u::uuid, (select id from nucleo.roles where codigo = x.r and empresa_id is null), 'a8a8a8a8-0000-0000-0000-000000000001'
-  from (values ('00000000-0000-0000-0000-00000008a0a1', 'admin_empresa'), ('00000000-0000-0000-0000-00000008a0e1', 'encargado')) x(u, r);
+  from (values ('00000000-0000-0000-0000-00000008a0a1', 'admin_empresa'), ('00000000-0000-0000-0000-00000008a0e1', 'encargado'),
+               ('00000000-0000-0000-0000-00000008a0b2', 'operario')) x(u, r);
 create temp table v (k text primary key, s text);
 grant all on v to authenticated, service_role;
 insert into v values ('operario', (select id::text from nucleo.roles where codigo = 'operario' and empresa_id is null));

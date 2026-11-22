@@ -2,6 +2,7 @@
 //  · «alta»: el operario escribe (o escanea) su código de alta y elige su PIN. Si no tenía cuenta, se le crea una sin
 //    correo de verdad (pin-<su ficha>@pin.invalid: nunca se le manda nada). Se gasta el código y su móvil queda apuntado.
 //  · «entrar»: con la llave secreta que guarda su móvil y su PIN.
+//  · «olvido»: «He olvidado mi PIN»: con la llave de su móvil, avisa a quien puede dar acceso (uno cada 30 minutos).
 //  · En los dos casos devuelve un vale de un solo uso (token_hash) con el que la app abre la sesión (verifyOtp).
 //    No se envía ningún correo.
 // Las comprobaciones (código válido, huellas, 5 fallos = bloqueado) están en la base de datos: nucleo.pin_codigo,
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
   try { p = await req.json(); } catch { return fallo('DATOS'); }
   const llave = String(p.llave ?? '');
   const pin = String(p.pin ?? '');
-  if (!LLAVE.test(llave) || !PIN.test(pin)) return fallo('DATOS');
+  if (!LLAVE.test(llave) || (p.accion !== 'olvido' && !PIN.test(pin))) return fallo('DATOS');
 
   const servidor = createClient(URL, SERVIDOR, { auth: { persistSession: false }, db: { schema: 'nucleo' } });
 
@@ -83,6 +84,15 @@ Deno.serve(async (req) => {
     const t = u?.user?.email ? await vale(u.user.email) : null;
     if (!t) return fallo('SESION', 500);
     return responde({ token_hash: t });
+  }
+
+  if (p.accion === 'olvido') {
+    const movil = String(p.movil ?? '');
+    if (!UUID.test(movil)) return fallo('DATOS');
+    const { data: r, error } = await servidor.rpc('pin_olvido', { p_movil: movil, p_llave: llave });
+    if (error) return fallo('SERVIDOR', 500);
+    if (r?.error) return fallo(r.error, 400);
+    return responde({ ok: true });
   }
 
   return fallo('DATOS');

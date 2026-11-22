@@ -25,6 +25,8 @@ export const ERRORES_PIN: Record<string, string> = {
   BAJA: 'Tu acceso está dado de baja. Habla con tu administrador.',
   OTRO_USUARIO: 'Ese código no se puede usar. Pide otro a tu administrador.',
   DATOS: 'Faltan datos. Vuelve a intentarlo.',
+  YA_AVISADO: 'Ya has avisado hace poco. Tu administrador te dará un código nuevo.',
+  TIENE_CORREO: 'Ese trabajador entra con su correo. Pide a tu administrador que le quite los roles de su usuario con correo.',
 };
 
 async function llamar(cuerpo: Record<string, unknown>): Promise<{ datos?: Record<string, unknown>; error?: string; quedan?: number }> {
@@ -65,4 +67,12 @@ export async function entrarConPin(pin: string): Promise<{ error?: string; olvid
   if (r.error) return { error: textoErrorPin(r.error, r.quedan), olvidar: r.error === 'MOVIL' };
   const e = await abrirSesion(String((r.datos as { token_hash: string }).token_hash));
   return e ? { error: 'No se ha podido entrar. Vuelve a intentarlo.' } : {};
+}
+
+/** «He olvidado mi PIN»: avisa a quien puede dar acceso (con la llave de este móvil). */
+export async function avisarOlvido(): Promise<{ error?: string }> {
+  const m = movilGuardado();
+  if (!m) return { error: ERRORES_PIN.MOVIL };
+  const r = await llamar({ accion: 'olvido', movil: m.movil, llave: m.llave });
+  return r.error ? { error: textoErrorPin(r.error) } : {};
 }

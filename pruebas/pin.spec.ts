@@ -153,3 +153,17 @@ test.describe('iPhone en Safari', () => {
     expect(await desbordes(page)).toEqual([]);
   });
 });
+
+test('«He olvidado mi PIN»: avisa al administrador desde el móvil', async ({ page }) => {
+  const errores = vigilar(page);
+  const pedidos: Record<string, unknown>[] = [];
+  await page.addInitScript((m) => localStorage.setItem('gf-movil-pin', JSON.stringify(m)), MOVIL);
+  await simular(page, { sesion: operario, funciones: { pin: (b) => { pedidos.push(b); return pedidos.length === 1 ? [200, { ok: true }] : [400, { error: 'YA_AVISADO' }]; } } });
+  await page.goto('./');
+  page.on('dialog', (d) => d.accept());
+  await page.getByRole('button', { name: 'He olvidado mi PIN: avisar al administrador' }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Aviso enviado' })).toBeVisible();
+  expect(pedidos[0]).toEqual({ accion: 'olvido', movil: 'm-1', llave: MOVIL.llave });
+  await expect(page.getByRole('button', { name: 'He olvidado mi PIN: avisar al administrador' })).toHaveCount(0);
+  expect(errores).toEqual([]);
+});

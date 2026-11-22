@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react';
 import { direccionApp, supabase } from '../nucleo/supabase';
 import { aviso } from '../componentes/basicos';
-import { darDeAlta, entrarConPin, movilGuardado, olvidarMovil } from '../nucleo/pin';
+import { avisarOlvido, darDeAlta, entrarConPin, movilGuardado, olvidarMovil } from '../nucleo/pin';
 
 type Modo = 'clave' | 'enlace' | 'olvido';
 
@@ -143,6 +143,12 @@ function EntrarPin({ alCorreo, alAlta }: { alCorreo: () => void; alAlta: () => v
   const [ocupado, setOcupado] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [perdido, setPerdido] = useState(false);
+  const [avisado, setAvisado] = useState<string | null>(null);
+  async function olvido() {
+    if (!confirm('¿Avisar a tu administrador de que has olvidado el PIN? Te dará un código nuevo para volver a elegirlo.')) return;
+    const r = await avisarOlvido();
+    if (r.error) setError(r.error); else setAvisado('Aviso enviado. Tu administrador te dará un código de alta nuevo para elegir otro PIN.');
+  }
   async function probar(pin: string) {
     setOcupado(true); setError(null);
     const r = await entrarConPin(pin);
@@ -156,7 +162,9 @@ function EntrarPin({ alCorreo, alAlta }: { alCorreo: () => void; alAlta: () => v
         <h1>Hola{m ? `, ${m.nombre.split(' ')[0]}` : ''}</h1>
         {perdido ? <p className="error" role="alert">{error}</p>
           : <TecladoPin titulo="Pon tu PIN" alCompletar={probar} ocupado={ocupado} error={error} />}
+        {avisado && <p className="entrar-ok" role="status">{avisado}</p>}
         <div className="entrar-otro">
+          {!perdido && !avisado && <button type="button" className="boton sec ancho" onClick={olvido}>He olvidado mi PIN: avisar al administrador</button>}
           <button type="button" className="boton txt ancho" onClick={alAlta}>Tengo un código de alta nuevo</button>
           <button type="button" className="boton txt ancho" onClick={alCorreo}>Entrar con correo</button>
         </div>
