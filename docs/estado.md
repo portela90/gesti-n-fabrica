@@ -541,6 +541,16 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   fin de semana con extra; 4/11 y 13/11 con horas fuera de presupuesto).
 - **1.ª copia de Personal: PEGADA 22/11 por Cristian y comprobada** (4 días de horas nuevos; huellas iguales en las dos apps:
   42 días de horas y 35 vacaciones).
+- **Limpieza, lo hecho cada día** (decidido 22/11): **todo desde el 5/10** (~800 `ots`); las fijas que la nueva saca sola y nadie tocó
+  se **cambian por las de la vieja** en esos días (lo hecho a mano en la nueva se queda); **sin fotos** de momento (865 archivos en
+  el Storage de limpieza-cie: no se pueden pasar con SQL ni desde aquí; se decide para el día del cambio), en la nota «N fotos en la app vieja».
+  Traducción `ots` → `limpieza.trabajos` (mismo id, origen `limpieza-cie:ots:<id>`): origen fija → `fija`; habitual (habitual_id o tipo
+  Habitual/limpieza de horno o inyectora) → `habitual`; rápida «Incidencia» y Excel → `suelto`; `borrado` no se copia; estado hecha → hecho,
+  en_curso → en_curso, pendiente y no_hecha → pendiente (con el motivo en la nota); tarea por `limpieza.tareas.origen`
+  (`limpieza-cie:tareas_fijas:<id>` / `tareas_habituales:<id>`); máquina: `elementos.codigo` = `nucleo.activos.codigo` (Limpieza);
+  equipo por nombre (Finde → finde); turno por nombre (Mañana finde no existe → vacío); checklist `{"punto": "OK"}` → `[{texto, tipo, valor}]`;
+  minutos = fin − inicio − pausado (mínimo 1). **Al copiar hay que apagar los disparadores `notificar`, `incidencias`, `caso` y `soltar`
+  de `limpieza.trabajos`** (si no, cientos de avisos e incidencias) y volver a encenderlos; el historial se deja.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
