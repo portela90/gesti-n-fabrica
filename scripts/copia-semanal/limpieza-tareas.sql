@@ -1,5 +1,5 @@
 -- Copia semanal de Limpieza · tareas y equipos (parte 8, decidido por Cristian el 22/11). SIN DATOS: el archivo de cada semana
--- empieza llenando v_tf (tareas fijas), v_th (habituales), v_trab (equipos de cada trabajador), v_hab (habilidades) y v_resp
+-- empieza llenando v_tf (tareas fijas), v_th (habituales), v_trab (nombre y equipos de cada trabajador), v_hab (habilidades) y v_resp
 -- (responsable de hornos) con lo de la vieja (leer-vieja-limpieza-tareas.sql). Reglas:
 --  · Tareas: la vieja manda en lo que ella tiene (título, descripción, días, equipo, turno, quién, minutos, «solo para», sitio, grupo de
 --    las habituales y si está activa). Lo que solo existe en la nueva (grupo de las fijas, máquina o zona) no se toca.
@@ -67,7 +67,7 @@ begin
     from v_trab v join nucleo.personas p on p.id = v.id and p.empresa_id = v_emp left join nucleo.equipos q on q.id = p.equipo_id
    where v.activo and p.baja is null
      and not (lower(coalesce(q.codigo, '')) = any (select case lower(e) when 'semana' then 'semana' when 'finde' then 'finde' end from unnest(v.equipos) e));
-  insert into r_resumen select 11, 'Aviso: trabajadores activos en la vieja y de baja (o sin ficha) en la nueva', count(*), string_agg(v.id::text, ', ')
+  insert into r_resumen select 11, 'Aviso: trabajadores activos en la vieja y de baja (o sin ficha) en la nueva', count(*), string_agg(coalesce(v.nombre, v.id::text), ', ')
     from v_trab v where v.activo and not exists (select 1 from nucleo.personas p where p.id = v.id and p.empresa_id = v_emp and p.baja is null);
   insert into r_resumen select 12, 'Aviso: habilidades distintas (grupos de reparto; míralo en Limpieza → Personas)', count(*), string_agg(p.nombre || ': ' || h.habilidad, '; ')
     from v_hab h join nucleo.personas p on p.id = h.trabajador

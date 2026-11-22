@@ -25,8 +25,9 @@ insert into v_tf values ('d1d1d1d1-0000-0000-0000-0000000001c1', 'Basuras', null
   ('d1d1d1d1-0000-0000-0000-0000000001c5', 'Vieja inactiva', null, '{todos}', 'Finde', null, '{}', false, null, false);
 create temp table v_th (id uuid, titulo text, descripcion text, lugar text, minutos_est int, vivo boolean, solo_para uuid[], grupo text);
 insert into v_th values ('d1d1d1d1-0000-0000-0000-0000000001c2', 'Derrame', 'Recoger', null, 30, false, '{}', 'limpieza');
-create temp table v_trab (id uuid, equipos text[], activo boolean);
-insert into v_trab values ('d1d1d1d1-0000-0000-0000-0000000000f1', '{Semana}', true), ('d1d1d1d1-0000-0000-0000-0000000000f2', '{Finde}', true);
+create temp table v_trab (id uuid, nombre text, equipos text[], activo boolean);
+insert into v_trab values ('d1d1d1d1-0000-0000-0000-0000000000f1', 'Ana', '{Semana}', true), ('d1d1d1d1-0000-0000-0000-0000000000f2', 'Bea', '{Finde}', true),
+  ('d1d1d1d1-0000-0000-0000-0000000000f9', 'Prueba Vieja', '{Semana}', true);
 create temp table v_hab (trabajador uuid, habilidad text, activo boolean);
 insert into v_hab values ('d1d1d1d1-0000-0000-0000-0000000000f1', 'hornos', true);
 create temp table v_resp (resp uuid, operario uuid, activo boolean);
@@ -43,6 +44,7 @@ select pruebas.ok((select baja is not null and descripcion = 'Recoger' and minut
   'la habitual desactivada en la vieja queda de baja y cambiada');
 select pruebas.ok((select baja is null from limpieza.tareas where id = 'd1d1d1d1-0000-0000-0000-0000000000c3'), 'lo hecho en la nueva no se toca');
 select pruebas.ok((select cuantos = 1 and detalle like 'Bea Prueba%' from r_resumen where orden = 10), 'avisa del trabajador que en la vieja está en otro equipo');
+select pruebas.ok((select detalle = 'Prueba Vieja' from r_resumen where orden = 11), 'el aviso dice el nombre del trabajador que falta');
 select pruebas.ok((select cuantos = 1 from r_resumen where orden = 12), 'avisa de la habilidad que falta');
 select pruebas.ok((select cuantos = 1 from r_resumen where orden = 13), 'avisa del responsable de hornos que falta');
 select pruebas.ok((select equipo_id = 'd1d1d1d1-0000-0000-0000-0000000000e1' from nucleo.personas where id = 'd1d1d1d1-0000-0000-0000-0000000000f2'), 'los equipos no se cambian solos');

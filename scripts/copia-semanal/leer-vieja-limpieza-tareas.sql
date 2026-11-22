@@ -7,14 +7,14 @@ select concat(
  'create temp table v_th (id uuid, titulo text, descripcion text, lugar text, minutos_est int, vivo boolean, solo_para uuid[], grupo text);', E'\n',
  'insert into v_th values ', (select string_agg(format('(%L,%L,%L,%L,%L,%L,%L,%L)', id, titulo, descripcion, lugar, minutos_est,
     coalesce(activo, true) and not coalesce(borrado, false), solo_para, grupo), E',\n' order by id) from tareas_habituales), ';', E'\n',
- 'create temp table v_trab (id uuid, equipos text[], activo boolean);', E'\n',
- 'insert into v_trab values ', (select string_agg(format('(%L,%L,%L)', id, equipos, coalesce(activo, true)), E',\n' order by id) from trabajadores), ';', E'\n',
+ 'create temp table v_trab (id uuid, nombre text, equipos text[], activo boolean);', E'\n',
+ 'insert into v_trab values ', (select string_agg(format('(%L,%L,%L,%L)', id, nombre, equipos, coalesce(activo, true)), E',\n' order by id) from trabajadores), ';', E'\n',
  'create temp table v_hab (trabajador uuid, habilidad text, activo boolean);', E'\n',
  coalesce('insert into v_hab values ' || (select string_agg(format('(%L,%L,%L)', trabajador, habilidad, coalesce(activo, true)), E',\n') from limp_habilidad) || ';', ''), E'\n',
  'create temp table v_resp (resp uuid, operario uuid, activo boolean);', E'\n',
  coalesce('insert into v_resp values ' || (select string_agg(format('(%L,%L,%L)', resp, operario, coalesce(activo, true)), E',\n') from limp_resp_hornos_op) || ';', ''), E'\n',
 $receta$-- Copia semanal de Limpieza · tareas y equipos (parte 8, decidido por Cristian el 22/11). SIN DATOS: el archivo de cada semana
--- empieza llenando v_tf (tareas fijas), v_th (habituales), v_trab (equipos de cada trabajador), v_hab (habilidades) y v_resp
+-- empieza llenando v_tf (tareas fijas), v_th (habituales), v_trab (nombre y equipos de cada trabajador), v_hab (habilidades) y v_resp
 -- (responsable de hornos) con lo de la vieja (leer-vieja-limpieza-tareas.sql). Reglas:
 --  · Tareas: la vieja manda en lo que ella tiene (título, descripción, días, equipo, turno, quién, minutos, «solo para», sitio, grupo de
 --    las habituales y si está activa). Lo que solo existe en la nueva (grupo de las fijas, máquina o zona) no se toca.
@@ -82,7 +82,7 @@ begin
     from v_trab v join nucleo.personas p on p.id = v.id and p.empresa_id = v_emp left join nucleo.equipos q on q.id = p.equipo_id
    where v.activo and p.baja is null
      and not (lower(coalesce(q.codigo, '')) = any (select case lower(e) when 'semana' then 'semana' when 'finde' then 'finde' end from unnest(v.equipos) e));
-  insert into r_resumen select 11, 'Aviso: trabajadores activos en la vieja y de baja (o sin ficha) en la nueva', count(*), string_agg(v.id::text, ', ')
+  insert into r_resumen select 11, 'Aviso: trabajadores activos en la vieja y de baja (o sin ficha) en la nueva', count(*), string_agg(coalesce(v.nombre, v.id::text), ', ')
     from v_trab v where v.activo and not exists (select 1 from nucleo.personas p where p.id = v.id and p.empresa_id = v_emp and p.baja is null);
   insert into r_resumen select 12, 'Aviso: habilidades distintas (grupos de reparto; míralo en Limpieza → Personas)', count(*), string_agg(p.nombre || ': ' || h.habilidad, '; ')
     from v_hab h join nucleo.personas p on p.id = h.trabajador
