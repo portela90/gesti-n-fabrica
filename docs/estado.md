@@ -604,7 +604,7 @@ cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a ma
 - `0037_limpieza_nave_trabajo.sql` (decidido 22/11: «que la adivine del texto»): `limpieza._nave_trabajo` (su máquina o zona; si no, máquinas
   o zonas nombradas en título/sitio/descripción, si todas son de la misma nave; si no, el nombre de una nave en el texto; dos naves = sin nave)
   y `limpieza._tiene_palabra`; `investigar` la usa en «detalles». Calculado el 22/11 sobre los datos de verdad: 647 de 806 trabajos con nave
-  (409 Nave 1, 238 Nave 2; antes 60). Prueba `82-limpieza-nave-trabajo.sql` (12). Falta: que Cristian pegue 0037.
+  (409 Nave 1, 238 Nave 2; antes 60). Prueba `82-limpieza-nave-trabajo.sql` (12). **APLICADO 22/11 (pegado por Cristian; comprobado: 647 de 806).**
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
