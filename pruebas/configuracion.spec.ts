@@ -1,13 +1,12 @@
 // Configuración: dar de alta sin programar (naves, máquinas…), cambiar, dar de baja, y quién la ve.
 import { test, expect } from '@playwright/test';
-import { simular, desbordes, vigilar, EMPRESA_A, USUARIO, PERMISOS_ADMIN } from './simulador';
+import { simular, desbordes, vigilar, EMPRESA_A, USUARIO, PERMISOS_ADMIN, abrirMenu } from './simulador';
 
 const admin = { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null }, empresas: [{ ...EMPRESA_A, permisos: PERMISOS_ADMIN }] };
 
 test('sin permisos de configuración no sale «Configuración» ni se puede entrar', async ({ page }) => {
   await simular(page, { dentro: true });
   await page.goto('./');
-  await expect(page.locator('.mosaico', { hasText: 'Configuración' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Menú' }).click();
   await expect(page.getByRole('navigation', { name: 'Módulos' }).getByRole('button', { name: 'Configuración' })).toHaveCount(0);
   await page.getByRole('button', { name: /Tu cuenta/ }).click();
@@ -20,7 +19,8 @@ test('el administrador da de alta una nave y una máquina en esa nave, sin progr
   const err = vigilar(page);
   const sim = await simular(page, { dentro: true, sesion: admin, tablas: { tipos_activo: [{ id: 't1', empresa_id: EMPRESA_A.id, codigo: 'inyectora', nombre: 'Inyectora', estados: [], baja: null }] } });
   await page.goto('./');
-  await page.locator('.mosaico', { hasText: 'Configuración' }).click();
+  await abrirMenu(page);
+  await page.getByRole('navigation', { name: 'Módulos' }).getByRole('button', { name: 'Configuración' }).click();
   await expect(page.locator('.cabecera')).toContainText('Configuración');
   await expect(page.locator('.fila', { hasText: 'Tipos de máquina' }).locator('.cuenta')).toHaveText('1');
   await page.locator('.fila', { hasText: 'Naves' }).click();

@@ -1,6 +1,6 @@
 // La app: entrar, elegir empresa, menú según permisos, «Tengo un problema» y que nada se aplaste en un móvil estrecho.
 import { test, expect } from '@playwright/test';
-import { simular, desbordes, vigilar, EMPRESA_A, EMPRESA_B, USUARIO } from './simulador';
+import { simular, desbordes, vigilar, EMPRESA_A, EMPRESA_B, USUARIO, abrirMenu } from './simulador';
 
 test('sin entrar sale la pantalla de entrar; con correo y contraseña entra y ve sus módulos', async ({ page }) => {
   const err = vigilar(page);
@@ -36,10 +36,12 @@ test('el menú solo trae los módulos que la base de datos permite (Unidad A: Al
   const err = vigilar(page);
   await simular(page, { dentro: true });
   await page.goto('./');
-  await expect(page.locator('.mosaico')).toHaveCount(2);
-  await expect(page.locator('.mosaico', { hasText: 'Almacén' })).toBeVisible();
-  await expect(page.locator('.mosaico', { hasText: 'Coladas' })).toHaveCount(0);
-  await page.locator('.mosaico', { hasText: 'Mantenimiento' }).click();
+  await expect(page.locator('.mosaico')).toHaveCount(0);   // los módulos ya no se repiten en Inicio: están en el menú
+  await abrirMenu(page);
+  const menu = page.getByRole('navigation', { name: 'Módulos' });
+  await expect(menu.getByRole('button', { name: 'Almacén' })).toBeVisible();
+  await expect(menu.getByRole('button', { name: 'Coladas' })).toHaveCount(0);
+  await menu.getByRole('button', { name: 'Mantenimiento' }).click();
   await expect(page.locator('.cabecera')).toContainText('Mantenimiento');
   await expect(page.getByText('Este módulo llega en la Fase 3')).toBeVisible();
   // un módulo sin permiso, aunque se escriba la dirección a mano
@@ -53,8 +55,7 @@ test('con dos unidades de trabajo pregunta en cuál trabajar y la recuerda', asy
   await page.goto('./');
   await expect(page.getByRole('heading', { name: '¿En qué unidad de trabajo vas a trabajar?' })).toBeVisible();
   await page.locator('.fila', { hasText: 'Unidad B' }).click();
-  await expect(page.locator('.mosaico')).toHaveCount(3);
-  await expect(page.locator('.mosaico', { hasText: 'Limpieza' })).toBeVisible();
+  await expect(page.locator('.lateral-nav button', { hasText: 'Limpieza' })).toBeAttached();
   await page.reload();
   await expect(page.locator('.cabecera')).toContainText('Unidad B');
   await page.getByRole('button', { name: 'Menú' }).click();
@@ -93,7 +94,7 @@ test('en el móvil más estrecho (320 px) nada se aplasta ni se sale', async ({ 
   await page.unrouteAll();
   await simular(page, { dentro: true, sesion: { usuario: { id: USUARIO.id, nombre: 'Ana Prueba Con Un Nombre Muy Largo', superadmin: true, empresa_actual: null }, empresas: [{ ...EMPRESA_B, nombre: 'Una empresa con un nombre bastante largo, S.L.' }] } });
   await page.goto('./');
-  await expect(page.locator('.mosaico')).toHaveCount(3);
+  await expect(page.getByRole('heading', { name: /^Hola/ })).toBeVisible();
   expect(await desbordes(page), 'inicio').toEqual([]);
   await page.getByRole('button', { name: 'Menú' }).click();
   expect(await desbordes(page), 'menú').toEqual([]);

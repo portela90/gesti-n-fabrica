@@ -239,7 +239,8 @@ test('la trabajadora ve su calendario pendiente y lo firma con el dedo', async (
   const t = tablas(); t.v_envios = [envio(ANA, 'pendiente')];
   const sim = await simular(page, { dentro: true, sesion: sesion(['personal.tarea.ver'], 'Ana Prueba'), tablas: t, rpc });
   await page.goto('./#/');
-  await page.locator('.mosaico', { hasText: 'Personal' }).click();
+  await abrirMenu(page);
+  await page.getByRole('navigation', { name: 'Módulos' }).getByRole('button', { name: 'Personal' }).click();
   await abrirMenu(page);
   await expect(page.getByRole('navigation', { name: 'Personal' }).getByRole('button')).toHaveText(['Mi calendario', 'Mis horas']); // solo lo suyo
   await cerrarMenu(page);

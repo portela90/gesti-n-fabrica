@@ -488,6 +488,11 @@ Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para 
     pone Cristian desde la app nueva, no se dejan fijos: tipos de día «Trabaja» (un día fuera de los de su equipo) y
     «Descanso» (un día de su equipo que no trabaja), y «Vacaciones para todo el equipo» (luego se cambian sueltas).
 
+### A.4 Inicio sin «Ir a» (22/11, pedido por Cristian) — PUBLICADO 22/11
+Los recuadros de «Ir a» (un mosaico por módulo y Configuración) repetían el menú lateral: quitados. Inicio queda con el saludo, el
+tablón, lo que te ha llegado, el panel (Limpieza de hoy, pendientes de firmar) y los avisos del móvil. A los módulos se va por el menú
+(≡ en el móvil). Pruebas cambiadas para entrar por el menú.
+
 ## Parte 8: en paralelo con la app vieja (21/11) — EN CURSO
 Decidido por Cristian (21/11): durante las 2–4 semanas en paralelo **solo él** usa la app nueva a la vez que la vieja; los operarios
 siguen solo con la vieja y cambian una sola vez, el día del cambio.

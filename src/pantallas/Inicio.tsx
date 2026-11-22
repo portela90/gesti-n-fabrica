@@ -33,7 +33,7 @@ export function ElegirEmpresa() {
   );
 }
 
-/** Inicio: los módulos que esta persona puede usar en esta unidad de trabajo (lo decide la base de datos). */
+/** Inicio: el panel de hoy, lo pendiente y los avisos. Los módulos están en el menú lateral. */
 export function Inicio({ ir, configurable }: { ir: (r: string) => void; configurable?: boolean }) {
   const { estado, empresa } = useSesion();
   if (estado.fase !== 'dentro' || !empresa) return null;
@@ -48,28 +48,11 @@ export function Inicio({ ir, configurable }: { ir: (r: string) => void; configur
         <TarjetasLimpieza ir={ir} />
         <Pendientes ir={ir} />
       </section>
-      {mios.length > 0 && <h2 className="titulo-ir">Ir a</h2>}
-      {mios.length === 0 && !configurable ? (
+      {/* Para ir a cada módulo, el menú lateral (≡ en el móvil): aquí ya no se repiten (decidido por Cristian el 22/11). */}
+      {mios.length === 0 && !configurable && (
         <div className="vacio">
           <p><b>Todavía no tienes ningún módulo en {empresa.nombre}.</b></p>
           <p>Los módulos se irán encendiendo según avance el plan. Si crees que deberías ver alguno, pídeselo a tu administrador.</p>
-        </div>
-      ) : (
-        <div className="mosaicos">
-          {mios.map((m) => (
-            <button key={m.codigo} type="button" className="mosaico" style={{ ['--area' as string]: m.color }} onClick={() => ir(`/m/${m.codigo}`)}>
-              <span className="mosaico-icono"><Icono d={m.icono} tam={26} /></span>
-              <b>{m.nombre}</b>
-              <small>{m.descripcion}</small>
-            </button>
-          ))}
-          {configurable && (
-            <button type="button" className="mosaico" style={{ ['--area' as string]: '#64748b' }} onClick={() => ir('/config')}>
-              <span className="mosaico-icono"><Icono d={ICONOS.ajustes} tam={26} /></span>
-              <b>Configuración</b>
-              <small>Naves, máquinas, almacenes, artículos, trabajadores…</small>
-            </button>
-          )}
         </div>
       )}
       <AvisosMovil />
