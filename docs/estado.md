@@ -580,6 +580,16 @@ enseña lo mismo. Qué se copia: **Personal**, **Limpieza (lo hecho cada día)**
   `leer-vieja-limpieza-tareas.sql` y `leer-vieja-prevencion.sql` (uno a uno) y la casilla de cada uno en colada-mapri; Claude comprueba.
   Pendiente para el día del cambio: fotos de trabajos (865) y archivos de certificados (3), que están en el Storage / base de la vieja.
 
+### 8.3 Día del cambio (preparación, 22/11) — EN CURSO
+Decidido por Cristian (22/11): las **fotos** de trabajos (865) se quedan en la app vieja (se consultan allí; en la nueva cada trabajo dice
+cuántas tenía); los **3 archivos de certificados** los vuelve a subir él a mano en la ficha; los códigos de alta se reparten con una
+**hoja para imprimir**; qué hacer con la app vieja después: **lo decide más adelante**.
+- **Hoja de códigos (PDF)** en Configuración → Usuarios (PUBLICADO 22/11, sin migración): marca a los trabajadores que aún no tienen
+  móvil ni entran con correo, saca sus códigos (`codigo_alta`, rol Operario por defecto) y hace un PDF A4 con 8 tarjetas para recortar
+  (nombre en una línea, código, QR, 3 pasos y el aviso del iPhone; `src/configuracion/hojaCodigos.ts`). Los códigos caducan a los 7 días:
+  se hace el mismo día del cambio. Prueba en `pin.spec.ts`.
+- Falta: archivo para borrar los datos de prueba (primero enseña la lista) y la lista paso a paso del día.
+
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera

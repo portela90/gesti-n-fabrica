@@ -3,6 +3,7 @@ import { direccionApp, nucleo, supabase } from '../nucleo/supabase';
 import { useSesion } from '../nucleo/sesion';
 import { aviso, Icono, ICONOS, Ventana } from '../componentes/basicos';
 import { Tabla, useOrdenador } from '../componentes/Tabla';
+import { bajarArchivo } from '../componentes/informes';
 
 interface Asig { id: string; usuario_id: string; rol_id: string; centro_id: string | null }
 interface Rol { id: string; empresa_id: string | null; codigo: string; nombre: string; descripcion: string | null; baja: string | null }
@@ -38,6 +39,7 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
   const [moviles, setMoviles] = useState<Movil[]>([]);
   const [codigos, setCodigos] = useState<Codigo[]>([]);
   const [conPin, setConPin] = useState<{ persona?: string; rol?: string } | null>(null);
+  const [hoja, setHoja] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const cargar = useCallback(async () => {
@@ -102,6 +104,7 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
         <div className="acciones-cal" style={{ marginTop: 0, marginBottom: 14 }}>
           <button type="button" className="boton" onClick={() => setFormulario({})}>Dar acceso con correo</button>
           {personas.length > 0 && <button type="button" className="boton sec" onClick={() => setConPin({})}>Operario: código de alta (PIN)</button>}
+          {personas.length > 0 && <button type="button" className="boton sec" onClick={() => setHoja(true)}>Hoja de códigos (PDF)</button>}
         </div>
       )}
       {editable && codigos.length > 0 && (
@@ -172,6 +175,9 @@ export function Usuarios({ ir }: { ir: (r: string) => void }) {
       {conPin && <CodigoAlta inicial={conPin} roles={roles} naves={naves}
         personas={personas.filter((p) => !usus.some((u) => u.persona_id === p.id && u.email))}
         alCerrar={() => setConPin(null)} alHacer={() => cargar()} />}
+      {hoja && <HojaCodigos roles={roles} unidad={empresa.nombre}
+        candidatos={personas.filter((p) => !usus.some((u) => u.persona_id === p.id && (u.email || moviles.some((m) => m.usuario_id === u.id))))}
+        alCerrar={() => setHoja(false)} alHacer={() => cargar()} />}
       {formulario && <DarAcceso inicial={formulario} roles={roles} naves={naves} personas={personas} empresaId={empresa.id}
         alCerrar={() => setFormulario(null)} alTerminar={() => cargar()} />}
     </main>
@@ -351,6 +357,78 @@ function CodigoAlta({ inicial, roles, naves, personas, alCerrar, alHacer }: {
           {naves.map((n) => <option key={n.id} value={n.id}>{n.nombre}</option>)}
         </select></label>
       {inicial.persona && <p className="nota">Al sacar el código nuevo, su móvil de ahora deja de servir hasta que lo vuelva a dar de alta.</p>}
+      {error && <p className="error" role="alert">{error}</p>}
+    </Ventana>
+  );
+}
+
+/** Día del cambio: los códigos de alta de varios trabajadores de una vez, en un PDF con una tarjeta por persona para imprimir y recortar. */
+function HojaCodigos({ candidatos, roles, unidad, alCerrar, alHacer }: {
+  candidatos: Ref[]; roles: Rol[]; unidad: string; alCerrar: () => void; alHacer: () => void;
+}) {
+  const [sel, setSel] = useState<Set<string>>(() => new Set(candidatos.map((p) => p.id)));
+  const [rol, setRol] = useState(roles.find((r) => r.codigo === 'operario')?.id ?? '');
+  const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hecho, setHecho] = useState<{ n: number; fallos: string[] } | null>(null);
+  const cambiar = (id: string) => setSel((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  async function hacer() {
+    setError(null);
+    if (!sel.size) { setError('Marca al menos a un trabajador.'); return; }
+    if (!rol) { setError('Elige un rol.'); return; }
+    setOcupado(true);
+    const tarjetas: { nombre: string; codigo: string }[] = [], fallos: string[] = [];
+    for (const p of candidatos.filter((x) => sel.has(x.id))) {
+      const { data, error } = await nucleo().rpc('codigo_alta', { p_persona: p.id, p_rol: rol, p_centro: null });
+      if (error) { const m = error.message.match(/[A-Z_]{4,}/)?.[0] ?? ''; fallos.push(`${p.nombre}: ${ERRORES[m] ?? error.message}`); }
+      else tarjetas.push({ nombre: p.nombre, codigo: String(data) });
+    }
+    try {
+      if (tarjetas.length) {
+        const { pdfCodigos } = await import('./hojaCodigos');
+        const caduca = new Date(Date.now() + 7 * 864e5);
+        await bajarArchivo(await pdfCodigos(tarjetas, unidad, direccionApp(), caduca), `codigos-de-alta-${new Date().toLocaleDateString('sv-SE')}.pdf`);
+      }
+    } catch (e) { fallos.push('No se ha podido hacer el PDF: ' + (e as Error).message); }
+    setOcupado(false);
+    setHecho({ n: tarjetas.length, fallos });
+    alHacer();
+  }
+
+  if (hecho) {
+    return (
+      <Ventana titulo="Hoja de códigos" alCerrar={alCerrar} pie={<button type="button" className="boton" onClick={alCerrar}>Hecho</button>}>
+        <p style={{ marginTop: 0 }}>{hecho.n ? <><b>{hecho.n} {hecho.n === 1 ? 'código' : 'códigos'}</b> en el PDF. Imprímelo, recorta las tarjetas y dáselas en mano.
+          Caducan en 7 días.</> : 'No se ha sacado ningún código.'}</p>
+        {hecho.fallos.length > 0 && <div className="error" role="alert">{hecho.fallos.map((f) => <p key={f} style={{ margin: '0 0 4px' }}>{f}</p>)}</div>}
+        <p className="nota">Si alguien pierde su tarjeta, sácale otro código: el de la tarjeta deja de valer.</p>
+      </Ventana>
+    );
+  }
+  return (
+    <Ventana titulo="Hoja de códigos (PDF)" alCerrar={alCerrar}
+      pie={<><button type="button" className="boton sec" onClick={alCerrar}>Cancelar</button>
+        <button type="button" className="boton" disabled={ocupado} onClick={hacer}>{ocupado ? 'Sacando códigos…' : `Sacar ${sel.size} ${sel.size === 1 ? 'código' : 'códigos'} y hacer el PDF`}</button></>}>
+      <p className="nota" style={{ marginTop: 0 }}>Para el día del cambio: una tarjeta por persona con su código, su QR y cómo darse de alta (8 por hoja).
+        Salen los trabajadores que aún no tienen móvil dado de alta ni entran con correo. Los códigos caducan a los 7 días.</p>
+      {!candidatos.length ? <div className="vacio"><p>Todos los trabajadores tienen ya acceso.</p></div> : (
+        <>
+          <div className="acciones-cal" style={{ marginTop: 0 }}>
+            <button type="button" className="boton txt peq" onClick={() => setSel(new Set(candidatos.map((p) => p.id)))}>Todos</button>
+            <button type="button" className="boton txt peq" onClick={() => setSel(new Set())}>Ninguno</button>
+          </div>
+          <div className="lista compacta">{candidatos.map((p) => (
+            <label key={p.id} className="fila check">
+              <input type="checkbox" checked={sel.has(p.id)} onChange={() => cambiar(p.id)} />
+              <span className="fila-txt">{p.nombre}</span></label>))}</div>
+        </>
+      )}
+      <label className="campo"><span>Rol</span>
+        <select id="hoja-rol" value={rol} onChange={(e) => setRol(e.target.value)}>
+          <option value="">— elige —</option>
+          {roles.map((x) => <option key={x.id} value={x.id}>{x.nombre}</option>)}
+        </select></label>
       {error && <p className="error" role="alert">{error}</p>}
     </Ventana>
   );

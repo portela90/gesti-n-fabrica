@@ -187,3 +187,37 @@ test('cambiar de usuario: en el móvil salen solo las personas dadas de alta en 
   expect(await page.evaluate(() => localStorage.getItem('gf-movil-pin-actual'))).toBe('m-1');   // la próxima vez, directo a Oli
   expect(errores).toEqual([]);
 });
+
+test('día del cambio: la hoja de códigos saca los de los que no tienen acceso y hace el PDF', async ({ page }) => {
+  const errores = vigilar(page);
+  await page.setViewportSize({ width: 1280, height: 900 });
+  let n = 0;
+  const sim = await simular(page, { dentro: true,
+    sesion: { usuario: { id: USUARIO.id, nombre: 'Ana Prueba', superadmin: false, empresa_actual: null },
+      empresas: [{ ...EMPRESA_A, permisos: [...PERMISOS_ADMIN, 'nucleo.usuario.ver', 'nucleo.usuario.editar'] }] },
+    tablas: {
+      roles: [{ id: 'r-ope', empresa_id: null, codigo: 'operario', nombre: 'Operario', descripcion: null, baja: null }],
+      personas: [{ id: OLI, empresa_id: E, nombre: 'Oli Prueba', baja: null }, { id: PEPA, empresa_id: E, nombre: 'Pepa Prueba', baja: null },
+        { id: LUIS, empresa_id: E, nombre: 'Luis Prueba Con Un Nombre Bastante Largo', baja: null }, { id: 'p-ana', empresa_id: E, nombre: 'Ana Prueba', baja: null }],
+      usuarios: [{ id: USUARIO.id, nombre: 'Ana Prueba', email: USUARIO.email, superadmin: false, persona_id: 'p-ana' },
+        { id: 'u-pepa', nombre: 'Pepa Prueba', email: null, superadmin: false, persona_id: PEPA }],
+      asignaciones: [{ id: 'as-0', usuario_id: USUARIO.id, rol_id: 'r-ope', empresa_id: E, centro_id: null, hasta: null },
+        { id: 'as-1', usuario_id: 'u-pepa', rol_id: 'r-ope', empresa_id: E, centro_id: null, hasta: null }],
+      moviles: [{ id: 'm-p', usuario_id: 'u-pepa', empresa_id: E, fallos: 0, bloqueado: null, ultimo: null, baja: null, creado: '2026-11-01T10:00:00Z' }],
+      codigos_alta: [],
+    },
+    rpc: { codigo_alta: () => ['K7P2-9QXM', 'B4CD-7XYZ', 'Q2RS-8TUV'][n++] } });
+  await page.goto('./#/config/usuarios');
+  await page.getByRole('button', { name: 'Hoja de códigos (PDF)' }).click();
+  const v = page.getByRole('dialog');
+  // ni Pepa (ya tiene móvil) ni Ana (entra con correo)
+  await expect(v.locator('label.fila')).toHaveText([/Luis Prueba/, /Oli Prueba/]);
+  const descarga = page.waitForEvent('download');
+  await v.getByRole('button', { name: 'Sacar 2 códigos y hacer el PDF' }).click();
+  const d = await descarga;
+  expect(d.suggestedFilename()).toMatch(/^codigos-de-alta-\d{4}-\d{2}-\d{2}\.pdf$/);
+  await d.saveAs('/tmp/claude-0/-home-user-gesti-n-fabrica/ea8319cf-9414-597f-b890-3c1857ecd8db/scratchpad/hoja-codigos.pdf');
+  await expect(v).toContainText('2 códigos en el PDF');
+  expect(sim.filter((l) => l.ruta.endsWith('/rpc/codigo_alta')).map((l) => (l.cuerpo as { p_persona: string }).p_persona)).toEqual([LUIS, OLI]);
+  expect(errores).toEqual([]);
+});
