@@ -519,7 +519,7 @@ cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto
   haga dentro de la app (enseña el código y cómo añadir la app a la pantalla de inicio; «Usar la app aquí en Safari de todas formas»).
   La ventana del código lo dice también. En Android no pasa (comparten almacén). Prueba nueva en `pin.spec.ts`.
 - **Probado por Cristian 22/11:** «Pruebas 2» entró con PIN desde su iPhone.
-- **0036 (22/11, tras sus pruebas):** (1) una ficha cuyos usuarios con correo ya no tienen ningún rol (se los quitó) sí puede pasar a PIN:
+- **0036 (22/11, tras sus pruebas) — APLICADO 22/11 (comprobado), función «pin» v2 instalada y PUBLICADO:** (1) una ficha cuyos usuarios con correo ya no tienen ningún rol (se los quitó) sí puede pasar a PIN:
   al dar de alta el móvil esos usuarios se desenlazan de la ficha (no se borran) y se hace el de PIN (`_entra_con_correo`);
   (2) **«He olvidado mi PIN: avisar al administrador»** en la pantalla del PIN: `pin_olvido(móvil, llave)` (función de servidor
   «pin», acción «olvido») avisa a quien tiene `nucleo.usuario.editar` (campana y móvil; un aviso cada 30 minutos por móvil; dice si

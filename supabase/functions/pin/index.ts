@@ -3,7 +3,7 @@
 //    correo de verdad (pin-<su ficha>@pin.invalid: nunca se le manda nada). Se gasta el código y su móvil queda apuntado.
 //  · «entrar»: con la llave secreta que guarda su móvil y su PIN.
 //  · «olvido»: «He olvidado mi PIN»: con la llave de su móvil, avisa a quien puede dar acceso (uno cada 30 minutos).
-//  · En los dos casos devuelve un vale de un solo uso (token_hash) con el que la app abre la sesión (verifyOtp).
+//  · «alta» y «entrar» devuelven un vale de un solo uso (token_hash) con el que la app abre la sesión (verifyOtp).
 //    No se envía ningún correo.
 // Las comprobaciones (código válido, huellas, 5 fallos = bloqueado) están en la base de datos: nucleo.pin_codigo,
 // nucleo.pin_alta y nucleo.pin_entrar (migración 0035), que solo puede llamar esta función.
