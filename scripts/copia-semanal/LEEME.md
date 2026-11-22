@@ -9,6 +9,10 @@ Los datos de cada semana van en un archivo aparte **fuera del repositorio** (lle
 Cristian lo pega en el SQL Editor de la **vieja** (limpieza-cie; solo lee), copia la casilla que sale y la pega en el SQL Editor de
 **colada-mapri**. Los datos van de una app a la otra sin pasar por Claude. Si se cambia una receta: volver a ejecutar `montar.sh`.
 
+## Almacén (Fábrica): `almacen.sql`
+La vieja y la nueva del almacén están en el mismo Supabase (colada-mapri): `almacen.sql` se pega **tal cual** en colada-mapri
+(lee `public.docs`, no la cambia). Se puede repetir: lo ya copiado se reconoce por `almacen.equivalencias` y `movimientos.origen`.
+
 ## Cómo se hace cada semana (Personal), a mano
 1. Leer la vieja (limpieza-cie, solo lectura) con la consulta de abajo: devuelve el principio del archivo
    (crea `v_horas`, `v_vac` y `v_dias` y los llena).

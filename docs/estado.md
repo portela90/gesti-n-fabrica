@@ -630,6 +630,13 @@ Decidido por Cristian (22/11):
 - Datos de la vieja (22/11): familias barra 18, consumible 41, pistón 9, horno 43; unidades ud, kg, l, m; 25 artículos sin código;
   637 movimientos (ago–nov); stock = entrada + / salida − / ajuste ± / traslado −origen +destino (`stockMap` de la vieja).
 - Trozo 1 en pasos: 1a base de datos + copia + pruebas; 1b pantallas Stock, Movimientos y Apuntar; 1c Hoy y Reponer.
+- **1a hecho (22/11), SIN APLICAR:** migración `0038_almacen_base.sql` (esquema `almacen`: fichas, precios, dotación, movimientos,
+  gestores, sinónimos, equivalencias; vista `almacen.stock`; precios solo el administrador) y la copia `scripts/copia-semanal/almacen.sql`
+  (sin datos: lee `public.docs` del mismo Supabase; se pega tal cual en colada-mapri; se puede repetir). «Quién se lo lleva» de los
+  movimientos viejos va como texto en `extra.se_lo_llevo`; Nave 1A/1B = NAVE 1 (la de la vieja en `extra.nave`); `inc` = pérdida.
+  Pruebas 83 y 84 (la 84 comprueba que el stock sale igual que el de la vieja). Datos reales revisados (22/11): sin códigos ni
+  nombres repetidos, nada demasiado largo, todas las máquinas, proveedores y almacenes existen. Falta: Cristian pega 0038, añadir
+  `almacen` a «Exposed schemas» (preguntar antes; `public` el primero), pegar la copia y comprobar el stock artículo a artículo.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
