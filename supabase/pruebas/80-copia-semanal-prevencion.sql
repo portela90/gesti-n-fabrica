@@ -11,7 +11,11 @@ insert into nucleo.personas (id, empresa_id, nombre) values
   ('e1e1e1e1-0000-0000-0000-0000000000f2', 'e1e1e1e1-0000-0000-0000-000000000001', 'Bea Prueba');
 
 create temp table v_toolbox (anio int, mes int, compromiso text, cuerpo text, puntos jsonb, tema text, tema_intro text, tema_puntos jsonb, imagen text, codigo text);
-insert into v_toolbox values (2026, 10, 'Si veo algo, lo digo', 'Texto', '[]', 'Riesgo eléctrico', null, '["No tocar"]', null, 'COD-1');
+insert into v_toolbox values (2026, 10, 'Si veo algo, lo digo', 'Texto', '[]', 'Riesgo eléctrico', null, '["No tocar"]', null, 'COD-1'),
+  (2026, 1, 'Compromiso', 'Texto de enero', '[]', 'Frío', null, '[]', 'img/toolbox/2026-01.jpg', 'COD-1');
+-- en la nueva, enero ya estaba copiado con su imagen dentro
+insert into prevencion.charlas (empresa_id, anio, mes, codigo, compromiso, cuerpo, tema, imagen, origen) values
+  ('e1e1e1e1-0000-0000-0000-000000000001', 2026, 1, 'COD-1', 'Compromiso', 'Texto viejo', 'Frío', 'data:image/jpeg;base64,/9j/4AAQ', 'limpieza-cie:prl_toolbox:2026-01');
 create temp table v_sesion (id uuid, anio int, mes int, denominacion text, fecha date, centro text, duracion int, formador text, observaciones text,
   previstos uuid[], enviada_en timestamptz, estado text, cerrada_en timestamptz, creado timestamptz, prev_enviado_en timestamptz, prev_destino text);
 insert into v_sesion values ('e1e1e1e1-0000-0000-0000-000000000501', 2026, 10, 'Toolbox Octubre', '2026-10-05', 'Planta', 15, 'Formador Prueba', null,
@@ -40,6 +44,8 @@ create temp table stock_antes as select count(*) n from prevencion.stock_mov;
 \ir ../../scripts/copia-semanal/prevencion.sql
 
 select pruebas.ok((select count(*) = 1 from prevencion.charlas where empresa_id = 'e1e1e1e1-0000-0000-0000-000000000001' and tema = 'Riesgo eléctrico'), 'el texto del Toolbox se copia');
+select pruebas.ok((select cuerpo = 'Texto de enero' and imagen = 'data:image/jpeg;base64,/9j/4AAQ' from prevencion.charlas where mes = 1 and empresa_id = 'e1e1e1e1-0000-0000-0000-000000000001'),
+  'la imagen que en la vieja es un archivo no pisa la de la nueva (el texto sí se cambia)');
 select pruebas.ok((select cerrada_en is not null and previstos = '{e1e1e1e1-0000-0000-0000-0000000000f1,e1e1e1e1-0000-0000-0000-0000000000f2}'
   from prevencion.sesiones where id = 'e1e1e1e1-0000-0000-0000-000000000501'), 'la sesión se copia cerrada (sin la persona que no existe)');
 select pruebas.ok((select f.imagen like 'data:image/png;base64,%' and f.documento = 'charla' from prevencion.asistencias a join nucleo.firmas f on f.id = a.firma_id

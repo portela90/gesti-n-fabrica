@@ -1,6 +1,7 @@
 -- Copia semanal de Prevención (parte 8, decidido por Cristian el 22/11). SIN DATOS: el archivo de cada semana empieza llenando
 -- v_toolbox, v_sesion, v_firma, v_doc, v_cert y v_ficha con lo de la vieja (leer-vieja-prevencion.sql). Reglas:
 --  · Lo firmado solo se añade (la nueva no deja cambiar ni borrar firmas, asistencias ni documentos firmados). Una charla cerrada no se toca.
+--  · La imagen de cada charla: si en la vieja es el nombre de un archivo (img/toolbox/…), se deja la que ya tiene la nueva.
 --  · Las firmas se copian con su imagen (nucleo.firmas.imagen). Su «huella del documento» es la del registro de la vieja.
 --  · Certificados sin su archivo (en la nota: «N archivos en la app vieja»). Fichas sin el reconocimiento médico (decidido: no se migra).
 --  · Al copiar NO se descuenta stock de EPI (se apaga el disparador «stock» y se vuelve a encender). Todo o nada. Resumen al final.
@@ -21,15 +22,16 @@ begin
   -- ---------- textos del Toolbox (charla de cada mes) ----------
   with q as (
     insert into prevencion.charlas (empresa_id, anio, mes, codigo, compromiso, cuerpo, puntos, tema, tema_intro, tema_puntos, imagen, origen)
-    select v_emp, t.anio, t.mes, t.codigo, t.compromiso, t.cuerpo, coalesce(t.puntos, '[]'), t.tema, t.tema_intro, coalesce(t.tema_puntos, '[]'), t.imagen,
+    select v_emp, t.anio, t.mes, t.codigo, t.compromiso, t.cuerpo, coalesce(t.puntos, '[]'), t.tema, t.tema_intro, coalesce(t.tema_puntos, '[]'),
+           case when t.imagen ~ '^data:image/(png|jpeg);base64,' then t.imagen end,   -- en la vieja suele ser el nombre de un archivo: se deja la de la nueva
            'limpieza-cie:prl_toolbox:' || t.anio || '-' || lpad(t.mes::text, 2, '0')
       from v_toolbox t
     on conflict (empresa_id, anio, mes) do update set codigo = excluded.codigo, compromiso = excluded.compromiso, cuerpo = excluded.cuerpo, puntos = excluded.puntos,
-      tema = excluded.tema, tema_intro = excluded.tema_intro, tema_puntos = excluded.tema_puntos, imagen = excluded.imagen
+      tema = excluded.tema, tema_intro = excluded.tema_intro, tema_puntos = excluded.tema_puntos, imagen = coalesce(excluded.imagen, prevencion.charlas.imagen)
       where prevencion.charlas.origen like 'limpieza-cie:%'
         and (prevencion.charlas.codigo, prevencion.charlas.compromiso, prevencion.charlas.cuerpo, prevencion.charlas.puntos, prevencion.charlas.tema,
              prevencion.charlas.tema_intro, prevencion.charlas.tema_puntos, prevencion.charlas.imagen)
-            is distinct from (excluded.codigo, excluded.compromiso, excluded.cuerpo, excluded.puntos, excluded.tema, excluded.tema_intro, excluded.tema_puntos, excluded.imagen)
+            is distinct from (excluded.codigo, excluded.compromiso, excluded.cuerpo, excluded.puntos, excluded.tema, excluded.tema_intro, excluded.tema_puntos, coalesce(excluded.imagen, prevencion.charlas.imagen))
     returning anio, mes)
   insert into r_resumen select 1, 'Toolbox: textos nuevos o cambiados', count(*), string_agg(mes || '/' || anio, ', ' order by anio, mes) from q;
 
@@ -42,6 +44,7 @@ begin
            s.enviada_en, case when s.estado = 'cerrada' then coalesce(s.cerrada_en, now()) end, 'limpieza-cie:prl_sesion:' || s.id, coalesce(s.creado, now()),
            s.prev_enviado_en, s.prev_destino
       from v_sesion s join prevencion.charlas c on c.empresa_id = v_emp and c.anio = s.anio and c.mes = s.mes
+     where not exists (select 1 from prevencion.sesiones x where x.empresa_id = v_emp and x.charla_id = c.id and x.id <> s.id)
     on conflict (id) do update set denominacion = excluded.denominacion, fecha = excluded.fecha, centro = excluded.centro, duracion = excluded.duracion,
       formador = excluded.formador, observaciones = excluded.observaciones, previstos = excluded.previstos, enviada_en = excluded.enviada_en,
       cerrada_en = excluded.cerrada_en, prev_enviado_en = excluded.prev_enviado_en, prev_destino = excluded.prev_destino
@@ -53,6 +56,9 @@ begin
              excluded.previstos, excluded.enviada_en, excluded.cerrada_en, excluded.prev_enviado_en, excluded.prev_destino)
     returning fecha)
   insert into r_resumen select 2, 'Charlas: sesiones nuevas o cambiadas', count(*), string_agg(fecha::text, ', ' order by fecha) from q;
+  insert into r_resumen select 11, 'Aviso: meses con una charla hecha en la app nueva (la de la vieja no se copia; míralo)', count(*), string_agg(s.mes || '/' || s.anio, ', ')
+    from v_sesion s join prevencion.charlas c on c.empresa_id = v_emp and c.anio = s.anio and c.mes = s.mes
+   where exists (select 1 from prevencion.sesiones x where x.empresa_id = v_emp and x.charla_id = c.id and x.id <> s.id);
   insert into r_resumen select 10, 'Aviso: sesiones sin el texto de su mes en la nueva (no se copian)', count(*), string_agg(s.mes || '/' || s.anio, ', ')
     from v_sesion s where not exists (select 1 from prevencion.charlas c where c.empresa_id = v_emp and c.anio = s.anio and c.mes = s.mes);
 
