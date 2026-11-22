@@ -570,3 +570,5 @@ button.tarjeta-panel:hover, button.tarjeta-panel:focus-visible { border-color: v
 .pin-teclas button:disabled { opacity: .5; }
 .codigo-alta { font: 700 32px/1.2 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 3px; text-align: center; margin: 8px 0; }
 .qr-alta { display: block; margin: 0 auto; width: 220px; height: 220px; background: #fff; padding: 8px; border-radius: 8px; }
+.aviso-iphone { text-align: left; border: 1px solid var(--linea); border-radius: 12px; padding: 12px 14px; background: color-mix(in srgb, var(--acento) 6%, var(--sup)); }
+.aviso-iphone p { margin: 0 0 8px; } .aviso-iphone ol { margin: 0 0 8px; padding-left: 20px; } .aviso-iphone li { margin-bottom: 6px; }

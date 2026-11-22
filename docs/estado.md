@@ -514,7 +514,11 @@ cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto
   (con PIN, bloqueado, sin móvil), «Nuevo código de alta» y «Códigos de alta sin usar» (anular). El botón de siempre pasa a llamarse
   «Dar acceso con correo».
 - Pruebas: `supabase/pruebas/75-nucleo-pin.sql` (41) y `pruebas/pin.spec.ts` (6).
-- Pendiente: probarlo Cristian con el usuario «pruebas» (código → su móvil → PIN) antes de dárselo a nadie.
+- **Arreglo 22/11 (prueba de Cristian en iPhone):** el QR abre Safari y el alta se guardaba en Safari; la app de la pantalla de inicio
+  del iPhone tiene su propio almacén y no la veía (pedía correo y contraseña). Ahora, en un iPhone en Safari, el alta avisa de que se
+  haga dentro de la app (enseña el código y cómo añadir la app a la pantalla de inicio; «Usar la app aquí en Safari de todas formas»).
+  La ventana del código lo dice también. En Android no pasa (comparten almacén). Prueba nueva en `pin.spec.ts`.
+- Pendiente: que Cristian lo vuelva a probar con «Prueba PIN» (código nuevo, escrito dentro de la app) antes de dárselo a nadie.
 
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser

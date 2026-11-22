@@ -138,3 +138,18 @@ test('la pantalla del PIN cabe en el móvil más estrecho', async ({ page }) => 
   await expect(page.getByText('Elige tu PIN', { exact: true })).toBeVisible();
   expect(await desbordes(page)).toEqual([]);
 });
+
+test.describe('iPhone en Safari', () => {
+  test.use({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1' });
+  test('el QR abierto en Safari dice que el alta se hace dentro de la app (si no, luego no la reconoce)', async ({ page }) => {
+    await simular(page, { sesion: operario });
+    await page.goto('./#/alta/K7P2-9QXM');
+    const aviso = page.getByRole('note');
+    await expect(aviso).toContainText('En el iPhone, el alta se hace dentro de la app');
+    await expect(aviso.locator('.codigo-alta')).toHaveText('K7P2-9QXM');
+    await expect(page.getByRole('group', { name: /PIN/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Usar la app aquí en Safari de todas formas' }).click();
+    await expect(page.getByText('Elige tu PIN', { exact: true })).toBeVisible();
+    expect(await desbordes(page)).toEqual([]);
+  });
+});

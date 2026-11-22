@@ -165,9 +165,17 @@ function EntrarPin({ alCorreo, alAlta }: { alCorreo: () => void; alAlta: () => v
   );
 }
 
+/** iPhone o iPad en Safari (no en la app de la pantalla de inicio): ahí lo guardado no lo ve la app instalada. */
+export function iphoneEnNavegador() {
+  const ios = /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const instalada = (navigator as { standalone?: boolean }).standalone === true || matchMedia('(display-mode: standalone)').matches;
+  return ios && !instalada;
+}
+
 /** Dar de alta este móvil: el código que le han dado (o el del QR) y su PIN, dos veces. */
 function AltaMovil({ alVolver }: { alVolver: () => void }) {
   const [codigo, setCodigo] = useState(codigoDeLaDireccion);
+  const [aunAsi, setAunAsi] = useState(false);
   const [paso, setPaso] = useState<'codigo' | 'pin' | 'repetir'>(() => (codigoDeLaDireccion() ? 'pin' : 'codigo'));
   const [primero, setPrimero] = useState('');
   const [ocupado, setOcupado] = useState(false);
@@ -187,7 +195,19 @@ function AltaMovil({ alVolver }: { alVolver: () => void }) {
       <div className="entrar-caja">
         <img src={`${import.meta.env.BASE_URL}icono.svg`} alt="" width={56} height={56} />
         <h1>Dar de alta este móvil</h1>
-        {paso === 'codigo' ? (
+        {iphoneEnNavegador() && !aunAsi ? (
+          <div className="aviso-iphone" role="note">
+            <p><b>En el iPhone, el alta se hace dentro de la app</b> (la del icono en la pantalla de inicio), no aquí en Safari:
+              si no, luego la app no te reconoce.</p>
+            {limpio.length === 8 && <><p>Tu código es:</p><p className="codigo-alta">{limpio.slice(0, 4)}-{limpio.slice(4)}</p></>}
+            <ol>
+              <li><b>Si ya tienes la app</b> en la pantalla de inicio: ábrela desde allí, toca «Soy operario: tengo un código de alta» y escribe el código.</li>
+              <li><b>Si no la tienes:</b> toca el botón de compartir de Safari (el cuadrado con la flecha hacia arriba), elige «Añadir a pantalla de
+                inicio», abre la app desde el icono nuevo y escribe el código.</li>
+            </ol>
+            <button type="button" className="boton txt ancho" onClick={() => setAunAsi(true)}>Usar la app aquí en Safari de todas formas</button>
+          </div>
+        ) : paso === 'codigo' ? (
           <form noValidate onSubmit={(e) => {
             e.preventDefault();
             if (limpio.length !== 8) { setError('El código tiene 8 letras y números (por ejemplo, K7P2-9QXM).'); return; }

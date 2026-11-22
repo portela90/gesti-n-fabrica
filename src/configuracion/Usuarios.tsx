@@ -321,9 +321,11 @@ function CodigoAlta({ inicial, roles, naves, personas, alCerrar, alHacer }: {
   if (hecho) {
     return (
       <Ventana titulo={`Código de alta de ${nombre}`} alCerrar={alCerrar} pie={<button type="button" className="boton" onClick={alCerrar}>Hecho</button>}>
-        <p style={{ marginTop: 0 }}>Que lo escanee con la cámara de su móvil, o que abra la app y toque <b>«Soy operario: tengo un código de alta»</b> y escriba:</p>
+        <p style={{ marginTop: 0 }}>Que abra la app en su móvil, toque <b>«Soy operario: tengo un código de alta»</b> y escriba:</p>
         <p className="codigo-alta" id="codigoAlta">{hecho.codigo}</p>
         {hecho.qr && <img className="qr-alta" src={hecho.qr} alt={`Código QR para dar de alta el móvil de ${nombre}`} />}
+        <p className="nota"><b>Con iPhone:</b> que lo escriba dentro de la app de la pantalla de inicio (el QR abre Safari, y lo que se hace en Safari
+          la app no lo ve). Con Android, el QR vale.</p>
         <p className="nota">Sirve una sola vez y caduca en 7 días. Después elegirá su PIN de 4 cifras. Si tenía otro móvil o un código anterior, ya no sirven.</p>
       </Ventana>
     );
