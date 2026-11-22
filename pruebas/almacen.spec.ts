@@ -261,6 +261,7 @@ test('reponer hoy: hoja de carga, cambiar cuánto y reponer crea el traslado (si
 test('reponer: quitar una fila y la dotación de un almacén', async ({ page }) => {
   const ll = await abrir(page, 'reponer');
   const n2 = page.getByRole('region', { name: 'Almacén producción N2' });
+  await n2.getByRole('button', { name: 'Más opciones de Guantes de nitrilo' }).click();
   await n2.getByRole('button', { name: 'Quitar' }).click();
   expect(posts(ll, '/rest/v1/bajar')[0]).toMatchObject({ almacen_id: PN2, articulo_id: GUANTE, quitado_stock: 4 });
   await expect(page.getByText('Hoy no hay nada que bajar')).toBeVisible();   // ya no sale: no se ha gastado nada desde que se quitó
@@ -274,18 +275,17 @@ test('reponer: quitar una fila y la dotación de un almacén', async ({ page }) 
 });
 
 test('previsión y falta y sobra; solo lectura no cambia la dotación', async ({ page }) => {
-  const ll = await abrir(page, 'reponer');
-  await page.getByRole('button', { name: 'Previsión' }).click();
+  const ll = await abrir(page, 'prevision');
   await expect(page.locator('.cifras-ficha')).toContainText('Artículos a pedir');
   await expect(page.getByText('menos de 90 días')).toBeVisible();
   await expect(page.locator('.lista .fila', { hasText: 'Guantes de nitrilo' })).toContainText('al día');
   await page.getByRole('button', { name: 'Aplicar lo sugerido' }).click();
   await page.getByRole('dialog', { name: 'Aplicar lo sugerido' }).getByRole('button', { name: 'Aplicar' }).click();
   expect(posts(ll, '/rest/v1/rpc/poner_minimos')[0]).toMatchObject({ p_empresa: U });
-  await page.getByRole('button', { name: 'Falta y sobra' }).click();
+  await page.goto('./#/m/almacen/faltasobra');
   await expect(page.locator('.cifras-ficha')).toContainText('Faltan');
   await expect(page.locator('.lista .fila', { hasText: 'Trapos de algodón' }).locator('.chapa')).toHaveText('Sin datos');
-  await page.getByRole('button', { name: 'Qué va en cada almacén' }).click();
+  await irApartado(page, 'Almacén', 'Dotación');
   await expect(page.getByLabel('Dotación de Guantes de nitrilo en Almacén producción N2')).toHaveValue('10');
 });
 
@@ -297,8 +297,11 @@ test('Hoy y Reponer en el móvil más estrecho: nada se aplasta ni se sale', asy
   await page.goto('./#/m/almacen/reponer');
   await expect(page.getByRole('region', { name: 'Hoja de carga' })).toBeVisible();
   expect(await desbordes(page), 'reponer').toEqual([]);
-  for (const p of ['Qué va en cada almacén', 'Previsión', 'Falta y sobra']) {
-    await page.getByRole('button', { name: p }).click();
+  await page.getByRole('region', { name: 'Almacén producción N2' }).getByRole('button', { name: 'Más opciones de Guantes de nitrilo' }).click();
+  expect(await desbordes(page), 'reponer con botones').toEqual([]);
+  for (const p of ['dotacion', 'prevision', 'faltasobra']) {
+    await page.goto('./#/m/almacen/' + p);
+    await page.locator('main .nota, main .cifras-ficha').first().waitFor();
     expect(await desbordes(page), p).toEqual([]);
   }
 });

@@ -46,7 +46,7 @@ export function Hoy({ c, recargar, ir }: { c: Catalogo; recargar: () => void; ir
       detalle: retrasados.map((a) => `${a.nombre} (llegaba el ${fCorta(llegaEl(c, a))})`).join(' · '), boton: 'Ver pedidos', accion: () => ir('/m/almacen/stock') }] as Aviso[] : []),
     ...(nBajar ? [{ clave: 'bajar', nivel: 'warn', texto: `Bajar ${nBajar} artículo${nBajar > 1 ? 's' : ''} a planta`, detalle: `A ${naves.join(', ')}`, boton: 'Reponer', accion: () => ir('/m/almacen/reponer') }] as Aviso[] : []),
     ...(previstos.length ? [{ clave: 'previsto-' + h.slice(0, 7), nivel: 'info', texto: `Pedido previsto hasta fin del mes que viene: ${previstos.length} artículo${previstos.length > 1 ? 's' : ''}`,
-      boton: 'Ver previsión', accion: () => ir('/m/almacen/reponer') }] as Aviso[] : []),
+      boton: 'Ver previsión', accion: () => ir('/m/almacen/prevision') }] as Aviso[] : []),
     ...(notas ? [{ clave: 'notas-' + h, nivel: 'info', texto: `${notas} nota${notas > 1 ? 's' : ''} sin procesar en Apuntar`, boton: 'Apuntar', accion: () => ir('/m/almacen/apuntar') }] as Aviso[] : []),
   ];
   const orden = { bad: 0, warn: 1, info: 2 };

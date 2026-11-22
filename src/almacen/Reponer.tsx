@@ -10,16 +10,11 @@ import { estadoStock, faltas, horizonte, lineas, origenReposicion, prevision, ty
 import { FichaArticulo } from './Stock';
 import { FormMovimiento, type Inicial } from './Movimientos';
 
-type Parte = 'hoy' | 'dotacion' | 'prevision' | 'faltasobra';
+export type Parte = 'hoy' | 'dotacion' | 'prevision' | 'faltasobra';
 
-export function Reponer({ c, recargar }: { c: Catalogo; recargar: () => void }) {
-  const [parte, setParte] = useState<Parte>('hoy');
+export function Reponer({ c, recargar, parte }: { c: Catalogo; recargar: () => void; parte: Parte }) {
   return (
     <>
-      <div className="segmentos cuatro" role="group" aria-label="Qué parte de Reponer">
-        {([['hoy', 'Reponer hoy'], ['dotacion', 'Qué va en cada almacén'], ['prevision', 'Previsión'], ['faltasobra', 'Falta y sobra']] as const).map(([k, t]) =>
-          <button key={k} type="button" aria-pressed={parte === k} onClick={() => setParte(k)}>{t}</button>)}
-      </div>
       {parte === 'hoy' && <ReponerHoy c={c} recargar={recargar} />}
       {parte === 'dotacion' && <Dotacion c={c} recargar={recargar} />}
       {parte === 'prevision' && <PrevisionVista c={c} recargar={recargar} />}
@@ -44,6 +39,7 @@ function ReponerHoy({ c, recargar }: { c: Catalogo; recargar: () => void }) {
   const [mov, setMov] = useState<Inicial | null>(null);
   const [dotDe, setDotDe] = useState<string | null>(null);
   const [cambiar, setCambiar] = useState<Falta | null>(null);
+  const [abiertos, setAbiertos] = useState<Set<string>>(new Set());   // filas con sus botones a la vista («⋯»)
   const k = (f: Falta) => `${f.almacen_id}|${f.articulo_id}`;
   const art = (id: string) => c.articulos.find((a) => a.id === id)!;
   const ubic = (id: string) => c.fichas.get(id)?.ubicacion ?? '';
@@ -136,11 +132,13 @@ function ReponerHoy({ c, recargar }: { c: Catalogo; recargar: () => void }) {
                     onChange={(e) => setQuito((s) => { const n = new Set(s); if (e.target.checked) n.delete(k(f)); else n.add(k(f)); return n; })} />}
                   <span className="fila-txt"><b>{a.nombre}</b>
                     <small>hay {fmt(f.hay)} de {fmt(f.dotacion)} {a.unidad} · se baja de {almCorto(c, f.origen_id!)}{ubic(a.id) ? ` · ${ubic(a.id)}` : ''}{f.quitado ? ' · solo lo gastado desde que se quitó' : ''}{f.cambiadoHoy ? ' · cantidad cambiada hoy' : ''}</small>
-                    {apunta && <span className="botones-fila">
+                    {apunta && abiertos.has(k(f)) && <span className="botones-fila">
                       <button type="button" className="boton sec peq" onClick={() => setMov({ tipo: 'salida', articulo_id: a.id, almacen_id: l.id })}>Consumo</button>
                       <button type="button" className="boton sec peq" onClick={() => setCambiar(f)}>Cambiar</button>
                       <button type="button" className="boton sec peq" onClick={() => quitar(f)}>Quitar</button>
                       <button type="button" className="boton sec peq" disabled={ocupado} onClick={() => reponer([f])}>Repuesto</button></span>}</span>
+                  {apunta && <button type="button" className="boton-icono boton-mas-fila" aria-label={`Más opciones de ${a.nombre}`} aria-expanded={abiertos.has(k(f))}
+                    onClick={() => setAbiertos((x) => { const n = new Set(x); if (n.has(k(f))) n.delete(k(f)); else n.add(k(f)); return n; })}>⋯</button>}
                   {apunta ? <label className="cant-reponer"><input inputMode="decimal" aria-label={`Cuánto bajar de ${a.nombre} a ${l.nombre}`} value={cant[k(f)] ?? String(f.bajar)}
                     onChange={(e) => setCant((x) => ({ ...x, [k(f)]: e.target.value }))} /><small>de {fmt(f.falta)}</small></label>
                     : <span className="fila-cifra">{fmt(f.bajar)} {a.unidad}</span>}
