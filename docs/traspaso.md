@@ -52,7 +52,7 @@ publicado el 21/11**, `docs/estado.md` A.1); 2) panel de Inicio (**hecho y publi
 
 Después, **parte 8: 2–4 semanas en paralelo** con la app vieja antes del cambio (**empezada el 21/11**, `docs/estado.md` «Parte 8»).
 Decidido: en paralelo **solo usa la nueva Cristian**; los operarios cambian una vez, el día del cambio. Trozo 1, entrar con
-**código de alta + PIN** (8.1): hecho; falta que pegue 0035 e instalar la función «pin» (con su «sí»), y que lo pruebe con «pruebas».
+**código de alta + PIN** (8.1): hecho, aplicado (0035), función «pin» instalada y publicado el 22/11; falta que lo pruebe con «pruebas».
 Lo siguiente: decidir qué apunta él en la nueva esas semanas y qué se compara cada semana.
 
 ## Decisiones de Cristian que conviene recordar

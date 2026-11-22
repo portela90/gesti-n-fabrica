@@ -492,7 +492,7 @@ Decidido: por talla; se descuenta al hacer la entrega (no al firmar); solo para 
 Decidido por Cristian (21/11): durante las 2–4 semanas en paralelo **solo él** usa la app nueva a la vez que la vieja; los operarios
 siguen solo con la vieja y cambian una sola vez, el día del cambio.
 
-### 8.1 Entrar con código de alta + PIN — HECHO, falta aplicar (0035) e instalar la función «pin»
+### 8.1 Entrar con código de alta + PIN — APLICADO 22/11 (0035, comprobado), función «pin» instalada (v1, sin JWT) y PUBLICADO
 Decidido (21/11): código de alta (o su QR) + PIN de 4 cifras; en la pantalla de entrar no sale ningún nombre. Si olvida el PIN,
 cambia de móvil o se bloquea (5 fallos seguidos): se le da otro código. Puesto por defecto: el código sirve una vez y caduca a los
 7 días; un móvil por persona; rol «Operario» de partida (se puede elegir otro y una nave).
