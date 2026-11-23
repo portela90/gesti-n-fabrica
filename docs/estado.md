@@ -653,7 +653,7 @@ Decidido por Cristian (22/11):
   común `FormMovimiento` (avisos de «cantidad rara» y «quién se lo lleva» una vez). Migración **0039** (permiso `almacen.pedido.apuntar`,
   `marcar_pedido`/`anular_pedido`, la entrada de lo pedido quita la marca, `almacen.notas`). Pruebas: BD 85; pantallas `almacen.spec.ts`
   y `lector.spec.ts`. Pistones/ejes/averías: trozo 2; Hoy y Reponer: 1c.
-- **1c hecho (22/11), falta pegar 0040:** apartados **Hoy** (cuatro cifras, «lo urgente» con su botón —para pedir, no cuadran,
+- **1c hecho, 0040 APLICADA (23/11, comprobada):** apartados **Hoy** (cuatro cifras, «lo urgente» con su botón —para pedir, no cuadran,
   retrasados, bajar a planta, pedido previsto, notas—, apuntado hoy, este mes) y **Reponer** (reponer hoy con hoja de carga, casillas,
   cantidades, «Cambiar» solo para hoy, «Quitar», «Repuesto»/«Reponer marcados» → un traslado por artículo sin pasar de lo que hay en el
   origen; qué va en cada almacén; previsión con «Aplicar lo sugerido» y ajustes; falta y sobra). Cuentas en `src/almacen/reponer.ts`
