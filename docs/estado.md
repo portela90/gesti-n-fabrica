@@ -677,6 +677,14 @@ Decidido por Cristian (22/11):
   nombres repetidos, nada demasiado largo, todas las máquinas, proveedores y almacenes existen. Falta: Cristian pega 0038, añadir
   `almacen` a «Exposed schemas» (preguntar antes; `public` el primero), pegar la copia y comprobar el stock artículo a artículo.
 
+## Trozo 2 del Almacén (28/11, decidido por Cristian)
+- Orden: **Pistones → Ejes → Barras, horno y tolvas → Contenedores**. Con todos los extras: planos de ejes y barras, leer albarán del
+  taller con foto, costes y análisis de reparaciones, y avisos/documentos/listas por sección.
+- SAP (marcar cambios de pistón «metidos en SAP» e informe diario): encargado y administrador.
+- Diámetros, motivos, destinos del usado, tipos de contenedor y talleres: filas/ajustes, nunca en el código (la copia los trae de la vieja).
+- **La app vieja del almacén se CONGELA (28/11):** tenía 24 cambios desde el 20/11 (pistones salvados, pesar cajones, ronda de
+  consumos, envases completos, «No se sabe»…). Las mejoras, desde ahora, solo en la nueva; primero ponerse al día con esos cambios.
+
 ## Avisos
 - Al exponer `nucleo` en «Exposed schemas» (12/11) el esquema por defecto de la API de colada-mapri dejó de ser
   `public`: las llamadas que no dicen esquema (pg_net desde limpieza-cie) daban 404. Arreglado en Limpieza con la cabecera
